@@ -23,9 +23,11 @@ public class HomeserverProviderService(ILogger<HomeserverProviderService> logger
 
             AuthenticatedHomeserverGeneric? hs = null;
             if (!useGeneric) {
+                var clientVersionsTask = rhs.GetClientVersionsAsync();
+                var serverVersionTask = rhs.FederationClient?.GetServerVersionAsync() ?? Task.FromResult<ServerVersionResponse?>(null)!;
                 ClientVersionsResponse? clientVersions = new();
                 try {
-                    clientVersions = await rhs.GetClientVersionsAsync();
+                    clientVersions = await clientVersionsTask;
                 }
                 catch (Exception e) {
                     logger.LogError(e, "Failed to get client versions for {homeserver}", homeserver);
@@ -33,7 +35,7 @@ public class HomeserverProviderService(ILogger<HomeserverProviderService> logger
 
                 ServerVersionResponse? serverVersion;
                 try {
-                    serverVersion = await (rhs.FederationClient?.GetServerVersionAsync() ?? Task.FromResult<ServerVersionResponse?>(null)!);
+                    serverVersion = await serverVersionTask;
                 }
                 catch (Exception e) {
                     logger.LogWarning(e, "Failed to get server version for {homeserver}", homeserver);

@@ -37,7 +37,7 @@ public class SyncStateResolver(AuthenticatedHomeserverGeneric homeserver, ILogge
         oldState.NextBatch = newState.NextBatch ?? oldState.NextBatch;
 
         oldState.AccountData ??= new EventList();
-        oldState.AccountData.Events ??= new List<StateEventResponse>();
+        oldState.AccountData.Events ??= [];
         if (newState.AccountData?.Events is not null)
             oldState.AccountData.Events.MergeStateEventLists(newState.AccountData?.Events ?? new List<StateEventResponse>());
 
@@ -55,16 +55,18 @@ public class SyncStateResolver(AuthenticatedHomeserverGeneric homeserver, ILogge
             oldState.Rooms = MergeRoomsDataStructure(oldState.Rooms, newState.Rooms);
 
         oldState.ToDevice ??= new EventList();
-        oldState.ToDevice.Events ??= new List<StateEventResponse>();
+        oldState.ToDevice.Events ??= [];
         if (newState.ToDevice?.Events is not null)
             oldState.ToDevice.Events.MergeStateEventLists(newState.ToDevice?.Events ?? new List<StateEventResponse>());
 
         oldState.DeviceLists ??= new SyncResponse.DeviceListsDataStructure();
+        oldState.DeviceLists.Changed ??= [];
+        oldState.DeviceLists.Left ??= [];
         if (newState.DeviceLists?.Changed is not null)
-            foreach (var s in oldState.DeviceLists.Changed!)
+            foreach (var s in newState.DeviceLists.Changed!)
                 oldState.DeviceLists.Changed.Add(s);
         if (newState.DeviceLists?.Left is not null)
-            foreach (var s in oldState.DeviceLists.Left!)
+            foreach (var s in newState.DeviceLists.Left!)
                 oldState.DeviceLists.Left.Add(s);
 
         return oldState;

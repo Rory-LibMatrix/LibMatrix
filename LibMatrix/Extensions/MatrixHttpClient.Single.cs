@@ -1,5 +1,5 @@
 #define SINGLE_HTTPCLIENT // Use a single HttpClient instance for all MatrixHttpClient instances
-// #define SYNC_HTTPCLIENT // Only allow one request as a time, for debugging
+// #define SYNC_HTTPCLIENT   // Only allow one request as a time, for debugging
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
@@ -15,7 +15,7 @@ using ArcaneLibs.Extensions;
 namespace LibMatrix.Extensions;
 
 #if SINGLE_HTTPCLIENT
-// TODO: Add URI wrapper for 
+// TODO: Add URI wrapper for
 public class MatrixHttpClient {
     private static readonly HttpClient Client;
 
@@ -70,6 +70,10 @@ public class MatrixHttpClient {
     }
 
     public async Task<HttpResponseMessage> SendUnhandledAsync(HttpRequestMessage request, CancellationToken cancellationToken) {
+        if (request.RequestUri is null) throw new NullReferenceException("RequestUri is null");
+        // if (!request.RequestUri.IsAbsoluteUri)
+            request.RequestUri = request.RequestUri.EnsureAbsolute(BaseAddress!);
+        var swWait = Stopwatch.StartNew();
 #if SYNC_HTTPCLIENT
         await _rateLimitSemaphore.WaitAsync(cancellationToken);
 #endif
@@ -86,13 +90,15 @@ public class MatrixHttpClient {
 
         request.Options.Set(new HttpRequestOptionsKey<bool>("WebAssemblyEnableStreamingResponse"), true);
 
+        Console.WriteLine("Sending " + request.Summarise(includeHeaders:true, includeQuery: true, includeContentIfText: true));
+
         HttpResponseMessage? responseMessage;
         try {
             responseMessage = await Client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         }
         catch (Exception e) {
             Console.WriteLine(
-                $"Failed to send request {request.Method} {BaseAddress}{request.RequestUri} ({Util.BytesToString(request.Content?.Headers.ContentLength ?? 0)}):\n{e}");
+                $"Failed to send request {request.Method} {request.RequestUri} ({Util.BytesToString(request.GetContentLength())}):\n{e}");
             throw;
         }
 #if SYNC_HTTPCLIENT
@@ -101,8 +107,20 @@ public class MatrixHttpClient {
         }
 #endif
 
-        Console.WriteLine(
-            $"Sending {request.Method} {request.RequestUri} ({Util.BytesToString(request.Content?.Headers.ContentLength ?? 0)}) -> {(int)responseMessage.StatusCode} {responseMessage.StatusCode} ({Util.BytesToString(responseMessage.Content.Headers.ContentLength ?? 0)})");
+        // Console.WriteLine($"Sending {request.Method} {request.RequestUri} ({Util.BytesToString(request.Content?.Headers.ContentLength ?? 0)}) -> {(int)responseMessage.StatusCode} {responseMessage.StatusCode} ({Util.BytesToString(responseMessage.GetContentLength())}, WAIT={swWait.ElapsedMilliseconds}ms, EXEC={swExec.ElapsedMilliseconds}ms)");
+        Console.WriteLine("Received " + responseMessage.Summarise(includeHeaders: true, includeContentIfText: false, hideHeaders: [
+            "Server",
+            "Date",
+            "Transfer-Encoding",
+            "Connection",
+            "Vary",
+            "Content-Length",
+            "Access-Control-Allow-Origin",
+            "Access-Control-Allow-Methods",
+            "Access-Control-Allow-Headers",
+            "Access-Control-Expose-Headers",
+            "Cache-Control"
+        ]));
 
         return responseMessage;
     }
@@ -110,13 +128,13 @@ public class MatrixHttpClient {
     public async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken = default) {
         var responseMessage = await SendUnhandledAsync(request, cancellationToken);
         if (responseMessage.IsSuccessStatusCode) return responseMessage;
-        
+
         //retry on gateway timeout
         if (responseMessage.StatusCode == HttpStatusCode.GatewayTimeout) {
             request.ResetSendStatus();
             return await SendAsync(request, cancellationToken);
         }
-        
+
         //error handling
         var content = await responseMessage.Content.ReadAsStringAsync(cancellationToken);
         if (content.Length == 0)
