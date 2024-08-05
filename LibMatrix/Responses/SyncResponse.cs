@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using LibMatrix.EventTypes.Spec.State;
 
 namespace LibMatrix.Responses;
 
@@ -14,7 +15,7 @@ public class SyncResponse {
     public EventList? AccountData { get; set; }
 
     [JsonPropertyName("presence")]
-    public PresenceDataStructure? Presence { get; set; }
+    public EventList? Presence { get; set; }
 
     [JsonPropertyName("device_one_time_keys_count")]
     public Dictionary<string, int>? DeviceOneTimeKeysCount { get; set; } = null!;
@@ -61,6 +62,13 @@ public class SyncResponse {
 
             [JsonPropertyName("state")]
             public EventList? State { get; set; }
+
+            public override string ToString() {
+                var lastEvent = Timeline?.Events?.LastOrDefault(x=>x.Type == "m.room.member");
+                var membership = (lastEvent?.TypedContent as RoomMemberEventContent);
+                return $"LeftRoomDataStructure: {lastEvent?.Sender} {membership?.Membership} ({membership?.Reason})";
+
+            }
         }
 
         public class JoinedRoomDataStructure {
