@@ -5,13 +5,14 @@ using ArcaneLibs.Collections;
 using ArcaneLibs.Extensions;
 using LibMatrix.Filters;
 using LibMatrix.Homeservers;
+using LibMatrix.Interfaces.Services;
 using LibMatrix.Responses;
 using LibMatrix.Utilities;
 using Microsoft.Extensions.Logging;
 
 namespace LibMatrix.Helpers;
 
-public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logger = null) {
+public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logger = null, IStorageProvider? storageProvider = null) {
     private SyncFilter? _filter;
     private string? _namedFilterName;
     private bool _filterIsDirty = false;
@@ -55,7 +56,7 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
 
     public TimeSpan MinimumDelay { get; set; } = new(0);
 
-    private async Task updateFilterAsync() {
+    private async Task UpdateFilterAsync() {
         if (!string.IsNullOrWhiteSpace(NamedFilterName)) {
             _filterId = await homeserver.NamedCaches.FilterCache.GetOrSetValueAsync(NamedFilterName);
             if (_filterId is null)
@@ -78,8 +79,27 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
             throw new ArgumentNullException(nameof(homeserver.ClientHttpClient), "Null passed as homeserver for SyncHelper!");
         }
 
+        if (storageProvider is null) return await SyncAsyncInternal(cancellationToken);
+
+        var key = Since ?? "init";
+        if (await storageProvider.ObjectExistsAsync(key)) {
+            var cached = await storageProvider.LoadObjectAsync<SyncResponse>(key);
+            // We explicitly check that NextBatch doesn't match since to prevent infinite loops...
+            if (cached is not null && cached.NextBatch != Since) {
+                logger?.LogInformation("SyncHelper: Using cached sync response for {}", key);
+                return cached;
+            }
+        }
+
+        var sync = await SyncAsyncInternal(cancellationToken);
+        // Ditto here.
+        if (sync is not null && sync.NextBatch != Since) await storageProvider.SaveObjectAsync(key, sync);
+        return sync;
+    }
+
+    private async Task<SyncResponse?> SyncAsyncInternal(CancellationToken? cancellationToken = null) {
         var sw = Stopwatch.StartNew();
-        if (_filterIsDirty) await updateFilterAsync();
+        if (_filterIsDirty) await UpdateFilterAsync();
 
         var url = $"/_matrix/client/v3/sync?timeout={Timeout}&set_presence={SetPresence}&full_state={(FullState ? "true" : "false")}";
         if (!string.IsNullOrWhiteSpace(Since)) url += $"&since={Since}";
@@ -216,7 +236,7 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
     /// Event fired when an account data event is received
     /// </summary>
     public List<Func<StateEventResponse, Task>> AccountDataReceivedHandlers { get; } = new();
-    
+
     private void Log(string message) {
         if (logger is null) Console.WriteLine(message);
         else logger.LogInformation(message);

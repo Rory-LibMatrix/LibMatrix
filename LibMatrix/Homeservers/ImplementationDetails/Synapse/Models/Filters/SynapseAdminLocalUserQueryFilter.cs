@@ -1,7 +1,7 @@
-namespace LibMatrix.Filters;
+namespace LibMatrix.Homeservers.ImplementationDetails.Synapse.Models.Filters;
 
-public class LocalRoomQueryFilter {
-    public string RoomIdContains { get; set; } = "";
+public class SynapseAdminLocalUserQueryFilter {
+    public string UserIdContains { get; set; } = "";
     public string NameContains { get; set; } = "";
     public string CanonicalAliasContains { get; set; } = "";
     public string VersionContains { get; set; } = "";

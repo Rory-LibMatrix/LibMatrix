@@ -17,7 +17,7 @@ public class SyncStateResolver(AuthenticatedHomeserverGeneric homeserver, ILogge
 
     public SyncResponse? MergedState { get; set; }
 
-    private SyncHelper _syncHelper = new(homeserver, logger);
+    private SyncHelper _syncHelper = new(homeserver, logger, storageProvider);
 
     public async Task<(SyncResponse next, SyncResponse merged)> ContinueAsync(CancellationToken? cancellationToken = null) {
         // copy properties
@@ -27,13 +27,14 @@ public class SyncStateResolver(AuthenticatedHomeserverGeneric homeserver, ILogge
         _syncHelper.Filter = Filter;
         _syncHelper.FullState = FullState;
         // run sync or grab from storage if available
-        var sync = storageProvider != null && await storageProvider.ObjectExistsAsync(Since ?? "init")
-            ? await storageProvider.LoadObjectAsync<SyncResponse>(Since ?? "init")
-            : await _syncHelper.SyncAsync(cancellationToken);
+        // var sync = storageProvider != null && await storageProvider.ObjectExistsAsync(Since ?? "init")
+        //     ? await storageProvider.LoadObjectAsync<SyncResponse>(Since ?? "init")
+        //     : await _syncHelper.SyncAsync(cancellationToken);
+        var sync = await _syncHelper.SyncAsync(cancellationToken);
         if (sync is null) return await ContinueAsync(cancellationToken);
 
-        if (storageProvider != null && !await storageProvider.ObjectExistsAsync(Since ?? "init"))
-            await storageProvider.SaveObjectAsync(Since ?? "init", sync);
+        // if (storageProvider != null && !await storageProvider.ObjectExistsAsync(Since ?? "init"))
+            // await storageProvider.SaveObjectAsync(Since ?? "init", sync);
 
         if (MergedState is null) MergedState = sync;
         else MergedState = MergeSyncs(MergedState, sync);
