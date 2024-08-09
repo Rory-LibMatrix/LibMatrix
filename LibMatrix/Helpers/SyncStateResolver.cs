@@ -142,7 +142,7 @@ public class SyncStateResolver(AuthenticatedHomeserverGeneric homeserver, ILogge
         return oldState;
     }
 
-    private SyncResponse.RoomsDataStructure.LeftRoomDataStructure MergeLeftRoomDataStructure(SyncResponse.RoomsDataStructure.LeftRoomDataStructure oldData,
+    private static SyncResponse.RoomsDataStructure.LeftRoomDataStructure MergeLeftRoomDataStructure(SyncResponse.RoomsDataStructure.LeftRoomDataStructure oldData,
         SyncResponse.RoomsDataStructure.LeftRoomDataStructure newData) {
         oldData.AccountData ??= new EventList();
         oldData.AccountData.Events ??= [];
@@ -165,7 +165,7 @@ public class SyncStateResolver(AuthenticatedHomeserverGeneric homeserver, ILogge
         return oldData;
     }
 
-    private SyncResponse.RoomsDataStructure.InvitedRoomDataStructure MergeInvitedRoomDataStructure(SyncResponse.RoomsDataStructure.InvitedRoomDataStructure oldData,
+    private static SyncResponse.RoomsDataStructure.InvitedRoomDataStructure MergeInvitedRoomDataStructure(SyncResponse.RoomsDataStructure.InvitedRoomDataStructure oldData,
         SyncResponse.RoomsDataStructure.InvitedRoomDataStructure newData) {
         oldData.InviteState ??= new EventList();
         oldData.InviteState.Events ??= [];
@@ -175,7 +175,7 @@ public class SyncStateResolver(AuthenticatedHomeserverGeneric homeserver, ILogge
         return oldData;
     }
 
-    private SyncResponse.RoomsDataStructure.JoinedRoomDataStructure MergeJoinedRoomDataStructure(SyncResponse.RoomsDataStructure.JoinedRoomDataStructure oldData,
+    private static SyncResponse.RoomsDataStructure.JoinedRoomDataStructure MergeJoinedRoomDataStructure(SyncResponse.RoomsDataStructure.JoinedRoomDataStructure oldData,
         SyncResponse.RoomsDataStructure.JoinedRoomDataStructure newData) {
         oldData.AccountData ??= new EventList();
         oldData.AccountData.Events ??= [];

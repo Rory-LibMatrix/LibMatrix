@@ -60,7 +60,7 @@ public class MatrixHttpClient {
         typeof(HttpRequestHeaders).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, [], null)?.Invoke([]) as HttpRequestHeaders ??
         throw new InvalidOperationException("Failed to create HttpRequestHeaders");
 
-    private JsonSerializerOptions GetJsonSerializerOptions(JsonSerializerOptions? options = null) {
+    private static JsonSerializerOptions GetJsonSerializerOptions(JsonSerializerOptions? options = null) {
         options ??= new JsonSerializerOptions();
         options.Converters.Add(new JsonFloatStringConverter());
         options.Converters.Add(new JsonDoubleStringConverter());
@@ -237,7 +237,7 @@ public class MatrixHttpClient {
         await foreach (var resp in result) yield return resp;
     }
 
-    public async Task<bool> CheckSuccessStatus(string url) {
+    public static async Task<bool> CheckSuccessStatus(string url) {
         //cors causes failure, try to catch
         try {
             var resp = await Client.GetAsync(url);

@@ -85,9 +85,9 @@ public class HomeserverResolverService {
             clientWellKnown ??= await _httpClient.TryGetFromJsonAsync<ClientWellKnown>($"http://{homeserver}/.well-known/matrix/client");
 
             if (clientWellKnown is null) {
-                if (await _httpClient.CheckSuccessStatus($"https://{homeserver}/_matrix/client/versions"))
+                if (await MatrixHttpClient.CheckSuccessStatus($"https://{homeserver}/_matrix/client/versions"))
                     return $"https://{homeserver}";
-                if (await _httpClient.CheckSuccessStatus($"http://{homeserver}/_matrix/client/versions"))
+                if (await MatrixHttpClient.CheckSuccessStatus($"http://{homeserver}/_matrix/client/versions"))
                     return $"http://{homeserver}";
             }
         }
@@ -122,16 +122,16 @@ public class HomeserverResolverService {
             var resolved = serverWellKnown.Homeserver;
             if (resolved.StartsWith("https://") || resolved.StartsWith("http://"))
                 return resolved;
-            if (await _httpClient.CheckSuccessStatus($"https://{resolved}/_matrix/federation/v1/version"))
+            if (await MatrixHttpClient.CheckSuccessStatus($"https://{resolved}/_matrix/federation/v1/version"))
                 return $"https://{resolved}";
-            if (await _httpClient.CheckSuccessStatus($"http://{resolved}/_matrix/federation/v1/version"))
+            if (await MatrixHttpClient.CheckSuccessStatus($"http://{resolved}/_matrix/federation/v1/version"))
                 return $"http://{resolved}";
             _logger.LogWarning("Server well-known points to invalid server: {resolved}", resolved);
         }
 
         // fallback: most servers host C2S and S2S on the same domain
         var clientUrl = await _tryResolveClientEndpoint(homeserver);
-        if (clientUrl is not null && await _httpClient.CheckSuccessStatus($"{clientUrl}/_matrix/federation/v1/version"))
+        if (clientUrl is not null && await MatrixHttpClient.CheckSuccessStatus($"{clientUrl}/_matrix/federation/v1/version"))
             return clientUrl;
 
         _logger.LogInformation("No server well-known for {server}...", homeserver);
