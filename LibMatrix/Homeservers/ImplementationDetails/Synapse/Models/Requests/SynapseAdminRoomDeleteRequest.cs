@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace LibMatrix.Homeservers.ImplementationDetails.Synapse.Models.Requests;
 
-public class AdminRoomDeleteRequest {
+public class SynapseAdminRoomDeleteRequest {
     [JsonPropertyName("new_room_user_id")]
     public string? NewRoomUserId { get; set; }
 

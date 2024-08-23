@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using LibMatrix.EventTypes.Spec.Ephemeral;
 using LibMatrix.EventTypes.Spec.State;
 
 namespace LibMatrix.Responses;
@@ -64,10 +65,9 @@ public class SyncResponse {
             public EventList? State { get; set; }
 
             public override string ToString() {
-                var lastEvent = Timeline?.Events?.LastOrDefault(x=>x.Type == "m.room.member");
+                var lastEvent = Timeline?.Events?.LastOrDefault(x => x.Type == "m.room.member");
                 var membership = (lastEvent?.TypedContent as RoomMemberEventContent);
                 return $"LeftRoomDataStructure: {lastEvent?.Sender} {membership?.Membership} ({membership?.Reason})";
-
             }
         }
 
@@ -132,5 +132,16 @@ public class SyncResponse {
             [JsonPropertyName("invite_state")]
             public EventList? InviteState { get; set; }
         }
+    }
+
+    public long GetDerivedSyncTime() {
+        return ((long[]) [
+            AccountData?.Events?.Max(x => x.OriginServerTs) ?? 0,
+            Presence?.Events?.Max(x => x.OriginServerTs) ?? 0,
+            ToDevice?.Events?.Max(x => x.OriginServerTs) ?? 0,
+            Rooms?.Join?.Values?.Max(x => x.Timeline?.Events?.Max(y => y.OriginServerTs)) ?? 0,
+            Rooms?.Invite?.Values?.Max(x => x.InviteState?.Events?.Max(y => y.OriginServerTs)) ?? 0,
+            Rooms?.Leave?.Values?.Max(x => x.Timeline?.Events?.Max(y => y.OriginServerTs)) ?? 0
+        ]).Max();
     }
 }

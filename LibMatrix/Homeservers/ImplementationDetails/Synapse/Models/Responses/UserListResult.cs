@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace LibMatrix.Homeservers.ImplementationDetails.Synapse.Models.Responses;
 
-public class SynapseAdminEventReportListResult {
+public class SynapseAdminUserListResult {
     [JsonPropertyName("offset")]
     public int Offset { get; set; }
 
@@ -12,10 +12,10 @@ public class SynapseAdminEventReportListResult {
     [JsonPropertyName("next_token")]
     public string? NextToken { get; set; }
 
-    [JsonPropertyName("event_reports")]
-    public List<SynapseAdminEventReportListResultReport> Reports { get; set; } = new();
+    [JsonPropertyName("users")]
+    public List<SynapseAdminUserListResultUser> Users { get; set; } = new();
 
-    public class SynapseAdminEventReportListResultReport {
+    public class SynapseAdminUserListResultUser {
         [JsonPropertyName("name")]
         public string Name { get; set; }
 
@@ -52,7 +52,20 @@ public class SynapseAdminEventReportListResult {
         [JsonPropertyName("locked")]
         public bool Locked { get; set; }
 
+        // Requires enabling MSC3866
         [JsonPropertyName("approved")]
-        public bool Approved { get; set; }
+        public bool? Approved { get; set; }
+
+        [JsonIgnore]
+        public DateTime CreationTsDateTime {
+            get => DateTimeOffset.FromUnixTimeMilliseconds(CreationTs).DateTime;
+            set => CreationTs = new DateTimeOffset(value).ToUnixTimeMilliseconds();
+        }
+
+        [JsonIgnore]
+        public DateTime? LastSeenTsDateTime {
+            get => LastSeenTs.HasValue ? DateTimeOffset.FromUnixTimeMilliseconds(LastSeenTs.Value).DateTime : null;
+            set => LastSeenTs = value.HasValue ? new DateTimeOffset(value.Value).ToUnixTimeMilliseconds() : null;
+        }
     }
 }

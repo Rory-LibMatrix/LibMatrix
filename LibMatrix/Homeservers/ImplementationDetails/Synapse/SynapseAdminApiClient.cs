@@ -1,5 +1,7 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using ArcaneLibs.Extensions;
 using LibMatrix.Filters;
 using LibMatrix.Homeservers.ImplementationDetails.Synapse.Models.Filters;
@@ -10,12 +12,13 @@ namespace LibMatrix.Homeservers.ImplementationDetails.Synapse;
 
 public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedHomeserver) {
     // https://github.com/element-hq/synapse/tree/develop/docs/admin_api
+    // https://github.com/element-hq/synapse/tree/develop/docs/usage/administration/admin_api
 
 #region Rooms
 
-    public async IAsyncEnumerable<AdminRoomListResult.AdminRoomListResultRoom> SearchRoomsAsync(int limit = int.MaxValue, int chunkLimit = 250, string orderBy = "name",
-        string dir = "f", string? searchTerm = null, SynapseAdminLocalRoomQueryFilter? localFilter = null) {
-        AdminRoomListResult? res = null;
+    public async IAsyncEnumerable<SynapseAdminRoomListResult.SynapseAdminRoomListResultRoom> SearchRoomsAsync(int limit = int.MaxValue, int chunkLimit = 250,
+        string orderBy = "name", string dir = "f", string? searchTerm = null, SynapseAdminLocalRoomQueryFilter? localFilter = null) {
+        SynapseAdminRoomListResult? res = null;
         var i = 0;
         int? totalRooms = null;
         do {
@@ -26,7 +29,7 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
 
             Console.WriteLine($"--- ADMIN Querying Room List with URL: {url} - Already have {i} items... ---");
 
-            res = await authenticatedHomeserver.ClientHttpClient.GetFromJsonAsync<AdminRoomListResult>(url);
+            res = await authenticatedHomeserver.ClientHttpClient.GetFromJsonAsync<SynapseAdminRoomListResult>(url);
             totalRooms ??= res.TotalRooms;
             Console.WriteLine(res.ToJson(false));
             foreach (var room in res.Rooms) {
@@ -117,7 +120,7 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
 
 #region Users
 
-    public async IAsyncEnumerable<AdminUserListResult.AdminUserListResultUser> SearchUsersAsync(int limit = int.MaxValue, int chunkLimit = 250,
+    public async IAsyncEnumerable<SynapseAdminUserListResult.SynapseAdminUserListResultUser> SearchUsersAsync(int limit = int.MaxValue, int chunkLimit = 250,
         SynapseAdminLocalUserQueryFilter? localFilter = null) {
         // TODO: implement filters
         string? from = null;
@@ -127,7 +130,7 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
             if (!string.IsNullOrWhiteSpace(from)) url = url.AddQuery("from", from);
             Console.WriteLine($"--- ADMIN Querying User List with URL: {url} ---");
             // TODO: implement URI methods in http client
-            var res = await authenticatedHomeserver.ClientHttpClient.GetFromJsonAsync<AdminUserListResult>(url.ToString());
+            var res = await authenticatedHomeserver.ClientHttpClient.GetFromJsonAsync<SynapseAdminUserListResult>(url.ToString());
             foreach (var user in res.Users) {
                 limit--;
                 yield return user;
@@ -170,6 +173,186 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
             from = res.NextToken;
         }
     }
+
+    public async Task<SynapseAdminEventReportListResult.SynapseAdminEventReportListResultReportWithDetails> GetEventReportDetailsAsync(string reportId) {
+        var url = new Uri($"/_synapse/admin/v1/event_reports/{reportId.UrlEncode()}", UriKind.Relative);
+        return await authenticatedHomeserver.ClientHttpClient
+            .GetFromJsonAsync<SynapseAdminEventReportListResult.SynapseAdminEventReportListResultReportWithDetails>(url.ToString());
+    }
+
+    // Utility function to get details straight away
+    public async IAsyncEnumerable<SynapseAdminEventReportListResult.SynapseAdminEventReportListResultReportWithDetails> GetEventReportsWithDetailsAsync(int limit = int.MaxValue,
+        int chunkLimit = 250, string dir = "f", SynapseAdminLocalEventReportQueryFilter? filter = null) {
+        Queue<Task<SynapseAdminEventReportListResult.SynapseAdminEventReportListResultReportWithDetails>> tasks = [];
+        await foreach (var report in GetEventReportsAsync(limit, chunkLimit, dir, filter)) {
+            tasks.Enqueue(GetEventReportDetailsAsync(report.Id));
+            while (tasks.Peek().IsCompleted) yield return await tasks.Dequeue(); // early return if possible
+        }
+
+        while (tasks.Count > 0) yield return await tasks.Dequeue();
+    }
+
+    public async Task DeleteEventReportAsync(string reportId) {
+        var url = new Uri($"/_synapse/admin/v1/event_reports/{reportId.UrlEncode()}", UriKind.Relative);
+        await authenticatedHomeserver.ClientHttpClient.DeleteAsync(url.ToString());
+    }
+
+#endregion
+
+#region Background Updates
+
+    public async Task<bool> GetBackgroundUpdatesEnabledAsync() {
+        var url = new Uri("/_synapse/admin/v1/background_updates/enabled", UriKind.Relative);
+        // The return type is technically wrong, but includes the field we want.
+        var resp = await authenticatedHomeserver.ClientHttpClient.GetFromJsonAsync<SynapseAdminBackgroundUpdateStatusResponse>(url.ToString());
+        return resp.Enabled;
+    }
+
+    public async Task<bool> SetBackgroundUpdatesEnabledAsync(bool enabled) {
+        var url = new Uri("/_synapse/admin/v1/background_updates/enabled", UriKind.Relative);
+        // The used types are technically wrong, but include the field we want.
+        var resp = await authenticatedHomeserver.ClientHttpClient.PostAsJsonAsync<JsonObject>(url.ToString(), new JsonObject {
+            ["enabled"] = enabled
+        });
+        var json = await resp.Content.ReadFromJsonAsync<SynapseAdminBackgroundUpdateStatusResponse>();
+        return json!.Enabled;
+    }
+
+    public async Task<SynapseAdminBackgroundUpdateStatusResponse> GetBackgroundUpdatesStatusAsync() {
+        var url = new Uri("/_synapse/admin/v1/background_updates/status", UriKind.Relative);
+        return await authenticatedHomeserver.ClientHttpClient.GetFromJsonAsync<SynapseAdminBackgroundUpdateStatusResponse>(url.ToString());
+    }
+
+    /// <summary>
+    /// Run a background job
+    /// </summary>
+    /// <param name="jobName">One of "populate_stats_process_rooms" or "regenerate_directory"</param>
+    public async Task RunBackgroundJobsAsync(string jobName) {
+        var url = new Uri("/_synapse/admin/v1/background_updates/run", UriKind.Relative);
+        await authenticatedHomeserver.ClientHttpClient.PostAsJsonAsync(url.ToString(), new JsonObject() {
+            ["job_name"] = jobName
+        });
+    }
+
+#endregion
+
+#region Federation
+
+    public async IAsyncEnumerable<SynapseAdminDestinationListResult.SynapseAdminDestinationListResultDestination> GetFederationDestinationsAsync(int limit = int.MaxValue,
+        int chunkLimit = 250) {
+        string? from = null;
+        while (limit > 0) {
+            var url = new Uri("/_synapse/admin/v1/federation/destinations", UriKind.Relative);
+            url = url.AddQuery("limit", Math.Min(limit, chunkLimit).ToString());
+            if (!string.IsNullOrWhiteSpace(from)) url = url.AddQuery("from", from);
+            Console.WriteLine($"--- ADMIN Querying Federation Destinations with URL: {url} ---");
+            var res = await authenticatedHomeserver.ClientHttpClient.GetFromJsonAsync<SynapseAdminDestinationListResult>(url.ToString());
+            foreach (var dest in res.Destinations) {
+                limit--;
+                yield return dest;
+            }
+        }
+    }
+
+    public async Task<SynapseAdminDestinationListResult.SynapseAdminDestinationListResultDestination> GetFederationDestinationDetailsAsync(string destination) {
+        var url = new Uri($"/_synapse/admin/v1/federation/destinations/{destination}", UriKind.Relative);
+        return await authenticatedHomeserver.ClientHttpClient.GetFromJsonAsync<SynapseAdminDestinationListResult.SynapseAdminDestinationListResultDestination>(url.ToString());
+    }
+
+    public async IAsyncEnumerable<SynapseAdminDestinationRoomListResult.SynapseAdminDestinationRoomListResultRoom> GetFederationDestinationRoomsAsync(string destination,
+        int limit = int.MaxValue, int chunkLimit = 250) {
+        string? from = null;
+        while (limit > 0) {
+            var url = new Uri($"/_synapse/admin/v1/federation/destinations/{destination}/rooms", UriKind.Relative);
+            url = url.AddQuery("limit", Math.Min(limit, chunkLimit).ToString());
+            if (!string.IsNullOrWhiteSpace(from)) url = url.AddQuery("from", from);
+            Console.WriteLine($"--- ADMIN Querying Federation Destination Rooms with URL: {url} ---");
+            var res = await authenticatedHomeserver.ClientHttpClient.GetFromJsonAsync<SynapseAdminDestinationRoomListResult>(url.ToString());
+            foreach (var room in res.Rooms) {
+                limit--;
+                yield return room;
+            }
+        }
+    }
+
+    public async Task ResetFederationConnectionTimeoutAsync(string destination) {
+        await authenticatedHomeserver.ClientHttpClient.PostAsJsonAsync($"/_synapse/admin/v1/federation/destinations/{destination}/reset_connection", new JsonObject());
+    }
+
+#endregion
+
+#region Registration Tokens
+
+    // does not support pagination
+    public async Task<List<SynapseAdminRegistrationTokenListResult.SynapseAdminRegistrationTokenListResultToken>> GetRegistrationTokensAsync() {
+        var url = new Uri("/_synapse/admin/v1/registration_tokens", UriKind.Relative);
+        var resp = await authenticatedHomeserver.ClientHttpClient.GetFromJsonAsync<SynapseAdminRegistrationTokenListResult>(url.ToString());
+        return resp.RegistrationTokens;
+    }
+
+    public async Task<SynapseAdminRegistrationTokenListResult.SynapseAdminRegistrationTokenListResultToken> GetRegistrationTokenAsync(string token) {
+        var url = new Uri($"/_synapse/admin/v1/registration_tokens/{token.UrlEncode()}", UriKind.Relative);
+        var resp =
+            await authenticatedHomeserver.ClientHttpClient.GetFromJsonAsync<SynapseAdminRegistrationTokenListResult.SynapseAdminRegistrationTokenListResultToken>(url.ToString());
+        return resp;
+    }
+
+    public async Task<SynapseAdminRegistrationTokenListResult.SynapseAdminRegistrationTokenListResultToken> CreateRegistrationTokenAsync(
+        SynapseAdminRegistrationTokenCreateRequest request) {
+        var url = new Uri("/_synapse/admin/v1/", UriKind.Relative);
+        var resp = await authenticatedHomeserver.ClientHttpClient.PostAsJsonAsync(url.ToString(), request);
+        var token = await resp.Content.ReadFromJsonAsync<SynapseAdminRegistrationTokenListResult.SynapseAdminRegistrationTokenListResultToken>();
+        return token!;
+    }
+
+    public async Task<SynapseAdminRegistrationTokenListResult.SynapseAdminRegistrationTokenListResultToken> UpdateRegistrationTokenAsync(string token,
+        SynapseAdminRegistrationTokenUpdateRequest request) {
+        var url = new Uri($"/_synapse/admin/v1/registration_tokens/{token.UrlEncode()}", UriKind.Relative);
+        var resp = await authenticatedHomeserver.ClientHttpClient.PutAsJsonAsync(url.ToString(), request);
+        return await resp.Content.ReadFromJsonAsync<SynapseAdminRegistrationTokenListResult.SynapseAdminRegistrationTokenListResultToken>();
+    }
+
+    public async Task DeleteRegistrationTokenAsync(string token) {
+        var url = new Uri($"/_synapse/admin/v1/registration_tokens/{token.UrlEncode()}", UriKind.Relative);
+        await authenticatedHomeserver.ClientHttpClient.DeleteAsync(url.ToString());
+    }
+
+#endregion
+
+#region Account Validity
+
+    // Does anyone even use this?
+    // README: https://github.com/matrix-org/synapse/issues/15271
+    // -> Don't implement unless requested, if not for this feature almost never being used.
+
+#endregion
+
+#region Experimental Features
+
+    public async Task<Dictionary<string, bool>> GetExperimentalFeaturesAsync(string userId) {
+        var url = new Uri($"/_synapse/admin/v1/experimental_features/{userId.UrlEncode()}", UriKind.Relative);
+        var resp = await authenticatedHomeserver.ClientHttpClient.GetFromJsonAsync<JsonObject>(url.ToString());
+        return resp["features"]!.GetValue<Dictionary<string, bool>>();
+    }
+
+    public async Task SetExperimentalFeaturesAsync(string userId, Dictionary<string, bool> features) {
+        var url = new Uri($"/_synapse/admin/v1/experimental_features/{userId.UrlEncode()}", UriKind.Relative);
+        await authenticatedHomeserver.ClientHttpClient.PostAsJsonAsync<JsonObject>(url.ToString(), new JsonObject {
+            ["features"] = JsonSerializer.Deserialize<JsonObject>(features.ToJson())
+        });
+    }
+
+#endregion
+
+#region Media
+
+    public async Task<SynapseAdminRoomMediaListResult> GetRoomMediaAsync(string roomId) {
+        var url = new Uri($"/_synapse/admin/v1/rooms/{roomId.UrlEncode()}/media", UriKind.Relative);
+        return await authenticatedHomeserver.ClientHttpClient.GetFromJsonAsync<SynapseAdminRoomMediaListResult>(url.ToString());
+    }
+
+    // This is in the user admin API section
+    // public async IAsyncEnumerable<SynapseAdminRoomMediaListResult>
 
 #endregion
 }

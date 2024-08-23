@@ -255,5 +255,10 @@ public class MatrixHttpClient {
         };
         return await SendAsync(request, cancellationToken);
     }
+
+    public async Task DeleteAsync(string url) {
+        var request = new HttpRequestMessage(HttpMethod.Delete, url);
+        await SendAsync(request);
+    }
 }
 #endif

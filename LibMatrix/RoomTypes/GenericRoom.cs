@@ -328,8 +328,8 @@ public class GenericRoom {
         catch {
             try {
                 var alias = await GetCanonicalAliasAsync();
-                if (alias?.Alias is not null) return alias.Alias;
-                throw new Exception("No name or alias");
+                if (!string.IsNullOrWhiteSpace(alias?.Alias)) return alias.Alias;
+                throw new Exception("No alias");
             }
             catch {
                 try {
@@ -337,7 +337,8 @@ public class GenericRoom {
                     var memberList = new List<string>();
                     var memberCount = 0;
                     await foreach (var member in members)
-                        memberList.Add(member.RawContent?["displayname"]?.GetValue<string>() ?? "");
+                        if (member.StateKey != Homeserver.UserId)
+                            memberList.Add(member.RawContent?["displayname"]?.GetValue<string>() ?? "");
                     memberCount = memberList.Count;
                     memberList.RemoveAll(string.IsNullOrWhiteSpace);
                     memberList = memberList.OrderBy(x => x).ToList();
@@ -431,7 +432,7 @@ public class GenericRoom {
 
         return await res.Content.ReadFromJsonAsync<T>();
     }
-    
+
     public async Task<T?> GetRoomAccountDataOrNullAsync<T>(string key) {
         try {
             return await GetRoomAccountDataAsync<T>(key);

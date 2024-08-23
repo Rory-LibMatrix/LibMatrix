@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace LibMatrix.Homeservers.ImplementationDetails.Synapse.Models.Responses;
 
-public class AdminRoomListResult {
+public class SynapseAdminRoomListResult {
     [JsonPropertyName("offset")]
     public int Offset { get; set; }
 
@@ -16,9 +16,9 @@ public class AdminRoomListResult {
     public int? PrevBatch { get; set; }
 
     [JsonPropertyName("rooms")]
-    public List<AdminRoomListResultRoom> Rooms { get; set; } = new();
+    public List<SynapseAdminRoomListResultRoom> Rooms { get; set; } = new();
 
-    public class AdminRoomListResultRoom {
+    public class SynapseAdminRoomListResultRoom {
         [JsonPropertyName("room_id")]
         public required string RoomId { get; set; }
 

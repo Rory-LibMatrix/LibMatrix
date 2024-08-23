@@ -56,6 +56,12 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
 
     public TimeSpan MinimumDelay { get; set; } = new(0);
 
+    public async Task<int> GetUnoptimisedStoreCount() {
+        if (storageProvider is null) return -1;
+        var keys = await storageProvider.GetAllKeysAsync();
+        return keys.Count(x => !x.StartsWith("old/")) - 1;
+    }
+
     private async Task UpdateFilterAsync() {
         if (!string.IsNullOrWhiteSpace(NamedFilterName)) {
             _filterId = await homeserver.NamedCaches.FilterCache.GetOrSetValueAsync(NamedFilterName);
