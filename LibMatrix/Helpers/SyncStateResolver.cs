@@ -129,46 +129,6 @@ public class SyncStateResolver(AuthenticatedHomeserverGeneric homeserver, ILogge
     }
 
     public async Task dev() {
-        // var keys = (await storageProvider?.GetAllKeysAsync()).ToFrozenSet();
-        // var times = new Dictionary<long, List<string>>();
-        // var values = keys.Select(async x => Task.Run(async () => (x, await storageProvider?.LoadObjectAsync<SyncResponse>(x)))).ToAsyncEnumerable();
-        // await foreach (var task in values) {
-        //     var (key, data) = await task;
-        //     if (data is null) continue;
-        //     var derivTime = data.GetDerivedSyncTime();
-        //     if (!times.ContainsKey(derivTime)) times[derivTime] = new();
-        //     times[derivTime].Add(key);
-        // }
-        //
-        // foreach (var (time, ckeys) in times.OrderBy(x => x.Key)) {
-        //     Console.WriteLine($"{time}: {ckeys.Count} keys");
-        // }
-
-        // var map = await GetCheckpointMap();
-        // if (map is null) return;
-        //
-        // var times = new Dictionary<long, List<string>>();
-        // foreach (var (time, keys) in map) {
-        //     Console.WriteLine($"{time}: {keys.Count} keys - calculating times");
-        //     Dictionary<string, Task<SyncResponse?>?> tasks = keys.ToDictionary(x => x, x => storageProvider?.LoadObjectAsync<SyncResponse>(x));
-        //     var nextKey = "init";
-        //     long lastTime = 0;
-        //     while (tasks.ContainsKey(nextKey)) {
-        //         var data = await tasks[nextKey];
-        //         if (data is null) break;
-        //         var derivTime = data.GetDerivedSyncTime();
-        //         if (derivTime == 0) derivTime = lastTime + 1;
-        //         if (!times.ContainsKey(derivTime)) times[derivTime] = new();
-        //         times[derivTime].Add(nextKey);
-        //         lastTime = derivTime;
-        //         nextKey = data.NextBatch;
-        //     }
-        // }
-        //
-        // foreach (var (time, ckeys) in times.OrderBy(x => x.Key)) {
-        //     Console.WriteLine($"{time}: {ckeys.Count} keys");
-        // }
-
         int i = 0;
         var sw = Stopwatch.StartNew();
         var hist = GetSerialisedHistory();
@@ -240,8 +200,6 @@ public class SyncStateResolver(AuthenticatedHomeserverGeneric homeserver, ILogge
             if (!key.StartsWith("old/")) continue;
             var parts = key.Split('/');
             if (parts.Length < 3) continue;
-            // if (!map.ContainsKey(parts[1])) map[parts[1]] = new();
-            // map[parts[1]].Add(parts[2]);
             if (!ulong.TryParse(parts[1], out var checkpoint)) continue;
             if (!map.ContainsKey(checkpoint)) map[checkpoint] = new();
             map[checkpoint].Add(parts[2]);
