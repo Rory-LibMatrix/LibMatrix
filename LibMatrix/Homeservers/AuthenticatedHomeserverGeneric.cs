@@ -48,7 +48,6 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
     public HsNamedCaches NamedCaches { get; set; } = null!;
 
     public GenericRoom GetRoom(string roomId) {
-        if (roomId is null || !roomId.StartsWith("!")) throw new ArgumentException("Room ID must start with !", nameof(roomId));
         return new GenericRoom(this, roomId);
     }
 
@@ -186,6 +185,17 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
 
 #endregion
 
+#region MSC 4133
+
+    public async Task UpdateProfilePropertyAsync(string name, object? value) {
+        var caps = await GetCapabilitiesAsync();
+        if(caps is null) throw new Exception("Failed to get capabilities");
+
+    }
+
+#endregion
+
+    [Obsolete("This method assumes no support for MSC 4069 and MSC 4133")]
     public async Task UpdateProfileAsync(UserProfileResponse? newProfile, bool preserveCustomRoomProfile = true) {
         if (newProfile is null) return;
         Console.WriteLine($"Updating profile for {WhoAmI.UserId} to {newProfile.ToJson(ignoreNull: true)} (preserving room profiles: {preserveCustomRoomProfile})");
@@ -496,7 +506,7 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
         catch (MatrixException e) {
             if (e is not { ErrorCode: "M_UNRECOGNIZED" }) throw;
         }
-        
+
         //fallback to legacy media
         try {
             var res = await ClientHttpClient.GetAsync($"/_matrix/media/v1/preview_url?url={HttpUtility.UrlEncode(url)}");
@@ -505,7 +515,7 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
         catch (MatrixException e) {
             if (e is not { ErrorCode: "M_UNRECOGNIZED" }) throw;
         }
-        
+
         throw new LibMatrixException() {
             ErrorCode = LibMatrixException.ErrorCodes.M_UNSUPPORTED,
             Error = "Failed to download URL preview"
@@ -513,4 +523,8 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
     }
 
 #endregion
+    private class CapabilitiesResponse {
+        [JsonPropertyName("capabilities")]
+        public Dictionary<string, object>? Capabilities { get; set; }
+    }
 }
