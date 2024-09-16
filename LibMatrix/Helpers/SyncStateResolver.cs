@@ -1,6 +1,7 @@
 using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Text;
 using ArcaneLibs.Extensions;
 using LibMatrix.Extensions;
 using LibMatrix.Filters;
@@ -40,15 +41,16 @@ public class SyncStateResolver(AuthenticatedHomeserverGeneric homeserver, ILogge
         return (sync, MergedState);
     }
 
-    public async Task OptimiseStore() {
+    public async Task OptimiseStore(Action<int, int>? progressCallback = null) {
         if (storageProvider is null) return;
         if (!await storageProvider.ObjectExistsAsync("init")) return;
 
         var totalSw = Stopwatch.StartNew();
         Console.Write("Optimising sync store...");
         var initLoadTask = storageProvider.LoadObjectAsync<SyncResponse>("init");
-        var keys = (await storageProvider.GetAllKeysAsync()).Where(x=>!x.StartsWith("old/")).ToFrozenSet();
+        var keys = (await storageProvider.GetAllKeysAsync()).Where(x => !x.StartsWith("old/")).ToFrozenSet();
         var count = keys.Count - 1;
+        int total = count;
         Console.WriteLine($"Found {count} entries to optimise.");
 
         var merged = await initLoadTask;
@@ -64,6 +66,7 @@ public class SyncStateResolver(AuthenticatedHomeserverGeneric homeserver, ILogge
 
         var moveTasks = new List<Task>();
 
+        Dictionary<string, Dictionary<string, TimeSpan>> traces = [];
         while (keys.Contains(merged.NextBatch)) {
             Console.Write($"Merging {merged.NextBatch}, {--count} remaining... ");
             var sw = Stopwatch.StartNew();
@@ -77,28 +80,36 @@ public class SyncStateResolver(AuthenticatedHomeserverGeneric homeserver, ILogge
             moveTasks.Add(storageProvider.MoveObjectAsync(merged.NextBatch, $"{oldPath}/{merged.NextBatch}"));
             Console.Write($"Move {sw.GetElapsedAndRestart().TotalMilliseconds}ms... ");
 
-            merged = MergeSyncs(merged, next);
+            var trace = new Dictionary<string, TimeSpan>();
+            traces[merged.NextBatch] = trace;
+            merged = MergeSyncs(merged, next, trace);
             Console.Write($"Merge {sw.GetElapsedAndRestart().TotalMilliseconds}ms... ");
             Console.WriteLine($"Total {swt.Elapsed.TotalMilliseconds}ms");
             // Console.WriteLine($"Merged {merged.NextBatch}, {--count} remaining...");
+            progressCallback?.Invoke(count, total);
         }
+
+        var traceString = string.Join("\n", traces.Select(x => $"{x.Key}\t{x.Value.ToJson(indent: false)}"));
+        var ms = new MemoryStream(Encoding.UTF8.GetBytes(traceString));
+        await storageProvider.SaveStreamAsync($"traces/{oldPath}", ms);
 
         await storageProvider.SaveObjectAsync("init", merged);
         await Task.WhenAll(moveTasks);
-        
+
         Console.WriteLine($"Optimised store in {totalSw.Elapsed.TotalMilliseconds}ms");
+        Console.WriteLine($"Insertions: {EnumerableExtensions.insertions}, replacements: {EnumerableExtensions.replacements}");
     }
 
     /// <summary>
     /// Remove all but initial sync and last checkpoint
     /// </summary>
     public async Task RemoveOldSnapshots() {
-        if(storageProvider is null) return;
+        if (storageProvider is null) return;
         var sw = Stopwatch.StartNew();
 
         var map = await GetCheckpointMap();
         if (map is null) return;
-        if(map.Count < 3) return;
+        if (map.Count < 3) return;
 
         var toRemove = map.Keys.Skip(1).Take(map.Count - 2).ToList();
         Console.Write("Cleaning up old snapshots: ");
@@ -109,6 +120,7 @@ public class SyncStateResolver(AuthenticatedHomeserverGeneric homeserver, ILogge
                 await storageProvider?.DeleteObjectAsync(path);
             }
         }
+
         Console.WriteLine("Done!");
         Console.WriteLine($"Removed {toRemove.Count} old snapshots in {sw.Elapsed.TotalMilliseconds}ms");
     }
@@ -137,6 +149,7 @@ public class SyncStateResolver(AuthenticatedHomeserverGeneric homeserver, ILogge
             // Console.WriteLine($"[{++i}] {key} -> {resp.NextBatch} ({resp.GetDerivedSyncTime()})");
             i++;
         }
+
         Console.WriteLine($"Iterated {i} syncResponses in {sw.Elapsed}");
         Environment.Exit(0);
     }
@@ -188,7 +201,7 @@ public class SyncStateResolver(AuthenticatedHomeserverGeneric homeserver, ILogge
             if (resp.GetDerivedSyncTime() > unixTime) break;
             merged = MergeSyncs(merged, resp);
         }
-        
+
         return merged;
     }
 
@@ -208,29 +221,29 @@ public class SyncStateResolver(AuthenticatedHomeserverGeneric homeserver, ILogge
         return map.OrderBy(x => x.Key).ToImmutableSortedDictionary(x => x.Key, x => x.Value.ToFrozenSet());
     }
 
-    private SyncResponse MergeSyncs(SyncResponse oldSync, SyncResponse newSync) {
+    private SyncResponse MergeSyncs(SyncResponse oldSync, SyncResponse newSync, Dictionary<string, TimeSpan>? trace = null) {
+        var sw = Stopwatch.StartNew();
         oldSync.NextBatch = newSync.NextBatch ?? oldSync.NextBatch;
 
-        oldSync.AccountData ??= new EventList();
-        oldSync.AccountData.Events ??= [];
-        if (newSync.AccountData?.Events is not null)
-            oldSync.AccountData.Events.MergeStateEventLists(newSync.AccountData?.Events ?? []);
+        oldSync.AccountData = MergeEventList(oldSync.AccountData, newSync.AccountData);
+        trace?.Add("AccountData", sw.GetElapsedAndRestart());
 
-        oldSync.Presence ??= new();
-        oldSync.Presence.Events?.ReplaceBy(newSync.Presence?.Events ?? [], (oldState, newState) => oldState.Sender == newState.Sender && oldState.Type == newState.Type);
+        oldSync.Presence = MergeEventListBy(oldSync.Presence, newSync.Presence, (oldState, newState) => oldState.Sender == newState.Sender && oldState.Type == newState.Type);
+        trace?.Add("Presence", sw.GetElapsedAndRestart());
 
+        // TODO: can this be cleaned up?
         oldSync.DeviceOneTimeKeysCount ??= new();
         if (newSync.DeviceOneTimeKeysCount is not null)
             foreach (var (key, value) in newSync.DeviceOneTimeKeysCount)
                 oldSync.DeviceOneTimeKeysCount[key] = value;
+        trace?.Add("DeviceOneTimeKeysCount", sw.GetElapsedAndRestart());
 
         if (newSync.Rooms is not null)
-            oldSync.Rooms = MergeRoomsDataStructure(oldSync.Rooms, newSync.Rooms);
+            oldSync.Rooms = MergeRoomsDataStructure(oldSync.Rooms, newSync.Rooms, trace);
+        trace?.Add("Rooms", sw.GetElapsedAndRestart());
 
-        oldSync.ToDevice ??= new EventList();
-        oldSync.ToDevice.Events ??= [];
-        if (newSync.ToDevice?.Events is not null)
-            oldSync.ToDevice.Events.MergeStateEventLists(newSync.ToDevice?.Events ?? []);
+        oldSync.ToDevice = MergeEventList(oldSync.ToDevice, newSync.ToDevice);
+        trace?.Add("ToDevice", sw.GetElapsedAndRestart());
 
         oldSync.DeviceLists ??= new SyncResponse.DeviceListsDataStructure();
         oldSync.DeviceLists.Changed ??= [];
@@ -241,125 +254,171 @@ public class SyncStateResolver(AuthenticatedHomeserverGeneric homeserver, ILogge
                 oldSync.DeviceLists.Changed.Add(s);
             }
 
+        trace?.Add("DeviceLists.Changed", sw.GetElapsedAndRestart());
+
         if (newSync.DeviceLists?.Left is not null)
             foreach (var s in newSync.DeviceLists.Left!) {
                 oldSync.DeviceLists.Changed.Remove(s);
                 oldSync.DeviceLists.Left.Add(s);
             }
 
+        trace?.Add("DeviceLists.Left", sw.GetElapsedAndRestart());
+
         return oldSync;
-    }
-
-    private List<StateEventResponse>? MergePresenceEvents(List<StateEventResponse>? oldEvents, List<StateEventResponse>? newEvents) {
-        if (oldEvents is null) return newEvents;
-        if (newEvents is null) return oldEvents;
-
-        foreach (var newEvent in newEvents) {
-            oldEvents.RemoveAll(x => x.Sender == newEvent.Sender && x.Type == newEvent.Type);
-            oldEvents.Add(newEvent);
-        }
-
-        return oldEvents;
     }
 
 #region Merge rooms
 
-    private SyncResponse.RoomsDataStructure MergeRoomsDataStructure(SyncResponse.RoomsDataStructure? oldState, SyncResponse.RoomsDataStructure newState) {
+    private SyncResponse.RoomsDataStructure MergeRoomsDataStructure(SyncResponse.RoomsDataStructure? oldState, SyncResponse.RoomsDataStructure newState,
+        Dictionary<string, TimeSpan>? trace) {
+        var sw = Stopwatch.StartNew();
         if (oldState is null) return newState;
-        oldState.Join ??= new Dictionary<string, SyncResponse.RoomsDataStructure.JoinedRoomDataStructure>();
-        foreach (var (key, value) in newState.Join ?? new Dictionary<string, SyncResponse.RoomsDataStructure.JoinedRoomDataStructure>())
-            if (!oldState.Join.ContainsKey(key)) oldState.Join[key] = value;
-            else oldState.Join[key] = MergeJoinedRoomDataStructure(oldState.Join[key], value);
 
-        oldState.Invite ??= new Dictionary<string, SyncResponse.RoomsDataStructure.InvitedRoomDataStructure>();
-        foreach (var (key, value) in newState.Invite ?? new Dictionary<string, SyncResponse.RoomsDataStructure.InvitedRoomDataStructure>())
-            if (!oldState.Invite.ContainsKey(key)) oldState.Invite[key] = value;
-            else oldState.Invite[key] = MergeInvitedRoomDataStructure(oldState.Invite[key], value);
+        if (newState.Join is { Count: > 0 })
+            if (oldState.Join is null)
+                oldState.Join = newState.Join;
+            else
+                foreach (var (key, value) in newState.Join)
+                    if (!oldState.Join.TryAdd(key, value))
+                        oldState.Join[key] = MergeJoinedRoomDataStructure(oldState.Join[key], value, trace);
+        trace?.Add("MergeRoomsDataStructure.Join", sw.GetElapsedAndRestart());
 
-        oldState.Leave ??= new Dictionary<string, SyncResponse.RoomsDataStructure.LeftRoomDataStructure>();
-        foreach (var (key, value) in newState.Leave ?? new Dictionary<string, SyncResponse.RoomsDataStructure.LeftRoomDataStructure>()) {
-            if (!oldState.Leave.ContainsKey(key)) oldState.Leave[key] = value;
-            else oldState.Leave[key] = MergeLeftRoomDataStructure(oldState.Leave[key], value);
-            if (oldState.Invite.ContainsKey(key)) oldState.Invite.Remove(key);
-            if (oldState.Join.ContainsKey(key)) oldState.Join.Remove(key);
-        }
+        if (newState.Invite is { Count: > 0 })
+            if (oldState.Invite is null)
+                oldState.Invite = newState.Invite;
+            else
+                foreach (var (key, value) in newState.Invite)
+                    if (!oldState.Invite.TryAdd(key, value))
+                        oldState.Invite[key] = MergeInvitedRoomDataStructure(oldState.Invite[key], value, trace);
+        trace?.Add("MergeRoomsDataStructure.Invite", sw.GetElapsedAndRestart());
+
+        if (newState.Leave is { Count: > 0 })
+            if (oldState.Leave is null)
+                oldState.Leave = newState.Leave;
+            else
+                foreach (var (key, value) in newState.Leave) {
+                    if (!oldState.Leave.TryAdd(key, value))
+                        oldState.Leave[key] = MergeLeftRoomDataStructure(oldState.Leave[key], value, trace);
+                    if (oldState.Invite?.ContainsKey(key) ?? false) oldState.Invite.Remove(key);
+                    if (oldState.Join?.ContainsKey(key) ?? false) oldState.Join.Remove(key);
+                }
+        trace?.Add("MergeRoomsDataStructure.Leave", sw.GetElapsedAndRestart());
 
         return oldState;
     }
 
     private static SyncResponse.RoomsDataStructure.LeftRoomDataStructure MergeLeftRoomDataStructure(SyncResponse.RoomsDataStructure.LeftRoomDataStructure oldData,
-        SyncResponse.RoomsDataStructure.LeftRoomDataStructure newData) {
-        oldData.AccountData ??= new EventList();
-        oldData.AccountData.Events ??= [];
-        oldData.Timeline ??= new SyncResponse.RoomsDataStructure.JoinedRoomDataStructure.TimelineDataStructure();
-        oldData.Timeline.Events ??= [];
-        oldData.State ??= new EventList();
-        oldData.State.Events ??= [];
+        SyncResponse.RoomsDataStructure.LeftRoomDataStructure newData, Dictionary<string, TimeSpan>? trace) {
+        var sw = Stopwatch.StartNew();
 
-        if (newData.AccountData?.Events is not null)
-            oldData.AccountData.Events.MergeStateEventLists(newData.AccountData?.Events ?? []);
+        oldData.AccountData = MergeEventList(oldData.AccountData, newData.AccountData);
+        trace?.Add($"LeftRoomDataStructure.AccountData/{oldData.GetHashCode()}", sw.GetElapsedAndRestart());
 
-        if (newData.Timeline?.Events is not null)
-            oldData.Timeline.Events.MergeStateEventLists(newData.Timeline?.Events ?? []);
+        oldData.Timeline = AppendEventList(oldData.Timeline, newData.Timeline) as SyncResponse.RoomsDataStructure.JoinedRoomDataStructure.TimelineDataStructure
+                           ?? throw new InvalidOperationException("Merged room timeline was not TimelineDataStructure");
         oldData.Timeline.Limited = newData.Timeline?.Limited ?? oldData.Timeline.Limited;
         oldData.Timeline.PrevBatch = newData.Timeline?.PrevBatch ?? oldData.Timeline.PrevBatch;
+        trace?.Add($"LeftRoomDataStructure.Timeline/{oldData.GetHashCode()}", sw.GetElapsedAndRestart());
 
-        if (newData.State?.Events is not null)
-            oldData.State.Events.MergeStateEventLists(newData.State?.Events ?? []);
+        oldData.State = MergeEventList(oldData.State, newData.State);
+        trace?.Add($"LeftRoomDataStructure.State/{oldData.GetHashCode()}", sw.GetElapsedAndRestart());
 
         return oldData;
     }
 
     private static SyncResponse.RoomsDataStructure.InvitedRoomDataStructure MergeInvitedRoomDataStructure(SyncResponse.RoomsDataStructure.InvitedRoomDataStructure oldData,
-        SyncResponse.RoomsDataStructure.InvitedRoomDataStructure newData) {
-        oldData.InviteState ??= new EventList();
-        oldData.InviteState.Events ??= [];
-        if (newData.InviteState?.Events is not null)
-            oldData.InviteState.Events.MergeStateEventLists(newData.InviteState?.Events ?? []);
+        SyncResponse.RoomsDataStructure.InvitedRoomDataStructure newData, Dictionary<string, TimeSpan>? trace) {
+        var sw = Stopwatch.StartNew();
+        oldData.InviteState = MergeEventList(oldData.InviteState, newData.InviteState);
+        trace?.Add($"InvitedRoomDataStructure.InviteState/{oldData.GetHashCode()}", sw.GetElapsedAndRestart());
 
         return oldData;
     }
 
     private static SyncResponse.RoomsDataStructure.JoinedRoomDataStructure MergeJoinedRoomDataStructure(SyncResponse.RoomsDataStructure.JoinedRoomDataStructure oldData,
-        SyncResponse.RoomsDataStructure.JoinedRoomDataStructure newData) {
-        oldData.AccountData ??= new EventList();
-        oldData.AccountData.Events ??= [];
-        oldData.Timeline ??= new SyncResponse.RoomsDataStructure.JoinedRoomDataStructure.TimelineDataStructure();
-        oldData.Timeline.Events ??= [];
-        oldData.State ??= new EventList();
-        oldData.State.Events ??= [];
-        oldData.Ephemeral ??= new EventList();
-        oldData.Ephemeral.Events ??= [];
+        SyncResponse.RoomsDataStructure.JoinedRoomDataStructure newData, Dictionary<string, TimeSpan>? trace) {
+        var sw = Stopwatch.StartNew();
 
-        if (newData.AccountData?.Events is not null)
-            oldData.AccountData.Events.MergeStateEventLists(newData.AccountData?.Events ?? []);
+        oldData.AccountData = MergeEventList(oldData.AccountData, newData.AccountData);
+        trace?.Add($"JoinedRoomDataStructure.AccountData/{oldData.GetHashCode()}", sw.GetElapsedAndRestart());
 
-        if (newData.Timeline?.Events is not null)
-            oldData.Timeline.Events.MergeStateEventLists(newData.Timeline?.Events ?? []);
+        oldData.Timeline = AppendEventList(oldData.Timeline, newData.Timeline) as SyncResponse.RoomsDataStructure.JoinedRoomDataStructure.TimelineDataStructure
+                           ?? throw new InvalidOperationException("Merged room timeline was not TimelineDataStructure");
         oldData.Timeline.Limited = newData.Timeline?.Limited ?? oldData.Timeline.Limited;
         oldData.Timeline.PrevBatch = newData.Timeline?.PrevBatch ?? oldData.Timeline.PrevBatch;
+        trace?.Add($"JoinedRoomDataStructure.Timeline/{oldData.GetHashCode()}", sw.GetElapsedAndRestart());
 
-        if (newData.State?.Events is not null)
-            oldData.State.Events.MergeStateEventLists(newData.State?.Events ?? []);
+        oldData.State = MergeEventList(oldData.State, newData.State);
+        trace?.Add($"JoinedRoomDataStructure.State/{oldData.GetHashCode()}", sw.GetElapsedAndRestart());
 
-        if (newData.Ephemeral?.Events is not null)
-            oldData.Ephemeral.Events.MergeStateEventLists(newData.Ephemeral?.Events ?? []);
+        oldData.Ephemeral = MergeEventList(oldData.Ephemeral, newData.Ephemeral);
+        trace?.Add($"JoinedRoomDataStructure.Ephemeral/{oldData.GetHashCode()}", sw.GetElapsedAndRestart());
 
         oldData.UnreadNotifications ??= new SyncResponse.RoomsDataStructure.JoinedRoomDataStructure.UnreadNotificationsDataStructure();
         oldData.UnreadNotifications.HighlightCount = newData.UnreadNotifications?.HighlightCount ?? oldData.UnreadNotifications.HighlightCount;
         oldData.UnreadNotifications.NotificationCount = newData.UnreadNotifications?.NotificationCount ?? oldData.UnreadNotifications.NotificationCount;
+        trace?.Add($"JoinedRoom$DataStructure.UnreadNotifications/{oldData.GetHashCode()}", sw.GetElapsedAndRestart());
 
-        oldData.Summary ??= new SyncResponse.RoomsDataStructure.JoinedRoomDataStructure.SummaryDataStructure {
-            Heroes = newData.Summary?.Heroes ?? oldData.Summary.Heroes,
-            JoinedMemberCount = newData.Summary?.JoinedMemberCount ?? oldData.Summary.JoinedMemberCount,
-            InvitedMemberCount = newData.Summary?.InvitedMemberCount ?? oldData.Summary.InvitedMemberCount
-        };
-        oldData.Summary.Heroes = newData.Summary?.Heroes ?? oldData.Summary.Heroes;
-        oldData.Summary.JoinedMemberCount = newData.Summary?.JoinedMemberCount ?? oldData.Summary.JoinedMemberCount;
-        oldData.Summary.InvitedMemberCount = newData.Summary?.InvitedMemberCount ?? oldData.Summary.InvitedMemberCount;
+        if (oldData.Summary is null)
+            oldData.Summary = newData.Summary;
+        else {
+            oldData.Summary.Heroes = newData.Summary?.Heroes ?? oldData.Summary.Heroes;
+            oldData.Summary.JoinedMemberCount = newData.Summary?.JoinedMemberCount ?? oldData.Summary.JoinedMemberCount;
+            oldData.Summary.InvitedMemberCount = newData.Summary?.InvitedMemberCount ?? oldData.Summary.InvitedMemberCount;
+        }
+
+        trace?.Add($"JoinedRoomDataStructure.Summary/{oldData.GetHashCode()}", sw.GetElapsedAndRestart());
 
         return oldData;
     }
 
 #endregion
+
+    private static EventList? MergeEventList(EventList? oldState, EventList? newState) {
+        if (newState is null) return oldState;
+        if (oldState is null) {
+            return newState;
+        }
+
+        if (newState.Events is null) return oldState;
+        if (oldState.Events is null) {
+            oldState.Events = newState.Events;
+            return oldState;
+        }
+
+        oldState.Events.MergeStateEventLists(newState.Events);
+        return oldState;
+    }
+
+    private static EventList? MergeEventListBy(EventList? oldState, EventList? newState, Func<StateEventResponse, StateEventResponse, bool> comparer) {
+        if (newState is null) return oldState;
+        if (oldState is null) {
+            return newState;
+        }
+
+        if (newState.Events is null) return oldState;
+        if (oldState.Events is null) {
+            oldState.Events = newState.Events;
+            return oldState;
+        }
+
+        oldState.Events.ReplaceBy(newState.Events, comparer);
+        return oldState;
+    }
+
+    private static EventList? AppendEventList(EventList? oldState, EventList? newState) {
+        if (newState is null) return oldState;
+        if (oldState is null) {
+            return newState;
+        }
+
+        if (newState.Events is null) return oldState;
+        if (oldState.Events is null) {
+            oldState.Events = newState.Events;
+            return oldState;
+        }
+
+        oldState.Events.AddRange(newState.Events);
+        return oldState;
+    }
 }

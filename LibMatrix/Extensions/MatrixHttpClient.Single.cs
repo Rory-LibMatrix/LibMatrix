@@ -51,6 +51,7 @@ public class MatrixHttpClient {
     internal SemaphoreSlim _rateLimitSemaphore { get; } = new(1, 1);
 #endif
 
+    private const bool LogRequests = true;
     public Dictionary<string, string> AdditionalQueryParameters { get; set; } = new();
 
     public Uri? BaseAddress { get; set; }
@@ -72,7 +73,7 @@ public class MatrixHttpClient {
     public async Task<HttpResponseMessage> SendUnhandledAsync(HttpRequestMessage request, CancellationToken cancellationToken) {
         if (request.RequestUri is null) throw new NullReferenceException("RequestUri is null");
         // if (!request.RequestUri.IsAbsoluteUri)
-            request.RequestUri = request.RequestUri.EnsureAbsolute(BaseAddress!);
+        request.RequestUri = request.RequestUri.EnsureAbsolute(BaseAddress!);
         var swWait = Stopwatch.StartNew();
 #if SYNC_HTTPCLIENT
         await _rateLimitSemaphore.WaitAsync(cancellationToken);
@@ -82,6 +83,9 @@ public class MatrixHttpClient {
 
         if (request.RequestUri is null) throw new NullReferenceException("RequestUri is null");
         if (!request.RequestUri.IsAbsoluteUri) request.RequestUri = new Uri(BaseAddress, request.RequestUri);
+        swWait.Stop();
+        var swExec = Stopwatch.StartNew();
+
         foreach (var (key, value) in AdditionalQueryParameters) request.RequestUri = request.RequestUri.AddQuery(key, value);
         foreach (var (key, value) in DefaultRequestHeaders) {
             if (request.Headers.Contains(key)) continue;
@@ -90,7 +94,8 @@ public class MatrixHttpClient {
 
         request.Options.Set(new HttpRequestOptionsKey<bool>("WebAssemblyEnableStreamingResponse"), true);
 
-        Console.WriteLine("Sending " + request.Summarise(includeHeaders:true, includeQuery: true, includeContentIfText: true));
+        if (LogRequests)
+            Console.WriteLine("Sending " + request.Summarise(includeHeaders: true, includeQuery: true, includeContentIfText: true, hideHeaders: ["Accept"]));
 
         HttpResponseMessage? responseMessage;
         try {
@@ -108,19 +113,25 @@ public class MatrixHttpClient {
 #endif
 
         // Console.WriteLine($"Sending {request.Method} {request.RequestUri} ({Util.BytesToString(request.Content?.Headers.ContentLength ?? 0)}) -> {(int)responseMessage.StatusCode} {responseMessage.StatusCode} ({Util.BytesToString(responseMessage.GetContentLength())}, WAIT={swWait.ElapsedMilliseconds}ms, EXEC={swExec.ElapsedMilliseconds}ms)");
-        Console.WriteLine("Received " + responseMessage.Summarise(includeHeaders: true, includeContentIfText: false, hideHeaders: [
-            "Server",
-            "Date",
-            "Transfer-Encoding",
-            "Connection",
-            "Vary",
-            "Content-Length",
-            "Access-Control-Allow-Origin",
-            "Access-Control-Allow-Methods",
-            "Access-Control-Allow-Headers",
-            "Access-Control-Expose-Headers",
-            "Cache-Control"
-        ]));
+        if (LogRequests)
+            Console.WriteLine("Received " + responseMessage.Summarise(includeHeaders: true, includeContentIfText: false, hideHeaders: [
+                "Server",
+                "Date",
+                "Transfer-Encoding",
+                "Connection",
+                "Vary",
+                "Content-Length",
+                "Access-Control-Allow-Origin",
+                "Access-Control-Allow-Methods",
+                "Access-Control-Allow-Headers",
+                "Access-Control-Expose-Headers",
+                "Cache-Control",
+                "Cross-Origin-Resource-Policy",
+                "X-Content-Security-Policy",
+                "Referrer-Policy",
+                "X-Robots-Tag",
+                "Content-Security-Policy"
+            ]));
 
         return responseMessage;
     }

@@ -18,7 +18,7 @@ public class BotInstaller(IServiceCollection services) {
     public BotInstaller AddMatrixBot() {
         services.AddSingleton<LibMatrixBotConfiguration>();
 
-        services.AddScoped<AuthenticatedHomeserverGeneric>(x => {
+        services.AddSingleton<AuthenticatedHomeserverGeneric>(x => {
             var config = x.GetService<LibMatrixBotConfiguration>() ?? throw new Exception("No configuration found!");
             var hsProvider = x.GetService<HomeserverProviderService>() ?? throw new Exception("No homeserver provider found!");
             

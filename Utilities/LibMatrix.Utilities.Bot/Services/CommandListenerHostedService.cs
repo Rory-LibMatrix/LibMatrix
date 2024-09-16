@@ -59,22 +59,44 @@ public class CommandListenerHostedService : IHostedService {
             FilterId = filter
         };
 
-        syncHelper.TimelineEventHandlers.Add(async @event => {
-            try {
-                var room = _hs.GetRoom(@event.RoomId);
-                // _logger.LogInformation(eventResponse.ToJson(indent: false));
-                if (@event is { Type: "m.room.message", TypedContent: RoomMessageEventContent message })
-                    if (message is { MessageType: "m.text" }) {
-                        var usedPrefix = await GetUsedPrefix(@event);
-                        if (usedPrefix is null) return;
-                        var res = await InvokeCommand(@event, usedPrefix);
-                        await (_commandResultHandler?.Invoke(res) ?? HandleResult(res));
+        syncHelper.SyncReceivedHandlers.Add(async sync => {
+            _logger.LogInformation("Sync received!");
+            foreach (var roomResp in sync.Rooms?.Join ?? []) {
+                if (roomResp.Value.Timeline?.Events is null or { Count: > 5 }) continue;
+                foreach (var @event in roomResp.Value.Timeline.Events) {
+                    @event.RoomId = roomResp.Key;
+                    try {
+                        // var room = _hs.GetRoom(@event.RoomId);
+                        // _logger.LogInformation(eventResponse.ToJson(indent: false));
+                        if (@event is { Type: "m.room.message", TypedContent: RoomMessageEventContent message })
+                            if (message is { MessageType: "m.text" }) {
+                                var usedPrefix = await GetUsedPrefix(@event);
+                                if (usedPrefix is null) return;
+                                var res = await InvokeCommand(@event, usedPrefix);
+                                await (_commandResultHandler?.Invoke(res) ?? HandleResult(res));
+                            }
                     }
-            }
-            catch (Exception e) {
-                _logger.LogError(e, "Error in command listener!");
+                    catch (Exception e) {
+                        _logger.LogError(e, "Error in command listener!");
+                        Console.WriteLine(@event.ToJson(ignoreNull: false, indent: true));
+                        var fakeResult = new CommandResult() {
+                            Result = CommandResult.CommandResultType.Failure_Exception,
+                            Exception = e,
+                            Success = false,
+                            Context = new() {
+                                Homeserver = _hs,
+                                CommandName = "[CommandListener.SyncHandler]",
+                                Room = _hs.GetRoom(roomResp.Key),
+                                Args = [],
+                                MessageEvent = @event
+                            }
+                        };
+                        await (_commandResultHandler?.Invoke(fakeResult) ?? HandleResult(fakeResult));
+                    }
+                }
             }
         });
+
         await syncHelper.RunSyncLoopAsync(cancellationToken: cancellationToken);
     }
 

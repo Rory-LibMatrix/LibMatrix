@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Text.Json;
 using ArcaneLibs.Collections;
+using System.Text.Json.Nodes;
 using ArcaneLibs.Extensions;
 using LibMatrix.Filters;
 using LibMatrix.Homeservers;
@@ -21,6 +22,7 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
     public string? Since { get; set; }
     public int Timeout { get; set; } = 30000;
     public string? SetPresence { get; set; } = "online";
+    public bool UseInternalStreamingSync { get; set; } = true;
 
     public string? FilterId {
         get => _filterId;
@@ -114,15 +116,23 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
         // logger?.LogInformation("SyncHelper: Calling: {}", url);
 
         try {
-            var httpResp = await homeserver.ClientHttpClient.GetAsync(url, cancellationToken ?? CancellationToken.None);
-            if (httpResp is null) throw new NullReferenceException("Failed to send HTTP request");
-            logger?.LogTrace("Got sync response: {} bytes, {} elapsed", httpResp.GetContentLength(), sw.Elapsed);
-            var deserializeSw = Stopwatch.StartNew();
-            var stream = await httpResp.Content.ReadAsStreamAsync();
-            await using var seekableStream = new SeekableStream(stream);
-            var resp = await JsonSerializer.DeserializeAsync<SyncResponse>(seekableStream, cancellationToken: cancellationToken ?? CancellationToken.None,
-                jsonTypeInfo: SyncResponseSerializerContext.Default.SyncResponse);
-            logger?.LogInformation("Deserialized sync response: {} bytes, {} elapsed, {} total", seekableStream.Position, deserializeSw.Elapsed, sw.Elapsed);
+            SyncResponse? resp = null;
+            if (UseInternalStreamingSync) {
+                resp = await homeserver.ClientHttpClient.GetFromJsonAsync<SyncResponse>(url, cancellationToken: cancellationToken ?? CancellationToken.None);
+                logger?.LogInformation("Got sync response: ~{} bytes, {} elapsed", resp.ToJson(false, true, true).Length, sw.Elapsed);
+            }
+            else {
+                var httpResp = await homeserver.ClientHttpClient.GetAsync(url, cancellationToken ?? CancellationToken.None);
+                if (httpResp is null) throw new NullReferenceException("Failed to send HTTP request");
+                logger?.LogInformation("Got sync response: {} bytes, {} elapsed", httpResp.GetContentLength(), sw.Elapsed);
+                var deserializeSw = Stopwatch.StartNew();
+                // var jsonResp = await httpResp.Content.ReadFromJsonAsync<JsonObject>(cancellationToken: cancellationToken ?? CancellationToken.None);
+                // var resp = jsonResp.Deserialize<SyncResponse>();
+                resp = await httpResp.Content.ReadFromJsonAsync(cancellationToken: cancellationToken ?? CancellationToken.None,
+                    jsonTypeInfo: SyncResponseSerializerContext.Default.SyncResponse);
+                logger?.LogInformation("Deserialized sync response: {} bytes, {} elapsed, {} total", httpResp.GetContentLength(), deserializeSw.Elapsed, sw.Elapsed);
+            }
+
             var timeToWait = MinimumDelay.Subtract(sw.Elapsed);
             if (timeToWait.TotalMilliseconds > 0)
                 await Task.Delay(timeToWait);
