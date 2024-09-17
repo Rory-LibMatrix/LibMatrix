@@ -78,19 +78,7 @@ public class HomeserverAbstraction(HomeserverProviderService _hsProvider, Config
         
         var username = _config.TestUsername;
         var password = _config.TestPassword;
-        
-        LoginResponse reg;
-        try {
-            reg = await rhs.LoginAsync(username, password);
-        }
-        catch (MatrixException e) {
-            if (e.ErrorCode == "M_FORBIDDEN") {
-                await rhs.RegisterAsync(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), "Unit tests!");
-                reg = await rhs.RegisterAsync(username, password, "Unit tests!");
-            }
-            else throw new Exception("Failed to log in", e);
-        }
-        
-        return (username, password, reg.AccessToken);
+        var reg = await rhs.RegisterAsync(username, password, "Unit tests!");
+        return ("", "", "");
     }
 }

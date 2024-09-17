@@ -210,10 +210,11 @@ public class GenericRoom {
     public async Task<RoomIdResponse> JoinAsync(string[]? homeservers = null, string? reason = null, bool checkIfAlreadyMember = true) {
         if (checkIfAlreadyMember)
             try {
-                _ = await GetCreateEventAsync();
-                return new RoomIdResponse {
-                    RoomId = RoomId
-                };
+                var ser = await GetStateEventOrNullAsync(RoomMemberEventContent.EventId, Homeserver.UserId);
+                if (ser?.TypedContent is RoomMemberEventContent { Membership: "join" })
+                    return new RoomIdResponse {
+                        RoomId = RoomId
+                    };
             }
             catch { } //ignore
 
@@ -316,6 +317,7 @@ public class GenericRoom {
     public Task<RoomPowerLevelEventContent?> GetPowerLevelsAsync() =>
         GetStateAsync<RoomPowerLevelEventContent>("m.room.power_levels");
 
+    [Obsolete("This method will be merged into GetNameAsync() in the future.")]
     public async Task<string> GetNameOrFallbackAsync(int maxMemberNames = 2) {
         try {
             return await GetNameAsync();
@@ -350,22 +352,6 @@ public class GenericRoom {
     public Task InviteUsersAsync(IEnumerable<string> users, string? reason = null, bool skipExisting = true) {
         var tasks = users.Select(x => InviteUserAsync(x, reason, skipExisting)).ToList();
         return Task.WhenAll(tasks);
-    }
-
-    public async Task<string?> GetResolvedRoomAvatarUrlAsync(bool useOriginHomeserver = false) {
-        var avatar = await GetAvatarUrlAsync();
-        if (avatar?.Url is null) return null;
-        if (!avatar.Url.StartsWith("mxc://")) return avatar.Url;
-        if (useOriginHomeserver)
-            try {
-                var hs = avatar.Url.Split('/', 3)[1];
-                return await new HomeserverResolverService(NullLogger<HomeserverResolverService>.Instance).ResolveMediaUri(hs, avatar.Url);
-            }
-            catch (Exception e) {
-                Console.WriteLine(e);
-            }
-
-        return Homeserver.ResolveMediaUri(avatar.Url);
     }
 
 #endregion

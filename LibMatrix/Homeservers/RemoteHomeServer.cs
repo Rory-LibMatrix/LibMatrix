@@ -107,6 +107,7 @@ public class RemoteHomeserver {
 
 #endregion
 
+    [Obsolete("This call uses the deprecated unauthenticated media endpoints, please switch to the relevant AuthenticatedHomeserver methods instead.", true)]
     public string? ResolveMediaUri(string? mxcUri) {
         if (mxcUri is null) return null;
         if (mxcUri.StartsWith("https://")) return mxcUri;

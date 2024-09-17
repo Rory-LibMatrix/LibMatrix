@@ -20,17 +20,36 @@ public class AuthTests : TestBed<TestFixture> {
     
     [Fact]
     public async Task LoginWithPassword() {
-        var credentials = await _hsAbstraction.GetKnownCredentials();
+        Assert.False(string.IsNullOrWhiteSpace(_config.TestHomeserver), $"{nameof(_config.TestHomeserver)} must be set in appsettings!");
+        Assert.False(string.IsNullOrWhiteSpace(_config.TestUsername), $"{nameof(_config.TestUsername)} must be set in appsettings!");
+        Assert.False(string.IsNullOrWhiteSpace(_config.TestPassword), $"{nameof(_config.TestPassword)} must be set in appsettings!");
+
+        // var server = await _resolver.ResolveHomeserverFromWellKnown(_config.TestHomeserver!);
+        var rhs = await _provider.GetRemoteHomeserver(_config.TestHomeserver);
+        var username = Guid.NewGuid().ToString();
+        var password = Guid.NewGuid().ToString();
         
-        var login = await _provider.Login(_config.TestHomeserver!, credentials.username, credentials.password);
+        var reg = await rhs.RegisterAsync(username, password, "Unit tests!");
+        
+        var login = await _provider.Login(_config.TestHomeserver!, username, password);
         Assert.NotNull(login);
         Assert.NotNull(login.AccessToken);
     }
 
     [Fact]
     public async Task LoginWithToken() {
-        var credentials = await _hsAbstraction.GetKnownCredentials();
-        var hs = await _provider.GetAuthenticatedWithToken(_config.TestHomeserver!, credentials.token);
+        Assert.False(string.IsNullOrWhiteSpace(_config.TestHomeserver), $"{nameof(_config.TestHomeserver)} must be set in appsettings!");
+        Assert.False(string.IsNullOrWhiteSpace(_config.TestUsername), $"{nameof(_config.TestUsername)} must be set in appsettings!");
+        Assert.False(string.IsNullOrWhiteSpace(_config.TestPassword), $"{nameof(_config.TestPassword)} must be set in appsettings!");
+
+        // var server = await _resolver.ResolveHomeserverFromWellKnown(_config.TestHomeserver!);
+        var rhs = await _provider.GetRemoteHomeserver(_config.TestHomeserver);
+        var username = Guid.NewGuid().ToString();
+        var password = Guid.NewGuid().ToString();
+        
+        var reg = await rhs.RegisterAsync(username, password, "Unit tests!");
+        
+        var hs = await _provider.GetAuthenticatedWithToken(_config.TestHomeserver!, reg.AccessToken);
         Assert.NotNull(hs);
         Assert.NotNull(hs.WhoAmI);
         hs.WhoAmI.VerifyRequiredFields();

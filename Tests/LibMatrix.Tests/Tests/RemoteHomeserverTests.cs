@@ -18,13 +18,13 @@ public class RemoteHomeserverTests : TestBed<TestFixture> {
         _provider = _fixture.GetService<HomeserverProviderService>(_testOutputHelper) ?? throw new InvalidOperationException($"Failed to get {nameof(HomeserverProviderService)}");
     }
 
-    [Fact]
-    public async Task ResolveMedia() {
-        var hs = await _provider.GetRemoteHomeserver("matrix.org");
-        var media = hs.ResolveMediaUri("mxc://matrix.org/eqwrRZRoPpNbcMeUwyXAuVRo");
-        
-        Assert.Equal("https://matrix-client.matrix.org/_matrix/media/v3/download/matrix.org/eqwrRZRoPpNbcMeUwyXAuVRo", media);
-    }
+    // [Fact]
+    // public async Task ResolveMedia() {
+    //     var hs = await _provider.GetRemoteHomeserver("matrix.org");
+    //     var media = hs.ResolveMediaUri("mxc://matrix.org/eqwrRZRoPpNbcMeUwyXAuVRo");
+    //     
+    //     Assert.Equal("https://matrix-client.matrix.org/_matrix/media/v3/download/matrix.org/eqwrRZRoPpNbcMeUwyXAuVRo", media);
+    // }
 
     [Fact]
     public async Task ResolveRoomAliasAsync() {

@@ -26,7 +26,8 @@ public class MatrixHttpClient {
                 EnableMultipleHttp2Connections = true
             };
             Client = new HttpClient(handler) {
-                DefaultRequestVersion = new Version(3, 0)
+                DefaultRequestVersion = new Version(3, 0),
+                Timeout = TimeSpan.FromDays(1)
             };
         }
         catch (PlatformNotSupportedException e) {

@@ -406,4 +406,111 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
         public NamedFilterCache FilterCache { get; init; }
         public NamedFileCache FileCache { get; init; }
     }
+
+#region Authenticated Media
+
+    // TODO: implement /_matrix/client/v1/media/config when it's actually useful - https://spec.matrix.org/v1.11/client-server-api/#get_matrixclientv1mediaconfig
+
+    private (string ServerName, string MediaId) ParseMxcUri(string mxcUri) {
+        if (!mxcUri.StartsWith("mxc://")) throw new ArgumentException("Matrix Content URIs must start with 'mxc://'", nameof(mxcUri));
+        var parts = mxcUri[6..].Split('/');
+        if (parts.Length != 2) throw new ArgumentException($"Invalid Matrix Content URI '{mxcUri}' passed! Matrix Content URIs must exist of only 2 parts!", nameof(mxcUri));
+        return (parts[0], parts[1]);
+    }
+
+    public async Task<Stream> GetMediaStreamAsync(string mxcUri, string? filename = null, int? timeout = null) {
+        var (serverName, mediaId) = ParseMxcUri(mxcUri);
+        try {
+            var uri = $"/_matrix/client/v1/media/download/{serverName}/{mediaId}";
+            if (!string.IsNullOrWhiteSpace(filename)) uri += $"/{HttpUtility.UrlEncode(filename)}";
+            if (timeout is not null) uri += $"?timeout_ms={timeout}";
+            var res = await ClientHttpClient.GetAsync(uri);
+            return await res.Content.ReadAsStreamAsync();
+        }
+        catch (MatrixException e) {
+            if (e is not { ErrorCode: "M_UNKNOWN" }) throw;
+        }
+
+        //fallback to legacy media
+        try {
+            var uri = $"/_matrix/media/v1/download/{serverName}/{mediaId}";
+            if (!string.IsNullOrWhiteSpace(filename)) uri += $"/{HttpUtility.UrlEncode(filename)}";
+            if (timeout is not null) uri += $"?timeout_ms={timeout}";
+            var res = await ClientHttpClient.GetAsync(uri);
+            return await res.Content.ReadAsStreamAsync();
+        }
+        catch (MatrixException e) {
+            if (e is not { ErrorCode: "M_UNKNOWN" }) throw;
+        }
+
+        throw new LibMatrixException() {
+            ErrorCode = LibMatrixException.ErrorCodes.M_UNSUPPORTED,
+            Error = "Failed to download media"
+        };
+        // return default;
+    }
+
+    public async Task<Stream> GetThumbnailStreamAsync(string mxcUri, int width, int height, string? method = null, int? timeout = null) {
+        var (serverName, mediaId) = ParseMxcUri(mxcUri);
+        try {
+            var uri = new Uri($"/_matrix/client/v1/thumbnail/{serverName}/{mediaId}");
+            uri = uri.AddQuery("width", width.ToString());
+            uri = uri.AddQuery("height", height.ToString());
+            if (!string.IsNullOrWhiteSpace(method)) uri = uri.AddQuery("method", method);
+            if (timeout is not null) uri = uri.AddQuery("timeout_ms", timeout.ToString());
+
+            var res = await ClientHttpClient.GetAsync(uri.ToString());
+            return await res.Content.ReadAsStreamAsync();
+        }
+        catch (MatrixException e) {
+            if (e is not { ErrorCode: "M_UNKNOWN" }) throw;
+        }
+
+        //fallback to legacy media
+        try {
+            var uri = new Uri($"/_matrix/media/v1/thumbnail/{serverName}/{mediaId}");
+            uri = uri.AddQuery("width", width.ToString());
+            uri = uri.AddQuery("height", height.ToString());
+            if (!string.IsNullOrWhiteSpace(method)) uri = uri.AddQuery("method", method);
+            if (timeout is not null) uri = uri.AddQuery("timeout_ms", timeout.ToString());
+
+            var res = await ClientHttpClient.GetAsync(uri.ToString());
+            return await res.Content.ReadAsStreamAsync();
+        }
+        catch (MatrixException e) {
+            if (e is not { ErrorCode: "M_UNKNOWN" }) throw;
+        }
+
+        throw new LibMatrixException() {
+            ErrorCode = LibMatrixException.ErrorCodes.M_UNSUPPORTED,
+            Error = "Failed to download media"
+        };
+        // return default;
+    }
+
+    public async Task<Dictionary<string, JsonValue>?> GetUrlPreviewAsync(string url) {
+        try {
+            var res = await ClientHttpClient.GetAsync($"/_matrix/client/v1/media/preview_url?url={HttpUtility.UrlEncode(url)}");
+            return await res.Content.ReadFromJsonAsync<Dictionary<string, JsonValue>>();
+        }
+        catch (MatrixException e) {
+            if (e is not { ErrorCode: "M_UNRECOGNIZED" }) throw;
+        }
+        
+        //fallback to legacy media
+        try {
+            var res = await ClientHttpClient.GetAsync($"/_matrix/media/v1/preview_url?url={HttpUtility.UrlEncode(url)}");
+            return await res.Content.ReadFromJsonAsync<Dictionary<string, JsonValue>>();
+        }
+        catch (MatrixException e) {
+            if (e is not { ErrorCode: "M_UNRECOGNIZED" }) throw;
+        }
+        
+        throw new LibMatrixException() {
+            ErrorCode = LibMatrixException.ErrorCodes.M_UNSUPPORTED,
+            Error = "Failed to download URL preview"
+        };
+    }
+
+#endregion
 }

@@ -79,6 +79,7 @@ public abstract class PolicyRuleEventContent : EventContent {
     /// </summary>
     [JsonPropertyName("gay.rory.matrix_room_utils.readable_expiry_time_utc")]
     [FriendlyName(Name = "Expires at")]
+    [TableHide]
     public DateTime? ExpiryDateTime {
         get => Expiry == null ? null : DateTimeOffset.FromUnixTimeMilliseconds(Expiry.Value).DateTime;
         set {

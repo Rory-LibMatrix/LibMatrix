@@ -57,12 +57,13 @@ public class RoomPowerLevelEventContent : EventContent {
         return Users.TryGetValue(userId, out var level) && level >= Events.GetValueOrDefault(eventType, EventsDefault ?? 0);
     }
 
-    public bool UserHasStatePermission(string userId, string eventType) {
+    public bool UserHasStatePermission(string userId, string eventType, bool log = false) {
         ArgumentNullException.ThrowIfNull(userId);
         var userLevel = GetUserPowerLevel(userId);
         var eventLevel = GetStateEventPowerLevel(eventType);
-        
-        Console.WriteLine($"{userId}={userLevel} >= {eventType}={eventLevel} = {userLevel >= eventLevel}");
+
+        if (log)
+            Console.WriteLine($"{userId}={userLevel} >= {eventType}={eventLevel} = {userLevel >= eventLevel}");
 
         return userLevel >= eventLevel;
     }
@@ -78,7 +79,7 @@ public class RoomPowerLevelEventContent : EventContent {
         if (Events is null) return StateDefault ?? 0;
         return Events.TryGetValue(eventType, out var level) ? level : StateDefault ?? 0;
     }
-    
+
     public long GetTimelineEventPowerLevel(string eventType) {
         ArgumentNullException.ThrowIfNull(eventType);
         if (Events is null) return EventsDefault ?? 0;
