@@ -1,14 +1,17 @@
 using ArcaneLibs.Extensions;
 using LibMatrix.Homeservers;
 using LibMatrix.Responses;
+using LibMatrix.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LibMatrix.Tests.Abstractions;
 
 public static class HomeserverAbstraction {
+    private static HomeserverResolverService _hsResolver = new HomeserverResolverService(NullLogger<HomeserverResolverService>.Instance);
+    private static HomeserverProviderService _hsProvider = new HomeserverProviderService(NullLogger<HomeserverProviderService>.Instance, _hsResolver);
+
     public static async Task<AuthenticatedHomeserverGeneric> GetHomeserver() {
-        var rhs = await RemoteHomeserver.Create("https://matrixunittests.rory.gay");
-        // string username = Guid.NewGuid().ToString();
-        // string password = Guid.NewGuid().ToString();
+        var rhs = await _hsProvider.GetRemoteHomeserver("matrixunittests.rory.gay");
         var username = "@f1a2d2d6-1924-421b-91d0-893b347b2a49:matrixunittests.rory.gay";
         var password = "d6d782d6-8bc9-4fac-9cd8-78e101b4298b";
         LoginResponse reg;
@@ -23,8 +26,7 @@ public static class HomeserverAbstraction {
             else throw new Exception("Failed to register", e);
         }
 
-        var hs = await reg.GetAuthenticatedHomeserver("https://matrixunittests.rory.gay");
-
+        var hs = await _hsProvider.GetAuthenticatedWithToken(reg.Homeserver, reg.AccessToken);
         //var rooms = await hs.GetJoinedRooms();
 
         // var disbandRoomTasks = rooms.Select(async room => {
@@ -45,9 +47,9 @@ public static class HomeserverAbstraction {
     }
 
     public static async Task<AuthenticatedHomeserverGeneric> GetRandomHomeserver() {
-        var rhs = await RemoteHomeserver.Create("https://matrixunittests.rory.gay");
+        var rhs = await _hsProvider.GetRemoteHomeserver("matrixunittests.rory.gay");
         var reg = await rhs.RegisterAsync(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), "Unit tests!");
-        var hs = await reg.GetAuthenticatedHomeserver("https://matrixunittests.rory.gay");
+        var hs = await _hsProvider.GetAuthenticatedWithToken(reg.Homeserver, reg.AccessToken);
 
         // var rooms = await hs.GetJoinedRooms();
         //

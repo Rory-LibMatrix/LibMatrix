@@ -26,7 +26,13 @@ public class AuthTests : TestBed<TestFixture> {
         Assert.False(string.IsNullOrWhiteSpace(_config.TestPassword), $"{nameof(_config.TestPassword)} must be set in appsettings!");
 
         // var server = await _resolver.ResolveHomeserverFromWellKnown(_config.TestHomeserver!);
-        var login = await _provider.Login(_config.TestHomeserver!, _config.TestUsername!, _config.TestPassword!);
+        var rhs = await _provider.GetRemoteHomeserver(_config.TestHomeserver);
+        var username = Guid.NewGuid().ToString();
+        var password = Guid.NewGuid().ToString();
+        
+        var reg = await rhs.RegisterAsync(username, password, "Unit tests!");
+        
+        var login = await _provider.Login(_config.TestHomeserver!, username, password);
         Assert.NotNull(login);
         var hs = await _provider.GetAuthenticatedWithToken(_config.TestHomeserver!, login.AccessToken);
         Assert.NotNull(hs);
@@ -40,10 +46,13 @@ public class AuthTests : TestBed<TestFixture> {
         Assert.False(string.IsNullOrWhiteSpace(_config.TestPassword), $"{nameof(_config.TestPassword)} must be set in appsettings!");
 
         // var server = await _resolver.ResolveHomeserverFromWellKnown(_config.TestHomeserver!);
-        var login = await _provider.Login(_config.TestHomeserver!, _config.TestUsername!, _config.TestPassword!);
-        Assert.NotNull(login);
-
-        var hs = await _provider.GetAuthenticatedWithToken(_config.TestHomeserver!, login.AccessToken);
+        var rhs = await _provider.GetRemoteHomeserver(_config.TestHomeserver);
+        var username = Guid.NewGuid().ToString();
+        var password = Guid.NewGuid().ToString();
+        
+        var reg = await rhs.RegisterAsync(username, password, "Unit tests!");
+        
+        var hs = await _provider.GetAuthenticatedWithToken(_config.TestHomeserver!, reg.AccessToken);
         Assert.NotNull(hs);
         Assert.NotNull(hs.WhoAmI);
         hs.WhoAmI.VerifyRequiredFields();
