@@ -393,7 +393,7 @@ public class GenericRoom {
             .Content.ReadFromJsonAsync<EventIdResponse>();
 
     public async Task<EventIdResponse?> SendStateEventAsync(string eventType, string stateKey, object content) =>
-        await (await Homeserver.ClientHttpClient.PutAsJsonAsync($"/_matrix/client/v3/rooms/{RoomId}/state/{eventType}/{stateKey}", content))
+        await (await Homeserver.ClientHttpClient.PutAsJsonAsync($"/_matrix/client/v3/rooms/{RoomId}/state/{eventType.UrlEncode()}/{stateKey.UrlEncode()}", content))
             .Content.ReadFromJsonAsync<EventIdResponse>();
 
     public async Task<EventIdResponse> SendTimelineEventAsync(string eventType, TimelineEventContent content) {

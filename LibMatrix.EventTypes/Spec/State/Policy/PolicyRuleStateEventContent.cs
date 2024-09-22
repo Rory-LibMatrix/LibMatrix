@@ -1,5 +1,7 @@
+using System.Security.Cryptography;
 using System.Text.Json.Serialization;
 using ArcaneLibs.Attributes;
+using ArcaneLibs.Extensions;
 
 namespace LibMatrix.EventTypes.Spec.State.Policy;
 
@@ -87,6 +89,8 @@ public abstract class PolicyRuleEventContent : EventContent {
                 Expiry = ((DateTimeOffset)value).ToUnixTimeMilliseconds();
         }
     }
+
+    public string GetDraupnir2StateKey() => Convert.ToBase64String(SHA256.HashData($"{Entity}{Recommendation}".AsBytes().ToArray()));
 }
 
 public static class PolicyRecommendationTypes {
