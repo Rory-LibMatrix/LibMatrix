@@ -23,7 +23,7 @@
                 Using the NuGet version in development is annoying due to delays between pushing and being able to consume.
                 If you want to use a time-appropriate version of the library, recursively clone https://cgit.rory.gay/matrix/MatrixUtils.git
                 instead, since this will be locked by the MatrixUtils project, which contains both LibMatrix and ArcaneLibs as a submodule. -->
-        <PackageReference Condition="!Exists('..\ArcaneLibs\ArcaneLibs\ArcaneLibs.csproj')" Include="ArcaneLibs" Version="*-preview*"/>
+        <PackageReference Condition="!Exists('..\ArcaneLibs\ArcaneLibs\ArcaneLibs.csproj')" Include="ArcaneLibs" Version="*-preview.202*"/>
         <ProjectReference Include="..\LibMatrix.EventTypes\LibMatrix.EventTypes.csproj"/>
     </ItemGroup>
 
