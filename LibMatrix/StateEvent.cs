@@ -44,6 +44,7 @@ public class StateEvent {
     public string FriendlyTypeNamePlural => MappedType.GetFriendlyNamePluralOrNull() ?? Type;
 
     private static readonly JsonSerializerOptions TypedContentSerializerOptions = new() {
+        // We need these, NumberHandling covers other number types that we don't want to convert
         Converters = {
             new JsonFloatStringConverter(),
             new JsonDoubleStringConverter(),
@@ -55,9 +56,6 @@ public class StateEvent {
     [SuppressMessage("ReSharper", "PropertyCanBeMadeInitOnly.Global")]
     public EventContent? TypedContent {
         get {
-            // if (Type == "m.receipt") {
-            // return null;
-            // }
             try {
                 var mappedType = GetStateEventType(Type);
                 if (mappedType == typeof(UnknownEventContent))
@@ -79,6 +77,18 @@ public class StateEvent {
                 RawContent = JsonSerializer.Deserialize<JsonObject>(JsonSerializer.Serialize(value, value.GetType(),
                     new JsonSerializerOptions() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull }));
         }
+    }
+
+    public T? ContentAs<T>() {
+        try {
+            return RawContent.Deserialize<T>(TypedContentSerializerOptions)!;
+        }
+        catch (JsonException e) {
+            Console.WriteLine(e);
+            Console.WriteLine("Content:\n" + (RawContent?.ToJson() ?? "null"));
+        }
+
+        return default;
     }
 
     [JsonPropertyName("state_key")]
@@ -255,3 +265,22 @@ public class StateEventContentPolymorphicTypeInfoResolver : DefaultJsonTypeInfoR
 */
 
 #endregion
+
+/*
+public class ForgivingObjectConverter<T> : JsonConverter<T> where T : new() {
+    public override T? Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options) {
+        try {
+            var text = JsonDocument.ParseValue(ref reader).RootElement.GetRawText();
+            return JsonSerializer.Deserialize<T>(text, options);
+        }
+        catch (JsonException ex) {
+            Console.WriteLine(ex);
+            return null;
+        }
+    }
+
+    public override bool CanConvert(Type typeToConvert) => true;
+
+    public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
+        => JsonSerializer.Serialize<T>(writer, value, options);
+}*/

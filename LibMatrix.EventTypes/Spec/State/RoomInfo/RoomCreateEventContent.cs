@@ -15,8 +15,8 @@ public class RoomCreateEventContent : EventContent {
     [JsonPropertyName("m.federate")]
     public bool? Federate { get; set; }
 
-    [JsonPropertyName("predecessor")]
-    public RoomCreatePredecessor? Predecessor { get; set; }
+    // [JsonPropertyName("predecessor")]
+    // public RoomCreatePredecessor? Predecessor { get; set; }
 
     [JsonPropertyName("type")]
     public string? Type { get; set; }

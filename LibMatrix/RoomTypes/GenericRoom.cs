@@ -106,7 +106,7 @@ public class GenericRoom {
                 Console.WriteLine("WARNING: Homeserver does not support getting event ID from state events, falling back to sync");
                 var sh = new SyncHelper(Homeserver);
                 var emptyFilter = new SyncFilter.EventFilter(types: [], limit: 1, senders: [], notTypes: ["*"]);
-                var emptyStateFilter = new SyncFilter.RoomFilter.StateFilter(types: [], limit: 1, senders: [], notTypes: ["*"], rooms:[]);
+                var emptyStateFilter = new SyncFilter.RoomFilter.StateFilter(types: [], limit: 1, senders: [], notTypes: ["*"], rooms: []);
                 sh.Filter = new() {
                     Presence = emptyFilter,
                     AccountData = emptyFilter,
@@ -121,10 +121,11 @@ public class GenericRoom {
                 var sync = await sh.SyncAsync();
                 var state = sync.Rooms.Join[RoomId].State.Events;
                 var stateEvent = state.FirstOrDefault(x => x.Type == type && x.StateKey == stateKey);
-                if (stateEvent is null) throw new LibMatrixException() {
-                    ErrorCode = LibMatrixException.ErrorCodes.M_NOT_FOUND,
-                    Error = "State event not found in sync response"
-                };
+                if (stateEvent is null)
+                    throw new LibMatrixException() {
+                        ErrorCode = LibMatrixException.ErrorCodes.M_NOT_FOUND,
+                        Error = "State event not found in sync response"
+                    };
                 return stateEvent.EventId;
             }
 
@@ -232,7 +233,7 @@ public class GenericRoom {
         // var sw = Stopwatch.StartNew();
         var res = await Homeserver.ClientHttpClient.GetAsync($"/_matrix/client/v3/rooms/{RoomId}/members");
         // if (sw.ElapsedMilliseconds > 1000)
-            // Console.WriteLine($"Members call responded in {sw.GetElapsedAndRestart()}");
+        // Console.WriteLine($"Members call responded in {sw.GetElapsedAndRestart()}");
         // else sw.Restart();
         // var resText = await res.Content.ReadAsStringAsync();
         // Console.WriteLine($"Members call response read in {sw.GetElapsedAndRestart()}");
@@ -240,7 +241,7 @@ public class GenericRoom {
             TypeInfoResolver = ChunkedStateEventResponseSerializerContext.Default
         });
         // if (sw.ElapsedMilliseconds > 100)
-            // Console.WriteLine($"Members call deserialised in {sw.GetElapsedAndRestart()}");
+        // Console.WriteLine($"Members call deserialised in {sw.GetElapsedAndRestart()}");
         // else sw.Restart();
         foreach (var resp in result.Chunk) {
             if (resp?.Type != "m.room.member") continue;
@@ -249,14 +250,14 @@ public class GenericRoom {
         }
 
         // if (sw.ElapsedMilliseconds > 100)
-            // Console.WriteLine($"Members call iterated in {sw.GetElapsedAndRestart()}");
+        // Console.WriteLine($"Members call iterated in {sw.GetElapsedAndRestart()}");
     }
 
     public async Task<FrozenSet<StateEventResponse>> GetMembersListAsync(bool joinedOnly = true) {
         // var sw = Stopwatch.StartNew();
         var res = await Homeserver.ClientHttpClient.GetAsync($"/_matrix/client/v3/rooms/{RoomId}/members");
         // if (sw.ElapsedMilliseconds > 1000)
-            // Console.WriteLine($"Members call responded in {sw.GetElapsedAndRestart()}");
+        // Console.WriteLine($"Members call responded in {sw.GetElapsedAndRestart()}");
         // else sw.Restart();
         // var resText = await res.Content.ReadAsStringAsync();
         // Console.WriteLine($"Members call response read in {sw.GetElapsedAndRestart()}");
@@ -264,7 +265,7 @@ public class GenericRoom {
             TypeInfoResolver = ChunkedStateEventResponseSerializerContext.Default
         });
         // if (sw.ElapsedMilliseconds > 100)
-            // Console.WriteLine($"Members call deserialised in {sw.GetElapsedAndRestart()}");
+        // Console.WriteLine($"Members call deserialised in {sw.GetElapsedAndRestart()}");
         // else sw.Restart();
         var members = new List<StateEventResponse>();
         foreach (var resp in result.Chunk) {
@@ -274,7 +275,7 @@ public class GenericRoom {
         }
 
         // if (sw.ElapsedMilliseconds > 100)
-            // Console.WriteLine($"Members call iterated in {sw.GetElapsedAndRestart()}");
+        // Console.WriteLine($"Members call iterated in {sw.GetElapsedAndRestart()}");
         return members.ToFrozenSet();
     }
 
@@ -320,7 +321,9 @@ public class GenericRoom {
     [Obsolete("This method will be merged into GetNameAsync() in the future.")]
     public async Task<string> GetNameOrFallbackAsync(int maxMemberNames = 2) {
         try {
-            return await GetNameAsync();
+            var name = await GetNameAsync();
+            if (!string.IsNullOrEmpty(name)) return name;
+            throw new();
         }
         catch {
             try {
@@ -376,7 +379,7 @@ public class GenericRoom {
 
     public async Task UnbanAsync(string userId, string? reason = null) =>
         await Homeserver.ClientHttpClient.PostAsJsonAsync($"/_matrix/client/v3/rooms/{RoomId}/unban",
-            new UserIdAndReason { UserId = userId, Reason = reason});
+            new UserIdAndReason { UserId = userId, Reason = reason });
 
     public async Task InviteUserAsync(string userId, string? reason = null, bool skipExisting = true) {
         if (skipExisting && await GetStateOrNullAsync<RoomMemberEventContent>("m.room.member", userId) is not null)
@@ -510,7 +513,7 @@ public class GenericRoom {
 
         var uri = new Uri(path, UriKind.Relative);
         if (dir == "b" || dir == "f") uri = uri.AddQuery("dir", dir);
-        else if(!string.IsNullOrWhiteSpace(dir)) throw new ArgumentException("Invalid direction", nameof(dir));
+        else if (!string.IsNullOrWhiteSpace(dir)) throw new ArgumentException("Invalid direction", nameof(dir));
         if (!string.IsNullOrEmpty(from)) uri = uri.AddQuery("from", from);
         if (chunkLimit is not null) uri = uri.AddQuery("limit", chunkLimit.Value.ToString());
         if (recurse is not null) uri = uri.AddQuery("recurse", recurse.Value.ToString());
