@@ -2,6 +2,7 @@
 // #define SYNC_HTTPCLIENT // Only allow one request as a time, for debugging
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
@@ -73,12 +74,15 @@ public class MatrixHttpClient {
         await _rateLimitSemaphore.WaitAsync(cancellationToken);
 #endif
 
-        Console.WriteLine($"Sending {request.Method} {BaseAddress}{request.RequestUri} ({Util.BytesToString(request.Content?.Headers.ContentLength ?? 0)})");
+        Console.WriteLine($"Sending {request.Method} {BaseAddress}{request.RequestUri} ({Util.BytesToString(request.GetContentLength())})");
 
         if (request.RequestUri is null) throw new NullReferenceException("RequestUri is null");
         if (!request.RequestUri.IsAbsoluteUri) request.RequestUri = new Uri(BaseAddress, request.RequestUri);
         foreach (var (key, value) in AdditionalQueryParameters) request.RequestUri = request.RequestUri.AddQuery(key, value);
-        foreach (var (key, value) in DefaultRequestHeaders) request.Headers.Add(key, value);
+        foreach (var (key, value) in DefaultRequestHeaders) {
+            if (request.Headers.Contains(key)) continue;
+            request.Headers.Add(key, value);
+        }
 
         request.Options.Set(new HttpRequestOptionsKey<bool>("WebAssemblyEnableStreamingResponse"), true);
 
@@ -106,7 +110,13 @@ public class MatrixHttpClient {
     public async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken = default) {
         var responseMessage = await SendUnhandledAsync(request, cancellationToken);
         if (responseMessage.IsSuccessStatusCode) return responseMessage;
-
+        
+        //retry on gateway timeout
+        if (responseMessage.StatusCode == HttpStatusCode.GatewayTimeout) {
+            request.ResetSendStatus();
+            return await SendAsync(request, cancellationToken);
+        }
+        
         //error handling
         var content = await responseMessage.Content.ReadAsStringAsync(cancellationToken);
         if (content.Length == 0)

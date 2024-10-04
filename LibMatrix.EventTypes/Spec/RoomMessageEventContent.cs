@@ -29,6 +29,7 @@ public class RoomMessageEventContent : TimelineEventContent {
     [JsonPropertyName("url")]
     public string? Url { get; set; }
 
+    [JsonPropertyName("filename")]
     public string? FileName { get; set; }
 
     [JsonPropertyName("info")]

@@ -4,6 +4,7 @@ using ArcaneLibs.Extensions;
 using LibMatrix.Filters;
 using LibMatrix.Homeservers;
 using LibMatrix.Responses;
+using LibMatrix.Utilities;
 using Microsoft.Extensions.Logging;
 
 namespace LibMatrix.Helpers;
@@ -42,6 +43,7 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
             _filter = value;
             _filterIsDirty = true;
             _filterId = null;
+            _namedFilterName = null;
         }
     }
 
@@ -81,16 +83,16 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
         if (!string.IsNullOrWhiteSpace(Since)) url += $"&since={Since}";
         if (_filterId is not null) url += $"&filter={_filterId}";
 
-        logger?.LogInformation("SyncHelper: Calling: {}", url);
+        // logger?.LogInformation("SyncHelper: Calling: {}", url);
 
         try {
             var httpResp = await homeserver.ClientHttpClient.GetAsync(url, cancellationToken ?? CancellationToken.None);
             if (httpResp is null) throw new NullReferenceException("Failed to send HTTP request");
-            logger?.LogInformation("Got sync response: {} bytes, {} elapsed", httpResp.Content.Headers.ContentLength ?? -1, sw.Elapsed);
+            logger?.LogTrace("Got sync response: {} bytes, {} elapsed", httpResp.GetContentLength(), sw.Elapsed);
             var deserializeSw = Stopwatch.StartNew();
             var resp = await httpResp.Content.ReadFromJsonAsync<SyncResponse>(cancellationToken: cancellationToken ?? CancellationToken.None,
                 jsonTypeInfo: SyncResponseSerializerContext.Default.SyncResponse);
-            logger?.LogInformation("Deserialized sync response: {} bytes, {} elapsed, {} total", httpResp.Content.Headers.ContentLength ?? -1, deserializeSw.Elapsed, sw.Elapsed);
+            logger?.LogInformation("Deserialized sync response: {} bytes, {} elapsed, {} total", httpResp.GetContentLength(), deserializeSw.Elapsed, sw.Elapsed);
             var timeToWait = MinimumDelay.Subtract(sw.Elapsed);
             if (timeToWait.TotalMilliseconds > 0)
                 await Task.Delay(timeToWait);

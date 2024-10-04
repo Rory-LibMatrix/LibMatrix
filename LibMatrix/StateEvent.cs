@@ -166,7 +166,7 @@ public class StateEventResponse : StateEvent {
     public string? Sender { get; set; }
 
     [JsonPropertyName("unsigned")]
-    public UnsignedData? Unsigned { get; set; }
+    public JsonObject? Unsigned { get; set; }
 
     [JsonPropertyName("event_id")]
     public string? EventId { get; set; }

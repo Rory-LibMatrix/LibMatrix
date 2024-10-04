@@ -1,8 +1,7 @@
 using ArcaneLibs;
-using LibMatrix.EventTypes.Spec.State;
 using LibMatrix.Homeservers;
-using LibMatrix.Responses;
 using LibMatrix.Services;
+using LibMatrix.Utilities.Bot.AppServices;
 using LibMatrix.Utilities.Bot.Interfaces;
 using LibMatrix.Utilities.Bot.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +21,20 @@ public class BotInstaller(IServiceCollection services) {
         services.AddScoped<AuthenticatedHomeserverGeneric>(x => {
             var config = x.GetService<LibMatrixBotConfiguration>() ?? throw new Exception("No configuration found!");
             var hsProvider = x.GetService<HomeserverProviderService>() ?? throw new Exception("No homeserver provider found!");
+            
+            if (x.GetService<AppServiceConfiguration>() is AppServiceConfiguration appsvcConfig)
+                config.AccessToken = appsvcConfig.AppserviceToken;
+            else if (Environment.GetEnvironmentVariable("LIBMATRIX_ACCESS_TOKEN_PATH") is string path)
+                config.AccessTokenPath = path;
+            
+            if(string.IsNullOrWhiteSpace(config.AccessToken) && string.IsNullOrWhiteSpace(config.AccessTokenPath))
+                throw new Exception("Unable to add bot service without an access token or access token path!");
+            
+            if(!string.IsNullOrWhiteSpace(config.AccessTokenPath)) {
+                var token = File.ReadAllText(config.AccessTokenPath);
+                config.AccessToken = token;
+            }
+            
             var hs = hsProvider.GetAuthenticatedWithToken(config.Homeserver, config.AccessToken).Result;
 
             return hs;

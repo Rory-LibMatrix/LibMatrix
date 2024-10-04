@@ -431,6 +431,16 @@ public class GenericRoom {
 
         return await res.Content.ReadFromJsonAsync<T>();
     }
+    
+    public async Task<T?> GetRoomAccountDataOrNullAsync<T>(string key) {
+        try {
+            return await GetRoomAccountDataAsync<T>(key);
+        }
+        catch (MatrixException e) {
+            if (e.ErrorCode == "M_NOT_FOUND") return default;
+            throw;
+        }
+    }
 
     public async Task SetRoomAccountDataAsync(string key, object data) {
         var res = await Homeserver.ClientHttpClient.PutAsJsonAsync($"/_matrix/client/v3/user/{Homeserver.UserId}/rooms/{RoomId}/account_data/{key}", data);
@@ -443,10 +453,17 @@ public class GenericRoom {
     public Task<StateEventResponse> GetEventAsync(string eventId) =>
         Homeserver.ClientHttpClient.GetFromJsonAsync<StateEventResponse>($"/_matrix/client/v3/rooms/{RoomId}/event/{eventId}");
 
-    public async Task<EventIdResponse> RedactEventAsync(string eventToRedact, string reason) {
+    public async Task<EventIdResponse> RedactEventAsync(string eventToRedact, string? reason = null) {
         var data = new { reason };
-        return (await (await Homeserver.ClientHttpClient.PutAsJsonAsync(
-            $"/_matrix/client/v3/rooms/{RoomId}/redact/{eventToRedact}/{Guid.NewGuid()}", data)).Content.ReadFromJsonAsync<EventIdResponse>())!;
+        var url = $"/_matrix/client/v3/rooms/{RoomId}/redact/{eventToRedact}/{Guid.NewGuid().ToString()}";
+        while (true) {
+            try {
+                return (await (await Homeserver.ClientHttpClient.PutAsJsonAsync(url, data)).Content.ReadFromJsonAsync<EventIdResponse>())!;
+            } catch (MatrixException e) {
+                if (e is { ErrorCode: MatrixException.ErrorCodes.M_FORBIDDEN }) throw;
+                throw;
+            }
+        }
     }
 
 #endregion

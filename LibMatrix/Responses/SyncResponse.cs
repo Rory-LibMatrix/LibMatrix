@@ -39,7 +39,7 @@ public class SyncResponse {
     // supporting classes
     public class PresenceDataStructure {
         [JsonPropertyName("events")]
-        public List<StateEventResponse> Events { get; set; } = new();
+        public List<StateEventResponse>? Events { get; set; }
     }
 
     public class RoomsDataStructure {

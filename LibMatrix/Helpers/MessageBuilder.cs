@@ -91,6 +91,18 @@ public class MessageBuilder(string msgType = "m.text", string format = "org.matr
         return this;
     }
 
+    public MessageBuilder WithMention(string id, string? displayName = null) {
+        Content.Body += $"@{displayName ?? id}";
+        Content.FormattedBody += $"<a href=\"https://matrix.to/#/{id}\">{displayName ?? id}</a>";
+        return this;
+    }
+
+    public MessageBuilder WithNewline() {
+        Content.Body += "\n";
+        Content.FormattedBody += "<br>";
+        return this;
+    }
+
     public MessageBuilder WithTable(Action<TableBuilder> tableBuilder) {
         var tb = new TableBuilder(this);
         this.WithHtmlTag("table", msb => tableBuilder(tb));

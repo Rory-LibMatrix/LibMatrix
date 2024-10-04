@@ -2,6 +2,7 @@
 
 using LibMatrix.Services;
 using LibMatrix.Utilities.Bot;
+using LibMatrix.Utilities.Bot.AppServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using TestDataGenerator.Bot;

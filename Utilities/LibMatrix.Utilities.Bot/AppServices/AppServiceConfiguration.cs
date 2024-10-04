@@ -1,23 +1,47 @@
-namespace LibMatrix.Utilities.Bot;
+using System.Text.Json.Serialization;
+
+namespace LibMatrix.Utilities.Bot.AppServices;
 
 public class AppServiceConfiguration {
+    [JsonPropertyName("id")]
     public string Id { get; set; } = null!;
+
+    [JsonPropertyName("url")]
     public string? Url { get; set; } = null!;
+
+    [JsonPropertyName("sender_localpart")]
     public string SenderLocalpart { get; set; } = null!;
+
+    [JsonPropertyName("as_token")]
     public string AppserviceToken { get; set; } = null!;
+
+    [JsonPropertyName("hs_token")]
     public string HomeserverToken { get; set; } = null!;
+
+    [JsonPropertyName("protocols")]
     public List<string>? Protocols { get; set; } = null!;
+
+    [JsonPropertyName("rate_limited")]
     public bool? RateLimited { get; set; } = null!;
 
+    [JsonPropertyName("namespaces")]
     public AppserviceNamespaces Namespaces { get; set; } = null!;
 
     public class AppserviceNamespaces {
+        [JsonPropertyName("users")]
         public List<AppserviceNamespace>? Users { get; set; } = null;
+
+        [JsonPropertyName("aliases")]
         public List<AppserviceNamespace>? Aliases { get; set; } = null;
+
+        [JsonPropertyName("rooms")]
         public List<AppserviceNamespace>? Rooms { get; set; } = null;
 
         public class AppserviceNamespace {
+            [JsonPropertyName("exclusive")]
             public bool Exclusive { get; set; }
+
+            [JsonPropertyName("regex")]
             public string Regex { get; set; } = null!;
         }
     }

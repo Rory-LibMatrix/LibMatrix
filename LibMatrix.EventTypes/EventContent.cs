@@ -37,6 +37,10 @@ public abstract class TimelineEventContent : EventContent {
         [JsonPropertyName("rel_type")]
         public string? RelationType { get; set; }
 
+        // used for reactions
+        [JsonPropertyName("key")]
+        public string? Key { get; set; }
+
         public class EventInReplyTo {
             [JsonPropertyName("event_id")]
             public string? EventId { get; set; }
