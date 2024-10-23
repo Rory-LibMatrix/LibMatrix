@@ -1,10 +1,20 @@
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
 namespace LibMatrix.EventTypes;
 
-public abstract class EventContent;
+public abstract class EventContent {
+    public static List<string> GetMatchingEventTypes<T>() where T : EventContent {
+        var type = typeof(T);
+        var eventTypes = new List<string>();
+        foreach (var attr in type.GetCustomAttributes<MatrixEventAttribute>(true)) {
+            eventTypes.Add(attr.EventName);
+        }
+        return eventTypes;
+    }
+}
 
 public class UnknownEventContent : TimelineEventContent;
 
