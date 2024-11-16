@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text.Json.Nodes;
 using LibMatrix.HomeserverEmulator.Services;
 using LibMatrix.Responses;
@@ -8,7 +9,7 @@ namespace LibMatrix.HomeserverEmulator.Controllers;
 
 [ApiController]
 [Route("/_matrix/client/{version}/")]
-public class AuthController(ILogger<AuthController> logger, UserStore userStore, TokenService tokenService) : ControllerBase {
+public class AuthController(ILogger<AuthController> logger, UserStore userStore, TokenService tokenService, HSEConfiguration config) : ControllerBase {
     [HttpPost("login")]
     public async Task<LoginResponse> Login(LoginRequest request) {
         if (!request.Identifier.User.StartsWith('@'))
@@ -58,6 +59,79 @@ public class AuthController(ILogger<AuthController> logger, UserStore userStore,
         user.AccessTokens.Remove(token);
         return new { };
     }
+
+    [HttpPost("register")]
+    public async Task<object> Register(JsonObject request, [FromQuery] string kind = "user") {
+        if (kind == "guest") {
+            var user = await userStore.CreateUser(Random.Shared.NextInt64(long.MaxValue).ToString(), kind: "guest");
+            return user.Login();
+        }
+
+        if (request.Count == 0) {
+            return new {
+                session = Guid.NewGuid().ToString(),
+                flows = new {
+                    stages = new[] {
+                        "m.login.dummy",
+                    }
+                }
+            };
+        }
+
+        if (request.ContainsKey("password")) {
+            var parts = request["username"].ToString().Split(':');
+            var localpart = parts[0].TrimStart('@');
+            var user = await userStore.CreateUser($"@{localpart}:{config.ServerName}");
+            var login = user.Login();
+
+            if (request.ContainsKey("initial_device_display_name"))
+                user.AccessTokens[login.AccessToken].DeviceName = request["initial_device_display_name"]!.ToString();
+
+            return login;
+        }
+
+        return new { };
+    }
+
+    [HttpGet("register/available")]
+    public async Task<object> IsUsernameAvailable([FromQuery] string username) {
+        return new {
+            available = await userStore.GetUserById($"@{username}:{config.ServerName}") is null
+        };
+    }
+    
+    // [HttpPost("account/deactivate")]
+    // public async Task<object> DeactivateAccount() {
+    //     var token = tokenService.GetAccessToken(HttpContext);
+    //     var user = await userStore.GetUserByToken(token);
+    //     if (user == null)
+    //         throw new MatrixException() {
+    //             ErrorCode = "M_UNKNOWN_TOKEN",
+    //             Error = "No such user"
+    //         };
+    //
+    //     
+    //     return new { };
+    // }
+    
+    #region 3PID
+    
+    [HttpGet("account/3pid")]
+    public async Task<object> Get3pid() {
+        var token = tokenService.GetAccessToken(HttpContext);
+        var user = await userStore.GetUserByToken(token);
+        if (user == null)
+            throw new MatrixException() {
+                ErrorCode = "M_UNKNOWN_TOKEN",
+                Error = "No such user"
+            };
+
+        return new {
+            threepids = (object[])[]
+        };
+    }
+    
+    #endregion
 }
 
 public class LoginFlowsResponse {

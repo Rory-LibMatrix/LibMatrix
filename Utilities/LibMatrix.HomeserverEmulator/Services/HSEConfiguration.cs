@@ -27,6 +27,8 @@ public class HSEConfiguration {
     public string DataStoragePath { get; set; }
 
     public bool StoreData { get; set; } = true;
+
+    public string ServerName { get; set; } = "localhost";
     
     public bool UnknownSyncTokenIsInitialSync { get; set; } = true;
 

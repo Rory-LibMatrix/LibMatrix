@@ -11,6 +11,25 @@
 // [ApiController]
 // [Route("/_matrix/client/{version}/")]
 // public class KeysController(ILogger<KeysController> logger, TokenService tokenService, UserStore userStore) : ControllerBase {
+//     [HttpPost("keys/upload")]
+//     public async Task<object> UploadKeys(DeviceKeysUploadRequest request) {
+//         var token = tokenService.GetAccessToken(HttpContext);
+//         if (token == null)
+//             throw new MatrixException() {
+//                 ErrorCode = "M_MISSING_TOKEN",
+//                 Error = "Missing token"
+//             };
+//
+//         var user = await userStore.GetUserByToken(token);
+//         if (user == null)
+//             throw new MatrixException() {
+//                 ErrorCode = "M_UNKNOWN_TOKEN",
+//                 Error = "No such user"
+//             };
+//
+//         return new { };
+//     }
+//     
 //     [HttpGet("room_keys/version")]
 //     public async Task<RoomKeysResponse> GetRoomKeys() {
 //         var token = tokenService.GetAccessToken(HttpContext);

@@ -42,6 +42,9 @@ public class MediaController(
 
     [HttpGet("download/{serverName}/{mediaId}")]
     public async Task DownloadMedia(string serverName, string mediaId) {
+        Response.Headers["Access-Control-Allow-Origin"] = "*";
+        Response.Headers["Access-Control-Allow-Methods"] = "GET";
+        
         var stream = await DownloadRemoteMedia(serverName, mediaId);
         await stream.CopyToAsync(Response.Body);
     }
@@ -56,6 +59,7 @@ public class MediaController(
         JsonObject data = new();
 
         using var hc = new HttpClient();
+        logger.LogInformation("Getting URL preview for {}", url);
         using var response = await hc.GetAsync(url);
         var doc = await response.Content.ReadAsStringAsync();
         var match = Regex.Match(doc, "<meta property=\"(.*?)\" content=\"(.*?)\"");
@@ -80,6 +84,7 @@ public class MediaController(
                     };
                 using var client = new HttpClient();
                 var stream = await client.GetStreamAsync(mediaUrl);
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
                 await using var fs = System.IO.File.Create(path);
                 await stream.CopyToAsync(fs);
             }

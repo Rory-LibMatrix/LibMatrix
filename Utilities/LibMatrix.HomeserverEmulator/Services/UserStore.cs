@@ -13,9 +13,11 @@ namespace LibMatrix.HomeserverEmulator.Services;
 
 public class UserStore {
     public ConcurrentBag<User> _users = new();
+    private readonly HSEConfiguration _config;
     private readonly RoomStore _roomStore;
 
     public UserStore(HSEConfiguration config, RoomStore roomStore) {
+        _config = config;
         _roomStore = roomStore;
         if (config.StoreData) {
             var dataDir = Path.Combine(HSEConfiguration.Current.DataStoragePath, "users");
@@ -64,12 +66,15 @@ public class UserStore {
         };
     }
 
-    public async Task<User> CreateUser(string userId, Dictionary<string, object>? profile = null) {
+    public async Task<User> CreateUser(string userId, Dictionary<string, object>? profile = null, string kind = "user") {
         profile ??= new();
-        if (!profile.ContainsKey("displayname")) profile.Add("displayname", userId.Split(":")[0]);
+        var parts = userId.Split(":");
+        var localPart = parts[0].TrimStart('@');
+        if (!profile.ContainsKey("displayname")) profile.Add("displayname", localPart);
         if (!profile.ContainsKey("avatar_url")) profile.Add("avatar_url", null);
         var user = new User() {
-            UserId = userId,
+            UserId = $"@{localPart}:{_config.ServerName}",
+            IsGuest = kind == "guest",
             AccountData = new() {
                 new StateEventResponse() {
                     Type = "im.vector.analytics",
@@ -80,7 +85,22 @@ public class UserStore {
                 new StateEventResponse() {
                     Type = "im.vector.web.settings",
                     RawContent = new JsonObject() {
-                        ["developerMode"] = true
+                        ["developerMode"] = true,
+                        ["alwaysShowTimestamps"] = true,
+                        ["SpotlightSearch.showNsfwPublicRooms"] = true,
+                        
+                    }
+                },
+                new() {
+                    Type = "im.vector.setting.integration_provisioning",
+                    RawContent = new JsonObject() {
+                        ["enabled"] = false
+                    }
+                },
+                new() {
+                    Type = "m.identity_server",
+                    RawContent = new JsonObject() {
+                        ["base_url"] = null
                     }
                 },
             }
@@ -185,6 +205,8 @@ public class UserStore {
             }
         }
 
+        public bool IsGuest { get; set; }
+
         public async Task SaveDebounced() {
             if (!HSEConfiguration.Current.StoreData) return;
             await _debounceCts.CancelAsync();
@@ -205,6 +227,7 @@ public class UserStore {
 
         public class SessionInfo {
             public string DeviceId { get; set; } = Guid.NewGuid().ToString();
+            public string DeviceName { get; set; } = "Unnamed device";
             public Dictionary<string, UserSyncState> SyncStates { get; set; } = new();
 
             public class UserSyncState {

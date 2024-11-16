@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Text.Json.Nodes;
 using ArcaneLibs;
+using ArcaneLibs.Extensions;
 using LibMatrix.EventTypes.Spec;
 using LibMatrix.EventTypes.Spec.State;
 using LibMatrix.Helpers;
@@ -46,7 +47,7 @@ public class RoomTimelineController(
 
         room.Timeline.Add(evt);
         if (evt.Type == RoomMessageEventContent.EventId && (evt.TypedContent as RoomMessageEventContent).Body.StartsWith("!hse"))
-            await HandleHseCommand(evt, room, user);
+            _ = Task.Run(() => HandleHseCommand(evt, room, user));
         // else
 
         return new() {
@@ -124,9 +125,10 @@ public class RoomTimelineController(
 
         return evt;
     }
-    
+
     [HttpGet("relations/{eventId}")]
-    public async Task<RecursedBatchedChunkedStateEventResponse> GetRelations(string roomId, string eventId, [FromQuery] string? dir = "b", [FromQuery] string? from = null, [FromQuery] int? limit = 100, [FromQuery] bool? recurse = false, [FromQuery] string? to = null) {
+    public async Task<RecursedBatchedChunkedStateEventResponse> GetRelations(string roomId, string eventId, [FromQuery] string? dir = "b", [FromQuery] string? from = null,
+        [FromQuery] int? limit = 100, [FromQuery] bool? recurse = false, [FromQuery] string? to = null) {
         var token = tokenService.GetAccessToken(HttpContext);
         var user = await userStore.GetUserByToken(token);
 
@@ -156,9 +158,10 @@ public class RoomTimelineController(
             Chunk = matchingEvents.ToList()
         };
     }
-    
+
     [HttpGet("relations/{eventId}/{relationType}")]
-    public async Task<RecursedBatchedChunkedStateEventResponse> GetRelations(string roomId, string eventId, string relationType, [FromQuery] string? dir = "b", [FromQuery] string? from = null, [FromQuery] int? limit = 100, [FromQuery] bool? recurse = false, [FromQuery] string? to = null) {
+    public async Task<RecursedBatchedChunkedStateEventResponse> GetRelations(string roomId, string eventId, string relationType, [FromQuery] string? dir = "b",
+        [FromQuery] string? from = null, [FromQuery] int? limit = 100, [FromQuery] bool? recurse = false, [FromQuery] string? to = null) {
         var token = tokenService.GetAccessToken(HttpContext);
         var user = await userStore.GetUserByToken(token);
 
@@ -188,9 +191,10 @@ public class RoomTimelineController(
             Chunk = matchingEvents.ToList()
         };
     }
-    
+
     [HttpGet("relations/{eventId}/{relationType}/{eventType}")]
-    public async Task<RecursedBatchedChunkedStateEventResponse> GetRelations(string roomId, string eventId, string relationType, string eventType, [FromQuery] string? dir = "b", [FromQuery] string? from = null, [FromQuery] int? limit = 100, [FromQuery] bool? recurse = false, [FromQuery] string? to = null) {
+    public async Task<RecursedBatchedChunkedStateEventResponse> GetRelations(string roomId, string eventId, string relationType, string eventType, [FromQuery] string? dir = "b",
+        [FromQuery] string? from = null, [FromQuery] int? limit = 100, [FromQuery] bool? recurse = false, [FromQuery] string? to = null) {
         var token = tokenService.GetAccessToken(HttpContext);
         var user = await userStore.GetUserByToken(token);
 
@@ -220,7 +224,7 @@ public class RoomTimelineController(
             Chunk = matchingEvents.ToList()
         };
     }
-    
+
     private async Task<IEnumerable<StateEventResponse>> GetRelationsInternal(string roomId, string eventId, string dir, string? from, int? limit, bool? recurse, string? to) {
         var room = roomStore.GetRoomById(roomId);
         var evt = room.Timeline.SingleOrDefault(x => x.EventId == eventId);
@@ -237,7 +241,7 @@ public class RoomTimelineController(
         else if (dir == "f") {
             relatedEvents = relatedEvents.Take(limit ?? 100);
         }
-        
+
         return relatedEvents;
     }
 
@@ -260,12 +264,14 @@ public class RoomTimelineController(
     }
 
     private async Task HandleHseCommand(StateEventResponse evt, RoomStore.Room room, UserStore.User user) {
+        logger.LogWarning("Handling HSE command for {0}: {1}", user.UserId, evt.RawContent.ToJson(false, true));
         try {
             var msgContent = evt.TypedContent as RoomMessageEventContent;
             var parts = msgContent.Body.Split('\n')[0].Split(" ");
             if (parts.Length < 2) return;
 
             var command = parts[1];
+            Console.WriteLine($"Handling command {command}");
             switch (command) {
                 case "import":
                     await HandleImportCommand(parts[2..], evt, room, user);
@@ -306,6 +312,7 @@ public class RoomTimelineController(
                             } while (Process.GetCurrentProcess().WorkingSet64 >= 1_024_000_000);
                         }
                     }
+
                     break;
                 }
                 case "genrooms": {
@@ -334,9 +341,11 @@ public class RoomTimelineController(
                                 }.ToStateEvent(user, room));
                             }
                         }
+
                         var newRoom = roomStore.CreateRoom(crq);
                         newRoom.AddUser(user.UserId);
                     }
+
                     InternalSendMessage(room, $"Generated {count} new rooms in {sw.Elapsed}!");
                     break;
                 }
@@ -348,6 +357,21 @@ public class RoomTimelineController(
                     InternalSendMessage(room,
                         $"GC memory: {Util.BytesToString(GC.GetTotalMemory(false))}, total process memory: {Util.BytesToString(Process.GetCurrentProcess().WorkingSet64)}");
                     break;
+                case "leave-all-rooms": {
+                    var rooms = roomStore.GetRoomsByMember(user.UserId);
+                    foreach (var memberEvt in rooms) {
+                        var roomObj = roomStore.GetRoomById(memberEvt.RoomId);
+                        roomObj.SetStateInternal(new() {
+                            Type = RoomMemberEventContent.EventId,
+                            StateKey = user.UserId,
+                            TypedContent = new RoomMemberEventContent() {
+                                Membership = "leave"
+                            },
+                        }, senderId: user.UserId);
+                    }
+
+                    break;
+                }
                 default:
                     InternalSendMessage(room, $"Command {command} not found!");
                     break;

@@ -28,10 +28,9 @@ public class SyncController(ILogger<SyncController> logger, TokenService tokenSe
         UserStore.User.SessionInfo.UserSyncState newSyncState = new();
 
         SyncResponse syncResp;
-        if (string.IsNullOrWhiteSpace(since) || !session.SyncStates.ContainsKey(since))
+        if (string.IsNullOrWhiteSpace(since) || !session.SyncStates.TryGetValue(since, out var syncState))
             syncResp = InitialSync(user, session);
         else {
-            var syncState = session.SyncStates[since];
             newSyncState = syncState.Clone();
 
             var newSyncToken = Guid.NewGuid().ToString();
@@ -155,7 +154,10 @@ public class SyncController(ILogger<SyncController> logger, TokenService tokenSe
             }
         }
 
-        if (data.Join.Count > 0) return data;
+        if (data.Join.Count > 0) {
+            logger.LogTrace("Found {count} updated rooms", data.Join.Count);
+            return data;
+        }
 
         // step 2: check newly joined rooms
         var untrackedRooms = roomStore._rooms.Where(r => !syncState.RoomPositions.ContainsKey(r.RoomId)).ToList();
@@ -206,6 +208,10 @@ public class SyncController(ILogger<SyncController> logger, TokenService tokenSe
 
 #endregion
 
+    private bool HasData(SyncResponse resp) {
+        return resp.Rooms?.Invite?.Count > 0 || resp.Rooms?.Join?.Count > 0 || resp.Rooms?.Leave?.Count > 0;
+    }
+    
     private async Task<bool> HasDataOrStall(SyncResponse resp) {
         // logger.LogTrace("Checking if sync response has data: {resp}", resp.ToJson(indent: false, ignoreNull: true));
         // if (resp.AccountData?.Events?.Count > 0) return true;
@@ -255,6 +261,14 @@ public class SyncController(ILogger<SyncController> logger, TokenService tokenSe
         } or {
             ToDevice: {
                 Events: { Count: > 0 }
+            }
+        } or {
+            Rooms: {
+                Invite: { Count: > 0 }
+            } or {
+                Join: { Count: > 0 }
+            } or {
+                Leave: { Count: > 0 }
             }
         };
 
