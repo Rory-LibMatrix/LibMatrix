@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Net.Http.Json;
+using System.Text.Json;
+using ArcaneLibs.Collections;
 using ArcaneLibs.Extensions;
 using LibMatrix.Filters;
 using LibMatrix.Homeservers;
@@ -90,9 +92,11 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
             if (httpResp is null) throw new NullReferenceException("Failed to send HTTP request");
             logger?.LogTrace("Got sync response: {} bytes, {} elapsed", httpResp.GetContentLength(), sw.Elapsed);
             var deserializeSw = Stopwatch.StartNew();
-            var resp = await httpResp.Content.ReadFromJsonAsync<SyncResponse>(cancellationToken: cancellationToken ?? CancellationToken.None,
+            var stream = await httpResp.Content.ReadAsStreamAsync();
+            await using var seekableStream = new SeekableStream(stream);
+            var resp = await JsonSerializer.DeserializeAsync<SyncResponse>(seekableStream, cancellationToken: cancellationToken ?? CancellationToken.None,
                 jsonTypeInfo: SyncResponseSerializerContext.Default.SyncResponse);
-            logger?.LogInformation("Deserialized sync response: {} bytes, {} elapsed, {} total", httpResp.GetContentLength(), deserializeSw.Elapsed, sw.Elapsed);
+            logger?.LogInformation("Deserialized sync response: {} bytes, {} elapsed, {} total", seekableStream.Position, deserializeSw.Elapsed, sw.Elapsed);
             var timeToWait = MinimumDelay.Subtract(sw.Elapsed);
             if (timeToWait.TotalMilliseconds > 0)
                 await Task.Delay(timeToWait);

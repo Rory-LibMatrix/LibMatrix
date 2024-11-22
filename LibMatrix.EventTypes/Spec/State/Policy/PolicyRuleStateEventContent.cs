@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using ArcaneLibs.Attributes;
 using ArcaneLibs.Extensions;
 
@@ -91,6 +92,14 @@ public abstract class PolicyRuleEventContent : EventContent {
     }
 
     public string GetDraupnir2StateKey() => Convert.ToBase64String(SHA256.HashData($"{Entity}{Recommendation}".AsBytes().ToArray()));
+
+    public Regex GetEntityRegex() => new(Entity.Replace(".", "\\.").Replace("*", ".*").Replace("?", "."));
+
+    public bool EntityMatches(string entity) =>
+        Entity == entity
+        || (Entity.Contains("*") || Entity.Contains("?")
+            ? GetEntityRegex().IsMatch(entity)
+            : entity == Entity);
 }
 
 public static class PolicyRecommendationTypes {
