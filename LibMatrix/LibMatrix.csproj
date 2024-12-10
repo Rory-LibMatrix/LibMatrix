@@ -12,25 +12,14 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Condition="Exists('..\ArcaneLibs\ArcaneLibs\ArcaneLibs.csproj')" Include="..\ArcaneLibs\ArcaneLibs\ArcaneLibs.csproj"/>
-        <!-- This is dangerous, but eases development since locking the version will drift out of sync without noticing,
-                which causes build errors due to missing functions.
-                Using the NuGet version in development is annoying due to delays between pushing and being able to consume.
-                If you want to use a time-appropriate version of the library, recursively clone https://cgit.rory.gay/matrix/MatrixUtils.git
-                instead, since this will be locked by the MatrixUtils project, which contains both LibMatrix and ArcaneLibs as a submodule. -->
-        <PackageReference Condition="!Exists('..\ArcaneLibs\ArcaneLibs\ArcaneLibs.csproj')" Include="ArcaneLibs" Version="*-preview.202*"/>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0"/>
         <ProjectReference Include="..\LibMatrix.EventTypes\LibMatrix.EventTypes.csproj"/>
     </ItemGroup>
 
-    <!-- 
-    <Target Name="ArcaneLibsNugetWarning" AfterTargets="AfterBuild">
-        <Warning Text="ArcaneLibs is being referenced from NuGet, which is dangerous. Please read the warning in LibMatrix.csproj!" Condition="!Exists('..\ArcaneLibs\ArcaneLibs\ArcaneLibs.csproj')"/>
-    </Target>
-    -->
+    <ItemGroup>
+        <PackageReference Include="ArcaneLibs" Version="1.0.0-preview.20241122-053825" Condition="'$(Configuration)' == 'Release'"/>
+        <ProjectReference Include="..\ArcaneLibs\ArcaneLibs\ArcaneLibs.csproj" Condition="'$(Configuration)' == 'Debug'"/>
+    </ItemGroup>
 
 </Project>
