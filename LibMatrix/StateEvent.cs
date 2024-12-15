@@ -31,23 +31,6 @@ public class StateEvent {
     public static Type GetStateEventType(string? type) =>
         string.IsNullOrWhiteSpace(type) ? typeof(UnknownEventContent) : KnownStateEventTypesByName.GetValueOrDefault(type) ?? typeof(UnknownEventContent);
 
-    [JsonPropertyName("state_key")]
-    public string? StateKey { get; set; }
-
-    [JsonPropertyName("type")]
-    public string Type { get; set; }
-
-    [JsonPropertyName("replaces_state")]
-    public string? ReplacesState { get; set; }
-
-    private JsonObject? _rawContent;
-
-    [JsonPropertyName("content")]
-    public JsonObject? RawContent {
-        get => _rawContent;
-        set => _rawContent = value;
-    }
-
     [JsonIgnore]
     public Type MappedType => GetStateEventType(Type);
 
@@ -96,7 +79,6 @@ public class StateEvent {
         }
     }
 
-<<<<<<< HEAD
     public T? ContentAs<T>() {
         try {
             return RawContent.Deserialize<T>(TypedContentSerializerOptions)!;
