@@ -45,7 +45,7 @@ public class HomeserverResolverService {
 
             // try {
             if (client != null)
-                res.Client = await client ?? throw new Exception($"Could not resolve client URL for {homeserver}.");
+                res.Client = (await client)?.TrimEnd('/') ?? throw new Exception($"Could not resolve client URL for {homeserver}.");
             // }
             // catch (Exception e) {
             // _logger.LogError(e, "Error resolving client well-known for {hs}", homeserver);
@@ -53,7 +53,7 @@ public class HomeserverResolverService {
 
             // try {
             if (server != null)
-                res.Server = await server ?? throw new Exception($"Could not resolve server URL for {homeserver}.");
+                res.Server = (await server)?.TrimEnd('/') ?? throw new Exception($"Could not resolve server URL for {homeserver}.");
             // }
             // catch (Exception e) {
             // _logger.LogError(e, "Error resolving server well-known for {hs}", homeserver);
