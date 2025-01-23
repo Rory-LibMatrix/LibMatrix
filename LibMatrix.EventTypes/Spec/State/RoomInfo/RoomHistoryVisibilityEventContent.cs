@@ -7,5 +7,5 @@ public class RoomHistoryVisibilityEventContent : EventContent {
     public const string EventId = "m.room.history_visibility";
 
     [JsonPropertyName("history_visibility")]
-    public string HistoryVisibility { get; set; }
+    public required string HistoryVisibility { get; set; }
 }

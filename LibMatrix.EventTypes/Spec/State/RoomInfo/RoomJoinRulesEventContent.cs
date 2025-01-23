@@ -12,7 +12,7 @@ public class RoomJoinRulesEventContent : EventContent {
     /// unknown values are treated as "private"
     /// </summary>
     [JsonPropertyName("join_rule")]
-    public string JoinRuleValue { get; set; }
+    public string JoinRuleValue { get; set; } = null!;
 
     [JsonIgnore]
     public JoinRules JoinRule {
