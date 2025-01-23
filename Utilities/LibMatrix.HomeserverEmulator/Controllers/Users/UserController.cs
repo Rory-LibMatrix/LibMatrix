@@ -1,10 +1,7 @@
-using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
-using ArcaneLibs.Extensions;
 using LibMatrix.EventTypes.Spec.State;
-using LibMatrix.Filters;
+using LibMatrix.EventTypes.Spec.State.RoomInfo;
 using LibMatrix.HomeserverEmulator.Services;
-using LibMatrix.Responses;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LibMatrix.HomeserverEmulator.Controllers;

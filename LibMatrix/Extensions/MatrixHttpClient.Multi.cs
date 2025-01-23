@@ -1,16 +1,5 @@
 #define SINGLE_HTTPCLIENT // Use a single HttpClient instance for all MatrixHttpClient instances
 // #define SYNC_HTTPCLIENT // Only allow one request as a time, for debugging
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.Net.Http.Headers;
-using System.Reflection;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using ArcaneLibs;
-using ArcaneLibs.Extensions;
-
 namespace LibMatrix.Extensions;
 
 public static class HttpClientExtensions {

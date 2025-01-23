@@ -1,7 +1,5 @@
-using System.Net.Http.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
-using ArcaneLibs.Extensions;
 using LibMatrix.Responses;
 
 namespace LibMatrix.Homeservers;

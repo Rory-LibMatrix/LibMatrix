@@ -1,7 +1,6 @@
 using System.Net.Mime;
 using System.Text.Json.Serialization;
 using LibMatrix;
-using LibMatrix.HomeserverEmulator.Extensions;
 using LibMatrix.HomeserverEmulator.Services;
 using LibMatrix.Services;
 using Microsoft.AspNetCore.Diagnostics;

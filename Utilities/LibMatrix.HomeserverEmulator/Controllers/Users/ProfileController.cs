@@ -1,9 +1,5 @@
 using System.Text.Json.Nodes;
-using ArcaneLibs.Extensions;
-using LibMatrix.EventTypes.Spec.State;
-using LibMatrix.Filters;
 using LibMatrix.HomeserverEmulator.Services;
-using LibMatrix.Responses;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LibMatrix.HomeserverEmulator.Controllers;

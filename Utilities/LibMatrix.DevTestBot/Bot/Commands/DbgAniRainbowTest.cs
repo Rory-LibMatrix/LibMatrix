@@ -2,7 +2,6 @@ using System.Diagnostics;
 using LibMatrix.EventTypes.Spec;
 using LibMatrix.ExampleBot.Bot.Interfaces;
 using LibMatrix.Helpers;
-using LibMatrix.RoomTypes;
 using LibMatrix.Services;
 
 namespace ModerationBot.Commands;

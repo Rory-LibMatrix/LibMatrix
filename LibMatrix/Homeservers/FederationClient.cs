@@ -1,7 +1,6 @@
 using System.Text.Json.Serialization;
 using LibMatrix.Extensions;
 using LibMatrix.Services;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LibMatrix.Homeservers;
 

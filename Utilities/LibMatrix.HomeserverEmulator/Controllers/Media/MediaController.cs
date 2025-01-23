@@ -1,6 +1,5 @@
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
-using ArcaneLibs.Collections;
 using LibMatrix.HomeserverEmulator.Services;
 using LibMatrix.Services;
 using Microsoft.AspNetCore.Mvc;

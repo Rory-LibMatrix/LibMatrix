@@ -1,5 +1,4 @@
 using System.Collections.Frozen;
-using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -13,8 +12,6 @@ using LibMatrix.EventTypes.Spec.State.RoomInfo;
 using LibMatrix.Filters;
 using LibMatrix.Helpers;
 using LibMatrix.Homeservers;
-using LibMatrix.Services;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LibMatrix.RoomTypes;
 

@@ -2,13 +2,13 @@ using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using ArcaneLibs;
 using ArcaneLibs.Collections;
 using ArcaneLibs.Extensions;
 using LibMatrix.EventTypes.Spec.State;
+using LibMatrix.EventTypes.Spec.State.RoomInfo;
 using LibMatrix.HomeserverEmulator.Controllers.Rooms;
 using LibMatrix.Responses;
 

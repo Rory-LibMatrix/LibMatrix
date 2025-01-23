@@ -1,5 +1,4 @@
 using System.Text.Json.Nodes;
-using LibMatrix.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LibMatrix.HomeserverEmulator.Controllers;

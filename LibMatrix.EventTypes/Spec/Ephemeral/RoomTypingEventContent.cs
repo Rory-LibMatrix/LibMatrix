@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace LibMatrix.EventTypes.Spec.State;
+namespace LibMatrix.EventTypes.Spec.Ephemeral;
 
 [MatrixEvent(EventName = EventId)]
 public class RoomTypingEventContent : EventContent {

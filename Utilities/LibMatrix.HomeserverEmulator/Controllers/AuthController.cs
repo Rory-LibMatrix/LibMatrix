@@ -1,8 +1,6 @@
-using System.Security.Cryptography;
 using System.Text.Json.Nodes;
 using LibMatrix.HomeserverEmulator.Services;
 using LibMatrix.Responses;
-using LibMatrix.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LibMatrix.HomeserverEmulator.Controllers;

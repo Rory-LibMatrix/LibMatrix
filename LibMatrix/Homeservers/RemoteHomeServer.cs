@@ -1,13 +1,11 @@
 using System.Net.Http.Json;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Web;
 using ArcaneLibs.Extensions;
 using LibMatrix.Extensions;
 using LibMatrix.Responses;
 using LibMatrix.Services;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LibMatrix.Homeservers;
 

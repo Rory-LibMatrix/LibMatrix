@@ -5,8 +5,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Web;
 using ArcaneLibs.Extensions;
-using LibMatrix.EventTypes.Spec.State;
-using LibMatrix.Extensions;
+using LibMatrix.EventTypes.Spec.State.RoomInfo;
 using LibMatrix.Filters;
 using LibMatrix.Helpers;
 using LibMatrix.Homeservers.Extensions.NamedCaches;
@@ -14,7 +13,6 @@ using LibMatrix.Responses;
 using LibMatrix.RoomTypes;
 using LibMatrix.Services;
 using LibMatrix.Utilities;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LibMatrix.Homeservers;
 

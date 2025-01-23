@@ -1,12 +1,9 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Security.Cryptography;
-using System.Text.Json.Nodes;
 using ArcaneLibs.Extensions;
 using LibMatrix.EventTypes.Spec.State;
+using LibMatrix.EventTypes.Spec.State.RoomInfo;
 using LibMatrix.HomeserverEmulator.Services;
-using LibMatrix.Responses;
-using LibMatrix.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LibMatrix.HomeserverEmulator.Controllers;

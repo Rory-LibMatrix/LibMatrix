@@ -1,7 +1,4 @@
-using ArcaneLibs.Extensions;
-using LibMatrix.Filters;
 using LibMatrix.Homeservers.ImplementationDetails.Synapse;
-using LibMatrix.Responses.Admin;
 using LibMatrix.Services;
 
 namespace LibMatrix.Homeservers;
