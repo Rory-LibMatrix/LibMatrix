@@ -1,4 +1,3 @@
-using LibMatrix.Utilities.Bot.Interfaces;
 using Microsoft.Extensions.Configuration;
 
 namespace LibMatrix.Utilities.Bot;

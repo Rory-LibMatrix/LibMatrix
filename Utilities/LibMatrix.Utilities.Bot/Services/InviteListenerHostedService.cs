@@ -1,12 +1,6 @@
-using System.Reflection.Metadata;
-using ArcaneLibs.Extensions;
-using LibMatrix.EventTypes.Spec;
 using LibMatrix.Filters;
 using LibMatrix.Helpers;
 using LibMatrix.Homeservers;
-using LibMatrix.Responses;
-using LibMatrix.Utilities.Bot.Interfaces;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
