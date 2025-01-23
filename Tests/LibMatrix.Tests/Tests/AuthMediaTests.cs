@@ -1,6 +1,5 @@
 using ArcaneLibs.Extensions;
 using ArcaneLibs.Extensions.Streams;
-using LibMatrix.Homeservers;
 using LibMatrix.Services;
 using LibMatrix.Tests.Abstractions;
 using LibMatrix.Tests.Fixtures;

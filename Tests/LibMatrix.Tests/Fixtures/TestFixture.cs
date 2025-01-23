@@ -1,4 +1,3 @@
-using ArcaneLibs.Extensions;
 using LibMatrix.Services;
 using LibMatrix.Tests.Abstractions;
 using Microsoft.Extensions.Configuration;

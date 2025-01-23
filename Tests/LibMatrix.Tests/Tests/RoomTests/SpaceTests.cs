@@ -1,11 +1,8 @@
-using System.Diagnostics;
-using System.Text;
 using ArcaneLibs.Extensions;
 using LibMatrix.EventTypes.Spec.State;
-using LibMatrix.Homeservers;
+using LibMatrix.EventTypes.Spec.State.Space;
 using LibMatrix.Responses;
 using LibMatrix.RoomTypes;
-using LibMatrix.Services;
 using LibMatrix.Tests.Abstractions;
 using LibMatrix.Tests.Fixtures;
 using Xunit.Abstractions;

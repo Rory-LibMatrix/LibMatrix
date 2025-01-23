@@ -3,9 +3,7 @@ using LibMatrix.Homeservers;
 using LibMatrix.Responses;
 using LibMatrix.Services;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Xunit.Abstractions;
-using Xunit.Sdk;
 
 namespace LibMatrix.Tests.Abstractions;
 

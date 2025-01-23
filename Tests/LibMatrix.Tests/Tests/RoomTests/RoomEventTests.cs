@@ -1,5 +1,3 @@
-using LibMatrix.Homeservers;
-using LibMatrix.Services;
 using LibMatrix.Tests.Abstractions;
 using LibMatrix.Tests.Fixtures;
 using Xunit.Abstractions;
