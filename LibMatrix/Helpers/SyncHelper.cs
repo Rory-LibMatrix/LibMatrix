@@ -1,12 +1,10 @@
 using System.Diagnostics;
-using System.Net.Http.Json;
 using System.Text.Json;
 using ArcaneLibs.Collections;
 using ArcaneLibs.Extensions;
 using LibMatrix.Filters;
 using LibMatrix.Homeservers;
 using LibMatrix.Responses;
-using LibMatrix.Utilities;
 using Microsoft.Extensions.Logging;
 
 namespace LibMatrix.Helpers;
@@ -14,8 +12,8 @@ namespace LibMatrix.Helpers;
 public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logger = null) {
     private SyncFilter? _filter;
     private string? _namedFilterName;
-    private bool _filterIsDirty = false;
-    private string? _filterId = null;
+    private bool _filterIsDirty;
+    private string? _filterId;
 
     public string? Since { get; set; }
     public int Timeout { get; set; } = 30000;
@@ -55,7 +53,7 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
 
     public TimeSpan MinimumDelay { get; set; } = new(0);
 
-    private async Task updateFilterAsync() {
+    private async Task UpdateFilterAsync() {
         if (!string.IsNullOrWhiteSpace(NamedFilterName)) {
             _filterId = await homeserver.NamedCaches.FilterCache.GetOrSetValueAsync(NamedFilterName);
             if (_filterId is null)
@@ -79,7 +77,7 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
         }
 
         var sw = Stopwatch.StartNew();
-        if (_filterIsDirty) await updateFilterAsync();
+        if (_filterIsDirty) await UpdateFilterAsync();
 
         var url = $"/_matrix/client/v3/sync?timeout={Timeout}&set_presence={SetPresence}&full_state={(FullState ? "true" : "false")}";
         if (!string.IsNullOrWhiteSpace(Since)) url += $"&since={Since}";
@@ -189,7 +187,7 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
         if (syncResponse.Rooms is { Join.Count: > 0 })
             foreach (var updatedRoom in syncResponse.Rooms.Join) {
                 if (updatedRoom.Value.Timeline is null) continue;
-                foreach (var stateEventResponse in updatedRoom.Value.Timeline.Events) {
+                foreach (var stateEventResponse in updatedRoom.Value.Timeline.Events ?? []) {
                     stateEventResponse.RoomId = updatedRoom.Key;
                     var tasks = TimelineEventHandlers.Select(x => x(stateEventResponse)).ToList();
                     await Task.WhenAll(tasks);
@@ -216,9 +214,4 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
     /// Event fired when an account data event is received
     /// </summary>
     public List<Func<StateEventResponse, Task>> AccountDataReceivedHandlers { get; } = new();
-    
-    private void Log(string message) {
-        if (logger is null) Console.WriteLine(message);
-        else logger.LogInformation(message);
-    }
 }

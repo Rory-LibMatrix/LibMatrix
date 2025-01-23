@@ -8,7 +8,7 @@ namespace LibMatrix.Extensions;
 
 public static class CanonicalJsonSerializer {
     // TODO: Alphabetise dictionaries
-    private static JsonSerializerOptions _options => new() {
+    private static JsonSerializerOptions JsonOptions => new() {
         WriteIndented = false,
         Encoder = UnicodeJsonEncoder.Singleton,
     };
@@ -19,7 +19,7 @@ public static class CanonicalJsonSerializer {
         .ToFrozenSet();
 
     private static JsonSerializerOptions MergeOptions(JsonSerializerOptions? inputOptions) {
-        var newOptions = _options;
+        var newOptions = JsonOptions;
         if (inputOptions == null)
             return newOptions;
         
@@ -43,7 +43,7 @@ public static class CanonicalJsonSerializer {
     public static String Serialize<TValue>(TValue value, JsonSerializerOptions? options = null) {
         var newOptions = MergeOptions(options);
 
-        return System.Text.Json.JsonSerializer.SerializeToNode(value, options) // We want to allow passing custom converters for eg. double/float -> string here...
+        return JsonSerializer.SerializeToNode(value, options) // We want to allow passing custom converters for eg. double/float -> string here...
             .SortProperties()!
             .CanonicalizeNumbers()!
             .ToJsonString(newOptions);
@@ -53,13 +53,14 @@ public static class CanonicalJsonSerializer {
         
     }
 
-    public static String Serialize(object value, Type inputType, JsonSerializerOptions? options = null) => JsonSerializer.Serialize(value, inputType, _options);
+    public static String Serialize(object value, Type inputType, JsonSerializerOptions? options = null) => JsonSerializer.Serialize(value, inputType, JsonOptions);
     // public static String Serialize<TValue>(TValue value, JsonTypeInfo<TValue> jsonTypeInfo) => JsonSerializer.Serialize(value, jsonTypeInfo, _options);
     // public static String Serialize(Object value, JsonTypeInfo jsonTypeInfo) 
 
 #endregion
 
-    private static partial class JsonExtensions {
+    // ReSharper disable once UnusedType.Local
+    private static class JsonExtensions {
         public static Action<JsonTypeInfo> AlphabetizeProperties(Type type) {
             return typeInfo => {
                 if (typeInfo.Kind != JsonTypeInfoKind.Object || !type.IsAssignableFrom(typeInfo.Type))

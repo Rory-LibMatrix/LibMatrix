@@ -43,7 +43,7 @@ public abstract class PolicyRuleEventContent : EventContent {
     [FriendlyName(Name = "Entity")]
     public string? Entity { get; set; }
 
-    private bool init;
+    // private bool init;
 
     /// <summary>
     ///     Reason this user is banned
@@ -93,13 +93,18 @@ public abstract class PolicyRuleEventContent : EventContent {
 
     public string GetDraupnir2StateKey() => Convert.ToBase64String(SHA256.HashData($"{Entity}{Recommendation}".AsBytes().ToArray()));
 
-    public Regex GetEntityRegex() => new(Entity.Replace(".", "\\.").Replace("*", ".*").Replace("?", "."));
+    public Regex? GetEntityRegex() => Entity is null ? null : new(Entity.Replace(".", "\\.").Replace("*", ".*").Replace("?", "."));
 
     public bool EntityMatches(string entity) =>
-        Entity == entity
-        || (Entity.Contains("*") || Entity.Contains("?")
-            ? GetEntityRegex().IsMatch(entity)
-            : entity == Entity);
+        Entity != null
+        && (
+            Entity == entity
+            || (
+                Entity.Contains("*") || Entity.Contains("?")
+                    ? GetEntityRegex()!.IsMatch(entity)
+                    : entity == Entity
+            )
+        );
 }
 
 public static class PolicyRecommendationTypes {

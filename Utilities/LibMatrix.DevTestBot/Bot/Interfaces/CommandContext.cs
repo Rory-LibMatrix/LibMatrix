@@ -4,8 +4,9 @@ using LibMatrix.RoomTypes;
 namespace LibMatrix.ExampleBot.Bot.Interfaces;
 
 public class CommandContext {
-    public GenericRoom Room { get; set; }
-    public StateEventResponse MessageEvent { get; set; }
-    public string CommandName => (MessageEvent.TypedContent as RoomMessageEventContent).Body.Split(' ')[0][1..];
-    public string[] Args => (MessageEvent.TypedContent as RoomMessageEventContent).Body.Split(' ')[1..];
+    public required GenericRoom Room { get; init; }
+    public required StateEventResponse MessageEvent { get; init; }
+    public string CommandName => MessageContent.Body.Split(' ')[0][1..];
+    public string[] Args => MessageContent.Body.Split(' ')[1..];
+    private RoomMessageEventContent MessageContent => MessageEvent.TypedContent as RoomMessageEventContent ?? throw new Exception("Message content is not a RoomMessageEventContent");
 }

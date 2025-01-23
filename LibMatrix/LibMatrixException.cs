@@ -1,5 +1,7 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using ArcaneLibs.Extensions;
+// ReSharper disable MemberCanBePrivate.Global
 
 namespace LibMatrix;
 
@@ -20,6 +22,7 @@ public class LibMatrixException : Exception {
             _ => $"Unknown error: {GetAsObject().ToJson(ignoreNull: true)}"
         }}\nError: {Error}";
 
+    [SuppressMessage("ReSharper", "InconsistentNaming", Justification = "Follows spec naming")]
     public static class ErrorCodes {
         public const string M_NOT_FOUND = "M_NOT_FOUND";
         public const string M_UNSUPPORTED = "M_UNSUPPORTED";

@@ -1,8 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace LibMatrix.EventTypes.Spec.State.RoomInfo;
 
 [MatrixEvent(EventName = EventId)]
+[SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Global", Justification = "Deserialization, public API")]
+[SuppressMessage("ReSharper", "ClassNeverInstantiated.Global", Justification = "Deserialization, public API")]
 public class RoomCreateEventContent : EventContent {
     public const string EventId = "m.room.create";
 
@@ -20,12 +23,12 @@ public class RoomCreateEventContent : EventContent {
 
     [JsonPropertyName("type")]
     public string? Type { get; set; }
+}
 
-    public class RoomCreatePredecessor {
-        [JsonPropertyName("room_id")]
-        public string? RoomId { get; set; }
+public class RoomCreatePredecessor {
+    [JsonPropertyName("room_id")]
+    public string? RoomId { get; set; }
 
-        [JsonPropertyName("event_id")]
-        public string? EventId { get; set; }
-    }
+    [JsonPropertyName("event_id")]
+    public string? EventId { get; set; }
 }

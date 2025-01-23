@@ -49,7 +49,7 @@ public class RemoteHomeserver {
         var resp = await ClientHttpClient.GetAsync($"/_matrix/client/v3/profile/{HttpUtility.UrlEncode(mxid)}");
         var data = await resp.Content.ReadFromJsonAsync<UserProfileResponse>();
         if (!resp.IsSuccessStatusCode) Console.WriteLine("Profile: " + data);
-        _profileCache[mxid] = data;
+        _profileCache[mxid] = data ?? throw new InvalidOperationException($"Could not get profile for {mxid}");
 
         return data;
     }
@@ -58,7 +58,7 @@ public class RemoteHomeserver {
         var resp = await ClientHttpClient.GetAsync($"/_matrix/client/versions");
         var data = await resp.Content.ReadFromJsonAsync<ClientVersionsResponse>();
         if (!resp.IsSuccessStatusCode) Console.WriteLine("ClientVersions: " + data);
-        return data;
+        return data ?? throw new InvalidOperationException("ClientVersionsResponse is null");
     }
 
     public async Task<AliasResult> ResolveRoomAliasAsync(string alias) {
@@ -66,7 +66,7 @@ public class RemoteHomeserver {
         var data = await resp.Content.ReadFromJsonAsync<AliasResult>();
         //var text = await resp.Content.ReadAsStringAsync();
         if (!resp.IsSuccessStatusCode) Console.WriteLine("ResolveAlias: " + data.ToJson());
-        return data;
+        return data ?? throw new InvalidOperationException($"Could not resolve alias {alias}");
     }
 
 #region Authentication
@@ -78,12 +78,11 @@ public class RemoteHomeserver {
                 type = "m.id.user",
                 user = username
             },
-            password = password,
+            password,
             initial_device_display_name = deviceName
         });
         var data = await resp.Content.ReadFromJsonAsync<LoginResponse>();
-        if (!resp.IsSuccessStatusCode) Console.WriteLine("Login: " + data.ToJson());
-        return data;
+        return data ?? throw new InvalidOperationException("LoginResponse is null");
     }
 
     public async Task<LoginResponse> RegisterAsync(string username, string password, string? deviceName = null) {
@@ -99,18 +98,13 @@ public class RemoteHomeserver {
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         });
         var data = await resp.Content.ReadFromJsonAsync<LoginResponse>();
-        if (!resp.IsSuccessStatusCode) Console.WriteLine("Register: " + data.ToJson());
-        return data;
+        return data ?? throw new InvalidOperationException("LoginResponse is null");
     }
 
 #endregion
 
     [Obsolete("This call uses the deprecated unauthenticated media endpoints, please switch to the relevant AuthenticatedHomeserver methods instead.", true)]
-    public string? ResolveMediaUri(string? mxcUri) {
-        if (mxcUri is null) return null;
-        if (mxcUri.StartsWith("https://")) return mxcUri;
-        return $"{ClientHttpClient.BaseAddress}/_matrix/media/v3/download/{mxcUri.Replace("mxc://", "")}".Replace("//_matrix", "/_matrix");
-    }
+    public virtual string? ResolveMediaUri(string? mxcUri) => null;
 
     public UserInteractiveAuthClient Auth;
 }

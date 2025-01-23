@@ -126,6 +126,7 @@ public static class JsonElementExtensions {
             $"Encountered dictionary {field.Name} with key type {keyType.Name} and value type {valueType.Name}!");
 
         return field.Value.EnumerateObject()
+            // TODO: use key.Value?
             .Where(key => !valueType.IsPrimitive && valueType != typeof(string))
             .Aggregate(false, (current, key) =>
                 current | key.FindExtraJsonPropertyFieldsByValueKind(containerType, valueType)

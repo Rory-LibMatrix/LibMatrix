@@ -36,10 +36,11 @@ public class CreateRoomRequest {
     /// One of: ["public", "private"]
     /// </summary>
     [JsonPropertyName("visibility")]
+    // ReSharper disable once UnusedAutoPropertyAccessor.Global
     public string? Visibility { get; set; }
 
     [JsonPropertyName("power_level_content_override")]
-    public RoomPowerLevelEventContent? PowerLevelContentOverride { get; set; } = null!;
+    public RoomPowerLevelEventContent? PowerLevelContentOverride { get; set; }
 
     [JsonPropertyName("creation_content")]
     public JsonObject CreationContent { get; set; } = new();
@@ -51,11 +52,11 @@ public class CreateRoomRequest {
     ///     For use only when you can't use the CreationContent property
     /// </summary>
 
-    public StateEvent this[string eventType, string eventKey = ""] {
+    public StateEvent? this[string eventType, string eventKey = ""] {
         get {
-            var stateEvent = InitialState.FirstOrDefault(x => x.Type == eventType && x.StateKey == eventKey);
+            var stateEvent = InitialState?.FirstOrDefault(x => x.Type == eventType && x.StateKey == eventKey);
             if (stateEvent == null)
-                InitialState.Add(stateEvent = new StateEvent {
+                InitialState?.Add(stateEvent = new StateEvent {
                     Type = eventType,
                     StateKey = eventKey,
                     TypedContent = (EventContent)Activator.CreateInstance(
@@ -78,7 +79,7 @@ public class CreateRoomRequest {
 
     public Dictionary<string, string> Validate() {
         Dictionary<string, string> errors = new();
-        if (!Regex.IsMatch(RoomAliasName, @"[a-zA-Z0-9_\-]+$"))
+        if (!string.IsNullOrWhiteSpace(RoomAliasName) && !Regex.IsMatch(RoomAliasName, @"[a-zA-Z0-9_\-]+$"))
             errors.Add("room_alias_name",
                 "Room alias name must only contain letters, numbers, underscores, and hyphens.");
 
@@ -98,7 +99,7 @@ public class CreateRoomRequest {
                 Invite = 25,
                 StateDefault = 10,
                 Redact = 50,
-                NotificationsPl = new RoomPowerLevelEventContent.NotificationsPL {
+                NotificationsPl = new RoomPowerLevelEventContent.NotificationsPowerLevels {
                     Room = 10
                 },
                 Events = new Dictionary<string, long> {
@@ -138,7 +139,7 @@ public class CreateRoomRequest {
                 Invite = 25,
                 StateDefault = 10,
                 Redact = 50,
-                NotificationsPl = new RoomPowerLevelEventContent.NotificationsPL {
+                NotificationsPl = new RoomPowerLevelEventContent.NotificationsPowerLevels {
                     Room = 10
                 },
                 Events = new Dictionary<string, long> {

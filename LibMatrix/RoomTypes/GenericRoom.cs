@@ -135,7 +135,7 @@ public class GenericRoom {
             return await GetStateEventAsync(type, stateKey);
         }
         catch (MatrixException e) {
-            if (e.ErrorCode == "M_NOT_FOUND") return default;
+            if (e.ErrorCode == "M_NOT_FOUND") return null;
             throw;
         }
     }
@@ -237,10 +237,11 @@ public class GenericRoom {
         var result = await JsonSerializer.DeserializeAsync<ChunkedStateEventResponse>(await res.Content.ReadAsStreamAsync(), new JsonSerializerOptions() {
             TypeInfoResolver = ChunkedStateEventResponseSerializerContext.Default
         });
+        if (result is null) throw new Exception("Failed to deserialise members response");
         // if (sw.ElapsedMilliseconds > 100)
         // Console.WriteLine($"Members call deserialised in {sw.GetElapsedAndRestart()}");
         // else sw.Restart();
-        foreach (var resp in result.Chunk) {
+        foreach (var resp in result.Chunk ?? []) {
             if (resp?.Type != "m.room.member") continue;
             if (joinedOnly && resp.RawContent?["membership"]?.GetValue<string>() != "join") continue;
             yield return resp;
@@ -261,11 +262,12 @@ public class GenericRoom {
         var result = await JsonSerializer.DeserializeAsync<ChunkedStateEventResponse>(await res.Content.ReadAsStreamAsync(), new JsonSerializerOptions() {
             TypeInfoResolver = ChunkedStateEventResponseSerializerContext.Default
         });
+        if (result is null) throw new Exception("Failed to deserialise members response");
         // if (sw.ElapsedMilliseconds > 100)
         // Console.WriteLine($"Members call deserialised in {sw.GetElapsedAndRestart()}");
         // else sw.Restart();
         var members = new List<StateEventResponse>();
-        foreach (var resp in result.Chunk) {
+        foreach (var resp in result.Chunk ?? []) {
             if (resp?.Type != "m.room.member") continue;
             if (joinedOnly && resp.RawContent?["membership"]?.GetValue<string>() != "join") continue;
             members.Add(resp);
@@ -428,7 +430,7 @@ public class GenericRoom {
 
         return await res.Content.ReadFromJsonAsync<T>();
     }
-    
+
     public async Task<T?> GetRoomAccountDataOrNullAsync<T>(string key) {
         try {
             return await GetRoomAccountDataAsync<T>(key);
@@ -456,7 +458,8 @@ public class GenericRoom {
         while (true) {
             try {
                 return (await (await Homeserver.ClientHttpClient.PutAsJsonAsync(url, data)).Content.ReadFromJsonAsync<EventIdResponse>())!;
-            } catch (MatrixException e) {
+            }
+            catch (MatrixException e) {
                 if (e is { ErrorCode: MatrixException.ErrorCodes.M_FORBIDDEN }) throw;
                 throw;
             }

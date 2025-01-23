@@ -20,7 +20,7 @@ public class RoomPowerLevelEventContent : EventContent {
     public long? Kick { get; set; } = 50;
 
     [JsonPropertyName("notifications")]
-    public NotificationsPL? NotificationsPl { get; set; } // = null!;
+    public NotificationsPowerLevels? NotificationsPl { get; set; } // = null!;
 
     [JsonPropertyName("redact")]
     public long? Redact { get; set; } = 50;
@@ -42,19 +42,19 @@ public class RoomPowerLevelEventContent : EventContent {
     [JsonPropertyName("historical")]
     public long Historical { get; set; } // = 50;
 
-    public class NotificationsPL {
+    public class NotificationsPowerLevels {
         [JsonPropertyName("room")]
         public long Room { get; set; } = 50;
     }
 
     public bool IsUserAdmin(string userId) {
         ArgumentNullException.ThrowIfNull(userId);
-        return Users.TryGetValue(userId, out var level) && level >= Events.Max(x => x.Value);
+        return GetUserPowerLevel(userId) >= Events?.Max(x => x.Value);
     }
 
     public bool UserHasTimelinePermission(string userId, string eventType) {
         ArgumentNullException.ThrowIfNull(userId);
-        return Users.TryGetValue(userId, out var level) && level >= Events.GetValueOrDefault(eventType, EventsDefault ?? 0);
+        return GetUserPowerLevel(userId) >= Events?.GetValueOrDefault(eventType, EventsDefault ?? 0);
     }
 
     public bool UserHasStatePermission(string userId, string eventType, bool log = false) {

@@ -62,7 +62,7 @@ public class RoomsController(ILogger<RoomsController> logger, TokenService token
         var room = new RoomStore.Room($"!{Guid.NewGuid()}:{tokenService.GenerateServerName(HttpContext)}");
 
         var eventTypesToTransfer = new[] {
-            RoomServerACLEventContent.EventId,
+            RoomServerAclEventContent.EventId,
             RoomEncryptionEventContent.EventId,
             RoomNameEventContent.EventId,
             RoomAvatarEventContent.EventId,

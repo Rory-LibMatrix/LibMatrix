@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace LibMatrix.EventTypes.Spec.State.RoomInfo;
 
 [MatrixEvent(EventName = EventId)]
-public class RoomServerACLEventContent : EventContent {
+public class RoomServerAclEventContent : EventContent {
     public const string EventId = "m.room.server_acl";
 
     [JsonPropertyName("allow")]

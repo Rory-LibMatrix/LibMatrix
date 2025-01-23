@@ -76,7 +76,7 @@ public class MatrixHttpClient {
         Console.WriteLine($"Sending {request.Method} {BaseAddress}{request.RequestUri} ({Util.BytesToString(request.GetContentLength())})");
 
         if (request.RequestUri is null) throw new NullReferenceException("RequestUri is null");
-        if (!request.RequestUri.IsAbsoluteUri) request.RequestUri = new Uri(BaseAddress, request.RequestUri);
+        if (!request.RequestUri.IsAbsoluteUri) request.RequestUri = new Uri(BaseAddress ?? throw new InvalidOperationException("Relative URI passed, but no BaseAddress is specified!"), request.RequestUri);
         foreach (var (key, value) in AdditionalQueryParameters) request.RequestUri = request.RequestUri.AddQuery(key, value);
         foreach (var (key, value) in DefaultRequestHeaders) {
             if (request.Headers.Contains(key)) continue;
@@ -126,7 +126,7 @@ public class MatrixHttpClient {
         if (!content.StartsWith('{')) throw new InvalidDataException("Encountered invalid data:\n" + content);
         //we have a matrix error
 
-        MatrixException? ex = null;
+        MatrixException? ex;
         try {
             ex = JsonSerializer.Deserialize<MatrixException>(content);
         }
@@ -140,7 +140,7 @@ public class MatrixHttpClient {
         Debug.Assert(ex != null, nameof(ex) + " != null");
         ex.RawContent = content;
         // Console.WriteLine($"Failed to send request: {ex}");
-        if (ex?.RetryAfterMs is null) throw ex!;
+        if (ex.RetryAfterMs is null) throw ex!;
         //we have a ratelimit error
         await Task.Delay(ex.RetryAfterMs.Value, cancellationToken);
         request.ResetSendStatus();
@@ -179,7 +179,7 @@ public class MatrixHttpClient {
     }
 
     // GetStreamAsync
-    public new async Task<Stream> GetStreamAsync(string requestUri, CancellationToken cancellationToken = default) {
+    public async Task<Stream> GetStreamAsync(string requestUri, CancellationToken cancellationToken = default) {
         var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         var response = await SendAsync(request, cancellationToken);

@@ -27,14 +27,13 @@ public class SyncStateResolver(AuthenticatedHomeserverGeneric homeserver, ILogge
         // run sync
         var sync = await _syncHelper.SyncAsync(cancellationToken);
         if (sync is null) return await ContinueAsync(cancellationToken);
-        if (MergedState is null) MergedState = sync;
-        else MergedState = MergeSyncs(MergedState, sync);
+        MergedState = MergedState is null ? sync : MergeSyncs(MergedState, sync);
         Since = sync.NextBatch;
         return (sync, MergedState);
     }
 
     private SyncResponse MergeSyncs(SyncResponse oldState, SyncResponse newState) {
-        oldState.NextBatch = newState.NextBatch ?? oldState.NextBatch;
+        oldState.NextBatch = newState.NextBatch;
 
         oldState.AccountData ??= new EventList();
         oldState.AccountData.Events ??= new List<StateEventResponse>();
@@ -42,8 +41,11 @@ public class SyncStateResolver(AuthenticatedHomeserverGeneric homeserver, ILogge
             oldState.AccountData.Events.MergeStateEventLists(newState.AccountData?.Events ?? new List<StateEventResponse>());
 
         oldState.Presence ??= new SyncResponse.PresenceDataStructure();
-        if (newState.Presence?.Events is not null)
-            oldState.Presence.Events.MergeStateEventLists(newState.Presence?.Events ?? new List<StateEventResponse>());
+        if (newState.Presence?.Events is { Count: > 0 })
+            if (oldState.Presence.Events is { Count: > 0 })
+                oldState.Presence.Events.MergeStateEventLists(newState.Presence.Events);
+            else
+                oldState.Presence.Events = newState.Presence?.Events;
 
         oldState.DeviceOneTimeKeysCount ??= new Dictionary<string, int>();
         if (newState.DeviceOneTimeKeysCount is not null)
@@ -60,12 +62,17 @@ public class SyncStateResolver(AuthenticatedHomeserverGeneric homeserver, ILogge
             oldState.ToDevice.Events.MergeStateEventLists(newState.ToDevice?.Events ?? new List<StateEventResponse>());
 
         oldState.DeviceLists ??= new SyncResponse.DeviceListsDataStructure();
-        if (newState.DeviceLists?.Changed is not null)
-            foreach (var s in oldState.DeviceLists.Changed!)
+        if (newState.DeviceLists?.Changed is not null) {
+            oldState.DeviceLists.Changed ??= new List<string>();
+            foreach (var s in newState.DeviceLists.Changed)
                 oldState.DeviceLists.Changed.Add(s);
-        if (newState.DeviceLists?.Left is not null)
-            foreach (var s in oldState.DeviceLists.Left!)
+        }
+
+        if (newState.DeviceLists?.Left is not null) {
+            oldState.DeviceLists.Left ??= new List<string>();
+            foreach (var s in newState.DeviceLists.Left)
                 oldState.DeviceLists.Left.Add(s);
+        }
 
         return oldState;
     }
@@ -75,18 +82,18 @@ public class SyncStateResolver(AuthenticatedHomeserverGeneric homeserver, ILogge
     private SyncResponse.RoomsDataStructure MergeRoomsDataStructure(SyncResponse.RoomsDataStructure oldState, SyncResponse.RoomsDataStructure newState) {
         oldState.Join ??= new Dictionary<string, SyncResponse.RoomsDataStructure.JoinedRoomDataStructure>();
         foreach (var (key, value) in newState.Join ?? new Dictionary<string, SyncResponse.RoomsDataStructure.JoinedRoomDataStructure>())
-            if (!oldState.Join.ContainsKey(key)) oldState.Join[key] = value;
-            else oldState.Join[key] = MergeJoinedRoomDataStructure(oldState.Join[key], value);
+            if (!oldState.Join.TryAdd(key, value))
+                oldState.Join[key] = MergeJoinedRoomDataStructure(oldState.Join[key], value);
 
         oldState.Invite ??= new Dictionary<string, SyncResponse.RoomsDataStructure.InvitedRoomDataStructure>();
         foreach (var (key, value) in newState.Invite ?? new Dictionary<string, SyncResponse.RoomsDataStructure.InvitedRoomDataStructure>())
-            if (!oldState.Invite.ContainsKey(key)) oldState.Invite[key] = value;
-            else oldState.Invite[key] = MergeInvitedRoomDataStructure(oldState.Invite[key], value);
+            if (!oldState.Invite.TryAdd(key, value))
+                oldState.Invite[key] = MergeInvitedRoomDataStructure(oldState.Invite[key], value);
 
         oldState.Leave ??= new Dictionary<string, SyncResponse.RoomsDataStructure.LeftRoomDataStructure>();
         foreach (var (key, value) in newState.Leave ?? new Dictionary<string, SyncResponse.RoomsDataStructure.LeftRoomDataStructure>()) {
-            if (!oldState.Leave.ContainsKey(key)) oldState.Leave[key] = value;
-            else oldState.Leave[key] = MergeLeftRoomDataStructure(oldState.Leave[key], value);
+            if (!oldState.Leave.TryAdd(key, value))
+                oldState.Leave[key] = MergeLeftRoomDataStructure(oldState.Leave[key], value);
             if (oldState.Invite.ContainsKey(key)) oldState.Invite.Remove(key);
             if (oldState.Join.ContainsKey(key)) oldState.Join.Remove(key);
         }
@@ -157,9 +164,9 @@ public class SyncStateResolver(AuthenticatedHomeserverGeneric homeserver, ILogge
         oldData.UnreadNotifications.NotificationCount = newData.UnreadNotifications?.NotificationCount ?? oldData.UnreadNotifications.NotificationCount;
 
         oldData.Summary ??= new SyncResponse.RoomsDataStructure.JoinedRoomDataStructure.SummaryDataStructure {
-            Heroes = newData.Summary?.Heroes ?? oldData.Summary.Heroes,
-            JoinedMemberCount = newData.Summary?.JoinedMemberCount ?? oldData.Summary.JoinedMemberCount,
-            InvitedMemberCount = newData.Summary?.InvitedMemberCount ?? oldData.Summary.InvitedMemberCount
+            Heroes = newData.Summary?.Heroes ?? oldData.Summary?.Heroes,
+            JoinedMemberCount = newData.Summary?.JoinedMemberCount ?? oldData.Summary?.JoinedMemberCount,
+            InvitedMemberCount = newData.Summary?.InvitedMemberCount ?? oldData.Summary?.InvitedMemberCount
         };
         oldData.Summary.Heroes = newData.Summary?.Heroes ?? oldData.Summary.Heroes;
         oldData.Summary.JoinedMemberCount = newData.Summary?.JoinedMemberCount ?? oldData.Summary.JoinedMemberCount;

@@ -375,11 +375,11 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
     /// <returns>All account data.</returns>
     /// <exception cref="Exception"></exception>
     public async Task<EventList?> EnumerateAccountData() {
-        var syncHelper = new SyncHelper(this);
-        syncHelper.FilterId = await NamedCaches.FilterCache.GetOrSetValueAsync(CommonSyncFilters.GetAccountData);
+        var syncHelper = new SyncHelper(this) {
+            FilterId = await NamedCaches.FilterCache.GetOrSetValueAsync(CommonSyncFilters.GetAccountData)
+        };
         var resp = await syncHelper.SyncAsync();
-        if (resp is null) throw new Exception("Sync failed");
-        return resp.AccountData;
+        return resp?.AccountData ?? throw new Exception("Sync failed");
     }
 
     private Dictionary<string, string>? _namedFilterCache;
@@ -431,7 +431,7 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
 
         //fallback to legacy media
         try {
-            var uri = $"/_matrix/media/v1/download/{serverName}/{mediaId}";
+            var uri = $"/_matrix/media/v3/download/{serverName}/{mediaId}";
             if (!string.IsNullOrWhiteSpace(filename)) uri += $"/{HttpUtility.UrlEncode(filename)}";
             if (timeout is not null) uri += $"?timeout_ms={timeout}";
             var res = await ClientHttpClient.GetAsync(uri);
@@ -455,7 +455,7 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
             uri = uri.AddQuery("width", width.ToString());
             uri = uri.AddQuery("height", height.ToString());
             if (!string.IsNullOrWhiteSpace(method)) uri = uri.AddQuery("method", method);
-            if (timeout is not null) uri = uri.AddQuery("timeout_ms", timeout.ToString());
+            if (timeout is not null) uri = uri.AddQuery("timeout_ms", timeout.ToString()!);
 
             var res = await ClientHttpClient.GetAsync(uri.ToString());
             return await res.Content.ReadAsStreamAsync();
@@ -466,11 +466,11 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
 
         //fallback to legacy media
         try {
-            var uri = new Uri($"/_matrix/media/v1/thumbnail/{serverName}/{mediaId}");
+            var uri = new Uri($"/_matrix/media/v3/thumbnail/{serverName}/{mediaId}");
             uri = uri.AddQuery("width", width.ToString());
             uri = uri.AddQuery("height", height.ToString());
             if (!string.IsNullOrWhiteSpace(method)) uri = uri.AddQuery("method", method);
-            if (timeout is not null) uri = uri.AddQuery("timeout_ms", timeout.ToString());
+            if (timeout is not null) uri = uri.AddQuery("timeout_ms", timeout.ToString()!);
 
             var res = await ClientHttpClient.GetAsync(uri.ToString());
             return await res.Content.ReadAsStreamAsync();
@@ -497,7 +497,7 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
         
         //fallback to legacy media
         try {
-            var res = await ClientHttpClient.GetAsync($"/_matrix/media/v1/preview_url?url={HttpUtility.UrlEncode(url)}");
+            var res = await ClientHttpClient.GetAsync($"/_matrix/media/v3/preview_url?url={HttpUtility.UrlEncode(url)}");
             return await res.Content.ReadFromJsonAsync<Dictionary<string, JsonValue>>();
         }
         catch (MatrixException e) {

@@ -1,5 +1,7 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using ArcaneLibs.Extensions;
+// ReSharper disable MemberCanBePrivate.Global
 
 namespace LibMatrix;
 
@@ -17,7 +19,7 @@ public class MatrixException : Exception {
     [JsonPropertyName("retry_after_ms")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? RetryAfterMs { get; set; }
-
+    
     public string RawContent { get; set; }
 
     public object GetAsObject() => new { errcode = ErrorCode, error = Error, soft_logout = SoftLogout, retry_after_ms = RetryAfterMs };
@@ -62,6 +64,7 @@ public class MatrixException : Exception {
             _ => $"Unknown error: {new { ErrorCode, Error, SoftLogout, RetryAfterMs }.ToJson(ignoreNull: true)}"
         }}";
 
+    [SuppressMessage("ReSharper", "InconsistentNaming", Justification = "Follows spec naming")]
     public static class ErrorCodes {
         public const string M_FORBIDDEN = "M_FORBIDDEN";
         public const string M_UNKNOWN_TOKEN = "M_UNKNOWN_TOKEN";
