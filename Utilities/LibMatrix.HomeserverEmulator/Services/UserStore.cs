@@ -12,14 +12,14 @@ namespace LibMatrix.HomeserverEmulator.Services;
 
 public class UserStore {
     public ConcurrentBag<User> _users = new();
-    private readonly HSEConfiguration _config;
+    private readonly HseConfiguration _config;
     private readonly RoomStore _roomStore;
 
-    public UserStore(HSEConfiguration config, RoomStore roomStore) {
+    public UserStore(HseConfiguration config, RoomStore roomStore) {
         _config = config;
         _roomStore = roomStore;
         if (config.StoreData) {
-            var dataDir = Path.Combine(HSEConfiguration.Current.DataStoragePath, "users");
+            var dataDir = Path.Combine(HseConfiguration.Current.DataStoragePath, "users");
             if (!Directory.Exists(dataDir)) Directory.CreateDirectory(dataDir);
             foreach (var userId in Directory.GetDirectories(dataDir)) {
                 var tokensDir = Path.Combine(dataDir, userId, "tokens.json");
@@ -207,12 +207,12 @@ public class UserStore {
         public bool IsGuest { get; set; }
 
         public async Task SaveDebounced() {
-            if (!HSEConfiguration.Current.StoreData) return;
+            if (!HseConfiguration.Current.StoreData) return;
             await _debounceCts.CancelAsync();
             _debounceCts = new CancellationTokenSource();
             try {
                 await Task.Delay(250, _debounceCts.Token);
-                var dataDir = Path.Combine(HSEConfiguration.Current.DataStoragePath, "users", _userId);
+                var dataDir = Path.Combine(HseConfiguration.Current.DataStoragePath, "users", _userId);
                 if (!Directory.Exists(dataDir)) Directory.CreateDirectory(dataDir);
                 var tokensDir = Path.Combine(dataDir, "tokens.json");
                 var path = Path.Combine(dataDir, $"user.json");

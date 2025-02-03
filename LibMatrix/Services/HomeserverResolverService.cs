@@ -9,9 +9,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace LibMatrix.Services;
 
 public class HomeserverResolverService {
-    private readonly MatrixHttpClient _httpClient = new() {
-        // Timeout = TimeSpan.FromSeconds(60) // TODO: Re-implement this
-    };
+    private readonly MatrixHttpClient _httpClient = new();
 
     private static readonly SemaphoreCache<WellKnownUris> WellKnownCache = new();
 
@@ -22,48 +20,30 @@ public class HomeserverResolverService {
         if (logger is NullLogger<HomeserverResolverService>) {
             var stackFrame = new StackTrace(true).GetFrame(1);
             Console.WriteLine(
-                $"WARN | Null logger provided to HomeserverResolverService!\n{stackFrame.GetMethod().DeclaringType} at {stackFrame.GetFileName()}:{stackFrame.GetFileLineNumber()}");
+                $"WARN | Null logger provided to HomeserverResolverService!\n{stackFrame?.GetMethod()?.DeclaringType?.ToString() ?? "null"} at {stackFrame?.GetFileName() ?? "null"}:{stackFrame?.GetFileLineNumber().ToString() ?? "null"}");
         }
     }
-
-    // private static SemaphoreSlim _wellKnownSemaphore = new(1, 1);
 
     public async Task<WellKnownUris> ResolveHomeserverFromWellKnown(string homeserver, bool enableClient = true, bool enableServer = true) {
         ArgumentNullException.ThrowIfNull(homeserver);
 
         return await WellKnownCache.GetOrAdd(homeserver, async () => {
-            // await _wellKnownSemaphore.WaitAsync();
             _logger.LogTrace($"Resolving homeserver well-knowns: {homeserver}");
             var client = enableClient ? _tryResolveClientEndpoint(homeserver) : null;
             var server = enableServer ? _tryResolveServerEndpoint(homeserver) : null;
 
             var res = new WellKnownUris();
 
-            // try {
             if (client != null)
                 res.Client = (await client)?.TrimEnd('/') ?? throw new Exception($"Could not resolve client URL for {homeserver}.");
-            // }
-            // catch (Exception e) {
-            // _logger.LogError(e, "Error resolving client well-known for {hs}", homeserver);
-            // }
 
-            // try {
             if (server != null)
                 res.Server = (await server)?.TrimEnd('/') ?? throw new Exception($"Could not resolve server URL for {homeserver}.");
-            // }
-            // catch (Exception e) {
-            // _logger.LogError(e, "Error resolving server well-known for {hs}", homeserver);
-            // }
 
             _logger.LogInformation("Resolved well-knowns for {hs}: {json}", homeserver, res.ToJson(indent: false));
-            // _wellKnownSemaphore.Release();
             return res;
         });
     }
-
-    // private async Task<WellKnownUris> InternalResolveHomeserverFromWellKnown(string homeserver) {
-
-    // }
 
     private async Task<string?> _tryResolveClientEndpoint(string homeserver) {
         ArgumentNullException.ThrowIfNull(homeserver);
@@ -133,7 +113,8 @@ public class HomeserverResolverService {
         _logger.LogInformation("No server well-known for {server}...", homeserver);
         return null;
     }
-
+    
+    [Obsolete("Use authenticated media, available on AuthenticatedHomeserverGeneric", true)]
     public async Task<string?> ResolveMediaUri(string homeserver, string mxc) {
         if (homeserver is null) throw new ArgumentNullException(nameof(homeserver));
         if (mxc is null) throw new ArgumentNullException(nameof(mxc));

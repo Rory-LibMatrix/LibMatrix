@@ -1,5 +1,4 @@
 using System.Text.Json.Serialization;
-using LibMatrix.EventTypes.Spec.State;
 using LibMatrix.EventTypes.Spec.State.RoomInfo;
 using LibMatrix.HomeserverEmulator.Services;
 using LibMatrix.Responses;

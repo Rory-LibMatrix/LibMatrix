@@ -7,7 +7,6 @@ using System.Text.Json.Nodes;
 using ArcaneLibs;
 using ArcaneLibs.Collections;
 using ArcaneLibs.Extensions;
-using LibMatrix.EventTypes.Spec.State;
 using LibMatrix.EventTypes.Spec.State.RoomInfo;
 using LibMatrix.HomeserverEmulator.Controllers.Rooms;
 using LibMatrix.Responses;
@@ -19,7 +18,7 @@ public class RoomStore {
     public ConcurrentBag<Room> _rooms = new();
     private FrozenDictionary<string, Room> _roomsById = FrozenDictionary<string, Room>.Empty;
 
-    public RoomStore(ILogger<RoomStore> logger, HSEConfiguration config) {
+    public RoomStore(ILogger<RoomStore> logger, HseConfiguration config) {
         _logger = logger;
         if (config.StoreData) {
             var path = Path.Combine(config.DataStoragePath, "rooms");
@@ -34,26 +33,9 @@ public class RoomStore {
 
         RebuildIndexes();
     }
-
-    private SemaphoreSlim a = new(1, 1);
+    
     private void RebuildIndexes() {
-        // a.Wait();
-        // lock (_roomsById)
-        // _roomsById = new ConcurrentDictionary<string, Room>(_rooms.ToDictionary(u => u.RoomId));
-        // foreach (var room in _rooms) {
-        //     _roomsById.AddOrUpdate(room.RoomId, room, (key, old) => room);
-        // }
-        //
-        // var roomsArr = _rooms.ToArray();
-        // foreach (var (id, room) in _roomsById) {
-        //     if (!roomsArr.Any(x => x.RoomId == id))
-        //         _roomsById.TryRemove(id, out _);
-        // }
-        
-        // _roomsById = new ConcurrentDictionary<string, Room>(_rooms.ToDictionary(u => u.RoomId));
         _roomsById = _rooms.ToFrozenDictionary(u => u.RoomId);
-
-        // a.Release();
     }
 
     public Room? GetRoomById(string roomId, bool createIfNotExists = false) {
@@ -64,14 +46,14 @@ public class RoomStore {
         if (!createIfNotExists)
             return null;
 
-        return CreateRoom(new() { });
+        return CreateRoom(new());
     }
 
     public Room CreateRoom(CreateRoomRequest request, UserStore.User? user = null) {
         var room = new Room(roomId: $"!{Guid.NewGuid().ToString()}");
         var newCreateEvent = new StateEvent() {
             Type = RoomCreateEventContent.EventId,
-            RawContent = new() { }
+            RawContent = new()
         };
 
         foreach (var (key, value) in request.CreationContent) {
@@ -246,7 +228,7 @@ public class RoomStore {
             Task.Run(async () => {
                 await saveSemaphore.WaitAsync();
                 try {
-                    var path = Path.Combine(HSEConfiguration.Current.DataStoragePath, "rooms", $"{RoomId}.json");
+                    var path = Path.Combine(HseConfiguration.Current.DataStoragePath, "rooms", $"{RoomId}.json");
                     Console.WriteLine($"Saving room {RoomId} to {path}!");
                     await File.WriteAllTextAsync(path, this.ToJson(ignoreNull: true));
                 }

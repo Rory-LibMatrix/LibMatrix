@@ -33,11 +33,4 @@ public class HomeserverResolverTests : TestBed<TestFixture> {
         }).ToList();
         await Task.WhenAll(tasks);
     }
-    
-    [Fact]
-    public async Task ResolveMedia() {
-        var media = await _resolver.ResolveMediaUri("matrix.org", "mxc://matrix.org/eqwrRZRoPpNbcMeUwyXAuVRo");
-        
-        Assert.Equal("https://matrix-client.matrix.org/_matrix/media/v3/download/matrix.org/eqwrRZRoPpNbcMeUwyXAuVRo", media);
-    }
 }

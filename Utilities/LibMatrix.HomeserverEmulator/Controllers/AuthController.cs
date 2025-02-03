@@ -7,7 +7,7 @@ namespace LibMatrix.HomeserverEmulator.Controllers;
 
 [ApiController]
 [Route("/_matrix/client/{version}/")]
-public class AuthController(ILogger<AuthController> logger, UserStore userStore, TokenService tokenService, HSEConfiguration config) : ControllerBase {
+public class AuthController(ILogger<AuthController> logger, UserStore userStore, TokenService tokenService, HseConfiguration config) : ControllerBase {
     [HttpPost("login")]
     public async Task<LoginResponse> Login(LoginRequest request) {
         if (!request.Identifier.User.StartsWith('@'))

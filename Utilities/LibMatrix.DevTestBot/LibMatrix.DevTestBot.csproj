@@ -18,13 +18,15 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="ArcaneLibs.StringNormalisation" Version="1.0.0-preview.20250123-182609" Condition="'$(Configuration)' == 'Release'"/>
+        <ProjectReference Include="..\..\ArcaneLibs\ArcaneLibs.StringNormalisation\ArcaneLibs.StringNormalisation.csproj" Condition="'$(Configuration)' == 'Debug'"/>
         <ProjectReference Include="..\..\LibMatrix\LibMatrix.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="ArcaneLibs.StringNormalisation" Version="1.0.0-1.0.0-preview.20241122-053825"/>
-        <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.1" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.1"/>
     </ItemGroup>
+    
     <ItemGroup>
         <Content Include="appsettings*.json">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>

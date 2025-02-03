@@ -31,7 +31,7 @@ builder.Services.AddSwaggerGen(c => {
 });
 
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
-builder.Services.AddSingleton<HSEConfiguration>();
+builder.Services.AddSingleton<HseConfiguration>();
 builder.Services.AddSingleton<UserStore>();
 builder.Services.AddSingleton<RoomStore>();
 builder.Services.AddSingleton<MediaStore>();
@@ -76,7 +76,7 @@ app.UseExceptionHandler(exceptionHandlerApp => {
         var exceptionHandlerPathFeature =
             context.Features.Get<IExceptionHandlerPathFeature>();
         if (exceptionHandlerPathFeature?.Error is not null)
-            Console.WriteLine(exceptionHandlerPathFeature.Error.ToString()!);
+            Console.WriteLine(exceptionHandlerPathFeature.Error.ToString());
 
         if (exceptionHandlerPathFeature?.Error is MatrixException mxe) {
             context.Response.StatusCode = mxe.ErrorCode switch {
@@ -85,14 +85,14 @@ app.UseExceptionHandler(exceptionHandlerApp => {
                 _ => StatusCodes.Status500InternalServerError
             };
             context.Response.ContentType = MediaTypeNames.Application.Json;
-            await context.Response.WriteAsync(mxe.GetAsJson()!);
+            await context.Response.WriteAsync(mxe.GetAsJson());
         }
         else {
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
             context.Response.ContentType = MediaTypeNames.Application.Json;
             await context.Response.WriteAsync(new MatrixException() {
                 ErrorCode = "M_UNKNOWN",
-                Error = exceptionHandlerPathFeature?.Error.ToString()
+                Error = exceptionHandlerPathFeature?.Error?.ToString() ?? "Unknown error"
             }.GetAsJson());
         }
     });

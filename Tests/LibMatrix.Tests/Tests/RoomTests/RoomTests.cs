@@ -1,7 +1,6 @@
 using System.Text;
 using ArcaneLibs.Extensions;
 using LibMatrix.EventTypes.Spec;
-using LibMatrix.EventTypes.Spec.State;
 using LibMatrix.EventTypes.Spec.State.RoomInfo;
 using LibMatrix.Responses;
 using LibMatrix.Tests.Abstractions;

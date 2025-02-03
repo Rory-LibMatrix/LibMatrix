@@ -7,9 +7,9 @@ using Microsoft.Extensions.Logging;
 namespace LibMatrix.Services;
 
 public class HomeserverProviderService(ILogger<HomeserverProviderService> logger, HomeserverResolverService hsResolver) {
-    private static SemaphoreCache<AuthenticatedHomeserverGeneric> AuthenticatedHomeserverCache = new();
-    private static SemaphoreCache<RemoteHomeserver> RemoteHomeserverCache = new();
-    private static SemaphoreCache<FederationClient> FederationClientCache = new();
+    private static readonly SemaphoreCache<AuthenticatedHomeserverGeneric> AuthenticatedHomeserverCache = new();
+    private static readonly SemaphoreCache<RemoteHomeserver> RemoteHomeserverCache = new();
+    private static readonly SemaphoreCache<FederationClient> FederationClientCache = new();
 
     public async Task<AuthenticatedHomeserverGeneric> GetAuthenticatedWithToken(string homeserver, string accessToken, string? proxy = null, string? impersonatedMxid = null,
         bool useGeneric = false, bool enableClient = true, bool enableServer = true) {
@@ -22,7 +22,7 @@ public class HomeserverProviderService(ILogger<HomeserverProviderService> logger
 
             AuthenticatedHomeserverGeneric? hs = null;
             if (!useGeneric) {
-                ClientVersionsResponse? clientVersions = new();
+                ClientVersionsResponse clientVersions = new();
                 try {
                     clientVersions = await rhs.GetClientVersionsAsync();
                 }
@@ -64,7 +64,7 @@ public class HomeserverProviderService(ILogger<HomeserverProviderService> logger
         });
     }
 
-    public async Task<RemoteHomeserver> GetRemoteHomeserver(string homeserver, string? proxy = null, bool useCache = true, bool enableServer = true) =>
+    public async Task<RemoteHomeserver> GetRemoteHomeserver(string homeserver, string? proxy = null, bool useCache = true, bool enableServer = false) =>
         useCache
             ? await RemoteHomeserverCache.GetOrAdd($"{homeserver}{proxy}",
                 async () => { return new RemoteHomeserver(homeserver, await hsResolver.ResolveHomeserverFromWellKnown(homeserver, enableServer: enableServer), proxy); })

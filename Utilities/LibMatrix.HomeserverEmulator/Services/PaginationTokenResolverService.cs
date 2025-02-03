@@ -35,15 +35,15 @@ public class PaginationTokenResolverService(ILogger<PaginationTokenResolverServi
         }
     }
 
-    public async Task<StateEventResponse?> ResolveTokenToEvent(string token, RoomStore.Room room) {
+    public Task<StateEventResponse?> ResolveTokenToEvent(string token, RoomStore.Room room) {
         if (token.StartsWith('$')) {
             //we have an event ID
             logger.LogTrace("ResolveTokenToEvent(EventId({token}), Room({room})): searching for event...", token, room.RoomId);
 
             var evt = room.Timeline.SingleOrDefault(x => x.EventId == token);
-            if (evt is not null) return evt;
+            if (evt is not null) return Task.FromResult(evt);
             logger.LogTrace("ResolveTokenToEvent({token}, Room({room})): event not in requested room...", token, room.RoomId);
-            return null;
+            return Task.FromResult<StateEventResponse?>(null);
         }
         else {
             // we have a sync token

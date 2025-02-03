@@ -4,12 +4,12 @@ using ArcaneLibs.Extensions;
 
 namespace LibMatrix.HomeserverEmulator.Services;
 
-public class HSEConfiguration {
-    private static ILogger<HSEConfiguration> _logger;
-    public static HSEConfiguration Current { get; set; }
+public class HseConfiguration {
+    private static ILogger<HseConfiguration> _logger;
+    public static HseConfiguration Current { get; set; }
 
     [RequiresUnreferencedCode("Uses reflection binding")]
-    public HSEConfiguration(ILogger<HSEConfiguration> logger, IConfiguration config, HostBuilderContext host) {
+    public HseConfiguration(ILogger<HseConfiguration> logger, IConfiguration config, HostBuilderContext host) {
         Current = this;
         _logger = logger;
         logger.LogInformation("Loading configuration for environment: {}...", host.HostingEnvironment.EnvironmentName);
@@ -22,15 +22,15 @@ public class HSEConfiguration {
         _logger.LogInformation("Configuration loaded: {}", this.ToJson());
     }
 
-    public string CacheStoragePath { get; set; }
+    public required string CacheStoragePath { get; set; }
 
-    public string DataStoragePath { get; set; }
+    public required string DataStoragePath { get; set; }
 
-    public bool StoreData { get; set; } = true;
+    public required bool StoreData { get; set; } = true;
 
-    public string ServerName { get; set; } = "localhost";
+    public required string ServerName { get; set; } = "localhost";
     
-    public bool UnknownSyncTokenIsInitialSync { get; set; } = true;
+    public required bool UnknownSyncTokenIsInitialSync { get; set; } = true;
 
     private static string ExpandPath(string path, bool retry = true) {
         _logger.LogInformation("Expanding path `{}`", path);

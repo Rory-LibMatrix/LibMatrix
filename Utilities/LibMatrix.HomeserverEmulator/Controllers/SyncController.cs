@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using ArcaneLibs.Extensions;
-using LibMatrix.EventTypes.Spec.State;
 using LibMatrix.EventTypes.Spec.State.RoomInfo;
 using LibMatrix.HomeserverEmulator.Extensions;
 using LibMatrix.HomeserverEmulator.Services;
@@ -12,7 +11,7 @@ namespace LibMatrix.HomeserverEmulator.Controllers;
 
 [ApiController]
 [Route("/_matrix/client/{version}/")]
-public class SyncController(ILogger<SyncController> logger, TokenService tokenService, UserStore userStore, RoomStore roomStore, HSEConfiguration cfg) : ControllerBase {
+public class SyncController(ILogger<SyncController> logger, TokenService tokenService, UserStore userStore, RoomStore roomStore, HseConfiguration cfg) : ControllerBase {
     [HttpGet("sync")]
     [SuppressMessage("ReSharper.DPA", "DPA0011: High execution time of MVC action", Justification = "Endpoint is expected to wait until data is available or timeout.")]
     public async Task<SyncResponse> Sync([FromQuery] string? since = null, [FromQuery] int? timeout = 5000) {

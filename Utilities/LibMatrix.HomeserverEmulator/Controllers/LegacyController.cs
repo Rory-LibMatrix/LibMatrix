@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using ArcaneLibs.Extensions;
-using LibMatrix.EventTypes.Spec.State;
 using LibMatrix.EventTypes.Spec.State.RoomInfo;
 using LibMatrix.HomeserverEmulator.Services;
 using Microsoft.AspNetCore.Mvc;

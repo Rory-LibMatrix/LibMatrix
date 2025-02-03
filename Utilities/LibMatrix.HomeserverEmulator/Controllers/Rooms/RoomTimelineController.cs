@@ -3,7 +3,6 @@ using System.Text.Json.Nodes;
 using ArcaneLibs;
 using ArcaneLibs.Extensions;
 using LibMatrix.EventTypes.Spec;
-using LibMatrix.EventTypes.Spec.State;
 using LibMatrix.EventTypes.Spec.State.RoomInfo;
 using LibMatrix.EventTypes.Spec.State.Space;
 using LibMatrix.Helpers;

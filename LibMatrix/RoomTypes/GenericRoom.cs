@@ -7,7 +7,6 @@ using System.Web;
 using ArcaneLibs.Extensions;
 using LibMatrix.EventTypes;
 using LibMatrix.EventTypes.Spec;
-using LibMatrix.EventTypes.Spec.State;
 using LibMatrix.EventTypes.Spec.State.RoomInfo;
 using LibMatrix.Filters;
 using LibMatrix.Helpers;

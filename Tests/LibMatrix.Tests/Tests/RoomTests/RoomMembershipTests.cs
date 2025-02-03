@@ -1,5 +1,4 @@
 using ArcaneLibs.Extensions;
-using LibMatrix.EventTypes.Spec.State;
 using LibMatrix.EventTypes.Spec.State.RoomInfo;
 using LibMatrix.Homeservers;
 using LibMatrix.Tests.Abstractions;

@@ -1,6 +1,5 @@
 using System.Collections.Frozen;
 using LibMatrix.EventTypes.Common;
-using LibMatrix.EventTypes.Spec.State;
 using LibMatrix.EventTypes.Spec.State.RoomInfo;
 using LibMatrix.EventTypes.Spec.State.Space;
 using LibMatrix.Filters;

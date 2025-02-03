@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using LibMatrix.HomeserverEmulator.Services;
 using LibMatrix.Services;
 using Microsoft.AspNetCore.Mvc;
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace LibMatrix.HomeserverEmulator.Controllers.Media;
 
@@ -12,12 +13,12 @@ public class MediaController(
     ILogger<MediaController> logger,
     TokenService tokenService,
     UserStore userStore,
-    HSEConfiguration cfg,
+    HseConfiguration cfg,
     HomeserverResolverService hsResolver,
     MediaStore mediaStore)
     : ControllerBase {
     [HttpPost("upload")]
-    public async Task<object> UploadMedia([FromHeader(Name = "Content-Type")] string ContentType, [FromQuery] string filename, [FromBody] Stream file) {
+    public async Task<object> UploadMedia([FromHeader(Name = "Content-Type")] string contentType, [FromQuery] string filename, [FromBody] Stream file) {
         var token = tokenService.GetAccessTokenOrNull(HttpContext);
         if (token == null)
             throw new MatrixException() {
@@ -75,7 +76,9 @@ public class MediaController(
         if (cfg.StoreData) {
             var path = Path.Combine(cfg.DataStoragePath, "media", serverName, mediaId);
             if (!System.IO.File.Exists(path)) {
-                var mediaUrl = await hsResolver.ResolveMediaUri(serverName, $"mxc://{serverName}/{mediaId}");
+                // var mediaUrl = await hsResolver.ResolveMediaUri(serverName, $"mxc://{serverName}/{mediaId}");
+                var homeserver = (await hsResolver.ResolveHomeserverFromWellKnown(serverName)).Client;
+                var mediaUrl = homeserver is null ? null : $"{homeserver}/_matrix/media/v3/download/";
                 if (mediaUrl is null)
                     throw new MatrixException() {
                         ErrorCode = "M_NOT_FOUND",
@@ -90,7 +93,9 @@ public class MediaController(
             return new FileStream(path, FileMode.Open);
         }
         else {
-            var mediaUrl = await hsResolver.ResolveMediaUri(serverName, $"mxc://{serverName}/{mediaId}");
+            // var mediaUrl = await hsResolver.ResolveMediaUri(serverName, $"mxc://{serverName}/{mediaId}");
+            var homeserver = (await hsResolver.ResolveHomeserverFromWellKnown(serverName)).Client;
+            var mediaUrl = homeserver is null ? null : $"{homeserver}/_matrix/media/v3/download/";
             if (mediaUrl is null)
                 throw new MatrixException() {
                     ErrorCode = "M_NOT_FOUND",
