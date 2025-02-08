@@ -1,0 +1,159 @@
+using System.Diagnostics;
+using System.Text.Json.Serialization;
+using ArcaneLibs.Collections;
+using ArcaneLibs.Extensions;
+using LibMatrix.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+
+namespace LibMatrix.Services;
+
+public class WellKnownResolverService {
+    private readonly MatrixHttpClient _httpClient = new();
+
+    private static readonly SemaphoreCache<ClientWellKnown> ClientWellKnownCache = new();
+    private static readonly SemaphoreCache<ServerWellKnown> ServerWellKnownCache = new();
+    // private static readonly SemaphoreCache<support> SupportWellKnownCache = new();
+    // private static readonly SemaphoreCache<WellKnownRecords> WellKnownCache = new();
+
+    private readonly ILogger<WellKnownResolverService> _logger;
+
+    public WellKnownResolverService(ILogger<WellKnownResolverService> logger) {
+        _logger = logger;
+        if (logger is NullLogger<WellKnownResolverService>) {
+            var stackFrame = new StackTrace(true).GetFrame(1);
+            Console.WriteLine(
+                $"WARN | Null logger provided to WellKnownResolverService!\n{stackFrame?.GetMethod()?.DeclaringType?.ToString() ?? "null"} at {stackFrame?.GetFileName() ?? "null"}:{stackFrame?.GetFileLineNumber().ToString() ?? "null"}");
+        }
+    }
+
+    public async Task<WellKnownRecords> TryResolveWellKnownRecords(string homeserver) {
+        WellKnownRecords records = new();
+        records.ClientWellKnown = await ClientWellKnownCache.TryGetOrAdd(homeserver, async () => {
+            _logger.LogTrace($"Resolving client well-known: {homeserver}");
+            ClientWellKnown? clientWellKnown = null;
+            // check if homeserver has a client well-known
+            try {
+
+                var wk = await _httpClient.TryGetFromJsonAsync<ClientWellKnown>($"{homeserver}/.well-known/matrix/client");
+            }
+            catch { }
+
+            // return clientWellKnown;
+
+            _logger.LogInformation("No client well-known for {server}...", homeserver);
+            return null;
+        });
+        return records;
+    } 
+
+    // public async Task<WellKnownUris> ResolveHomeserverFromWellKnown(string homeserver, bool enableClient = true, bool enableServer = true) {
+    //     ArgumentNullException.ThrowIfNull(homeserver);
+    //
+    //     return await WellKnownCache.GetOrAdd(homeserver, async () => {
+    //         _logger.LogTrace($"Resolving homeserver well-knowns: {homeserver}");
+    //         var client = enableClient ? _tryResolveClientEndpoint(homeserver) : null;
+    //         var server = enableServer ? _tryResolveServerEndpoint(homeserver) : null;
+    //
+    //         var res = new WellKnownUris();
+    //
+    //         if (client != null)
+    //             res.Client = (await client)?.TrimEnd('/') ?? throw new Exception($"Could not resolve client URL for {homeserver}.");
+    //
+    //         if (server != null)
+    //             res.Server = (await server)?.TrimEnd('/') ?? throw new Exception($"Could not resolve server URL for {homeserver}.");
+    //
+    //         _logger.LogInformation("Resolved well-knowns for {hs}: {json}", homeserver, res.ToJson(indent: false));
+    //         return res;
+    //     });
+    // }
+    //
+    // private async Task<string?> _tryResolveClientEndpoint(string homeserver) {
+    //     ArgumentNullException.ThrowIfNull(homeserver);
+    //     _logger.LogTrace("Resolving client well-known: {homeserver}", homeserver);
+    //     ClientWellKnown? clientWellKnown = null;
+    //     // check if homeserver has a client well-known
+    //     if (homeserver.StartsWith("https://")) {
+    //         clientWellKnown = await _httpClient.TryGetFromJsonAsync<ClientWellKnown>($"{homeserver}/.well-known/matrix/client");
+    //     }
+    //     else if (homeserver.StartsWith("http://")) {
+    //         clientWellKnown = await _httpClient.TryGetFromJsonAsync<ClientWellKnown>($"{homeserver}/.well-known/matrix/client");
+    //     }
+    //     else {
+    //         clientWellKnown ??= await _httpClient.TryGetFromJsonAsync<ClientWellKnown>($"https://{homeserver}/.well-known/matrix/client");
+    //         clientWellKnown ??= await _httpClient.TryGetFromJsonAsync<ClientWellKnown>($"http://{homeserver}/.well-known/matrix/client");
+    //
+    //         if (clientWellKnown is null) {
+    //             if (await _httpClient.CheckSuccessStatus($"https://{homeserver}/_matrix/client/versions"))
+    //                 return $"https://{homeserver}";
+    //             if (await _httpClient.CheckSuccessStatus($"http://{homeserver}/_matrix/client/versions"))
+    //                 return $"http://{homeserver}";
+    //         }
+    //     }
+    //
+    //     if (!string.IsNullOrWhiteSpace(clientWellKnown?.Homeserver.BaseUrl))
+    //         return clientWellKnown.Homeserver.BaseUrl;
+    //
+    //     _logger.LogInformation("No client well-known for {server}...", homeserver);
+    //     return null;
+    // }
+    //
+    // private async Task<string?> _tryResolveServerEndpoint(string homeserver) {
+    //     // TODO: implement SRV delegation via DoH: https://developers.google.com/speed/public-dns/docs/doh/json
+    //     ArgumentNullException.ThrowIfNull(homeserver);
+    //     _logger.LogTrace($"Resolving server well-known: {homeserver}");
+    //     ServerWellKnown? serverWellKnown = null;
+    //     // check if homeserver has a server well-known
+    //     if (homeserver.StartsWith("https://")) {
+    //         serverWellKnown = await _httpClient.TryGetFromJsonAsync<ServerWellKnown>($"{homeserver}/.well-known/matrix/server");
+    //     }
+    //     else if (homeserver.StartsWith("http://")) {
+    //         serverWellKnown = await _httpClient.TryGetFromJsonAsync<ServerWellKnown>($"{homeserver}/.well-known/matrix/server");
+    //     }
+    //     else {
+    //         serverWellKnown ??= await _httpClient.TryGetFromJsonAsync<ServerWellKnown>($"https://{homeserver}/.well-known/matrix/server");
+    //         serverWellKnown ??= await _httpClient.TryGetFromJsonAsync<ServerWellKnown>($"http://{homeserver}/.well-known/matrix/server");
+    //     }
+    //
+    //     _logger.LogInformation("Server well-known for {hs}: {json}", homeserver, serverWellKnown?.ToJson() ?? "null");
+    //
+    //     if (!string.IsNullOrWhiteSpace(serverWellKnown?.Homeserver)) {
+    //         var resolved = serverWellKnown.Homeserver;
+    //         if (resolved.StartsWith("https://") || resolved.StartsWith("http://"))
+    //             return resolved;
+    //         if (await _httpClient.CheckSuccessStatus($"https://{resolved}/_matrix/federation/v1/version"))
+    //             return $"https://{resolved}";
+    //         if (await _httpClient.CheckSuccessStatus($"http://{resolved}/_matrix/federation/v1/version"))
+    //             return $"http://{resolved}";
+    //         _logger.LogWarning("Server well-known points to invalid server: {resolved}", resolved);
+    //     }
+    //
+    //     // fallback: most servers host C2S and S2S on the same domain
+    //     var clientUrl = await _tryResolveClientEndpoint(homeserver);
+    //     if (clientUrl is not null && await _httpClient.CheckSuccessStatus($"{clientUrl}/_matrix/federation/v1/version"))
+    //         return clientUrl;
+    //
+    //     _logger.LogInformation("No server well-known for {server}...", homeserver);
+    //     return null;
+    // }
+
+    public class ClientWellKnown {
+        [JsonPropertyName("m.homeserver")]
+        public WellKnownHomeserver Homeserver { get; set; }
+
+        public class WellKnownHomeserver {
+            [JsonPropertyName("base_url")]
+            public string BaseUrl { get; set; }
+        }
+    }
+
+    public class ServerWellKnown {
+        [JsonPropertyName("m.server")]
+        public string Homeserver { get; set; }
+    }
+    
+    public class WellKnownRecords {
+        public ClientWellKnown? ClientWellKnown { get; set; }
+        public ServerWellKnown? ServerWellKnown { get; set; }
+    }
+}

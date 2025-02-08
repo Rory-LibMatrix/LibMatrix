@@ -107,37 +107,6 @@ public class StateEvent {
         get => _rawContent;
         set => _rawContent = value;
     }
-    //
-    // [JsonIgnore]
-    // public new Type GetType {
-    //     get {
-    //         var type = GetStateEventType(Type);
-    //
-    //         //special handling for some types
-    //         // if (type == typeof(RoomEmotesEventContent)) {
-    //         //     RawContent["emote"] = RawContent["emote"]?.AsObject() ?? new JsonObject();
-    //         // }
-    //         //
-    //         // if (this is StateEventResponse stateEventResponse) {
-    //         //     if (type == null || type == typeof(object)) {
-    //         //         Console.WriteLine($"Warning: unknown event type '{Type}'!");
-    //         //         Console.WriteLine(RawContent.ToJson());
-    //         //         Directory.CreateDirectory($"unknown_state_events/{Type}");
-    //         //         File.WriteAllText($"unknown_state_events/{Type}/{stateEventResponse.EventId}.json",
-    //         //             RawContent.ToJson());
-    //         //         Console.WriteLine($"Saved to unknown_state_events/{Type}/{stateEventResponse.EventId}.json");
-    //         //     }
-    //         //     else if (RawContent is not null && RawContent.FindExtraJsonObjectFields(type)) {
-    //         //         Directory.CreateDirectory($"unknown_state_events/{Type}");
-    //         //         File.WriteAllText($"unknown_state_events/{Type}/{stateEventResponse.EventId}.json",
-    //         //             RawContent.ToJson());
-    //         //         Console.WriteLine($"Saved to unknown_state_events/{Type}/{stateEventResponse.EventId}.json");
-    //         //     }
-    //         // }
-    //
-    //         return type;
-    //     }
-    // }
 
     //debug
     [JsonIgnore]
@@ -264,8 +233,6 @@ public class StateEventContentPolymorphicTypeInfoResolver : DefaultJsonTypeInfoR
 }
 */
 
-#endregion
-
 /*
 public class ForgivingObjectConverter<T> : JsonConverter<T> where T : new() {
     public override T? Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options) {
@@ -284,3 +251,5 @@ public class ForgivingObjectConverter<T> : JsonConverter<T> where T : new() {
     public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
         => JsonSerializer.Serialize<T>(writer, value, options);
 }*/
+
+#endregion

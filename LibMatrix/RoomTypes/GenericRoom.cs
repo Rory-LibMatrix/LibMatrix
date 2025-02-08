@@ -139,11 +139,13 @@ public class GenericRoom {
         }
     }
 
-    public async Task<MessagesResponse> GetMessagesAsync(string from = "", int? limit = null, string dir = "b", string filter = "") {
+    public async Task<MessagesResponse> GetMessagesAsync(string from = "", int? limit = null, string dir = "b", string? filter = "", SyncFilter.EventFilter? filterObject = null) {
         var url = $"/_matrix/client/v3/rooms/{RoomId}/messages?dir={dir}";
         if (!string.IsNullOrWhiteSpace(from)) url += $"&from={from}";
         if (limit is not null) url += $"&limit={limit}";
-        if (!string.IsNullOrWhiteSpace(filter)) url += $"&filter={filter}";
+        if(filterObject is not null) url += $"&filter={filterObject.ToJson()}";
+        else if (!string.IsNullOrWhiteSpace(filter)) url += $"&filter={filter}";
+
         var res = await Homeserver.ClientHttpClient.GetFromJsonAsync<MessagesResponse>(url);
         return res;
     }
@@ -151,12 +153,12 @@ public class GenericRoom {
     /// <summary>
     /// Same as <see cref="GetMessagesAsync"/>, except keeps fetching more responses until the beginning of the room is found, or the target message limit is reached
     /// </summary>
-    public async IAsyncEnumerable<MessagesResponse> GetManyMessagesAsync(string from = "", int limit = 100, string dir = "b", string filter = "", bool includeState = true,
-        bool fixForward = false, int chunkSize = 100) {
+    public async IAsyncEnumerable<MessagesResponse> GetManyMessagesAsync(string from = "", int limit = int.MaxValue, string dir = "b", string? filter = "",
+        SyncFilter.EventFilter? filterObject = null, bool includeState = true, bool fixForward = false, int chunkSize = 100) {
         if (dir == "f" && fixForward) {
             var concat = new List<MessagesResponse>();
             while (true) {
-                var resp = await GetMessagesAsync(from, int.MaxValue, "b", filter);
+                var resp = await GetMessagesAsync(from, int.MaxValue, "b", filter, filterObject);
                 concat.Add(resp);
                 if (!includeState)
                     resp.State.Clear();
