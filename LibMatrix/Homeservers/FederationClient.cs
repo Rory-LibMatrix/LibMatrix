@@ -13,8 +13,8 @@ public class FederationClient {
         if (proxy is not null) HttpClient.DefaultRequestHeaders.Add("MXAE_UPSTREAM", federationEndpoint);
     }
 
-    public MatrixHttpClient HttpClient { get; set; } = null!;
-    public HomeserverResolverService.WellKnownUris WellKnownUris { get; set; } = null!;
+    public MatrixHttpClient HttpClient { get; set; }
+    public HomeserverResolverService.WellKnownUris WellKnownUris { get; set; }
 
     public async Task<ServerVersionResponse> GetServerVersionAsync() => await HttpClient.GetFromJsonAsync<ServerVersionResponse>("/_matrix/federation/v1/version");
 }

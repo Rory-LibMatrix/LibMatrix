@@ -26,7 +26,7 @@ public class CreateRoomRequest {
 
     //we dont want to use this, we want more control
     // [JsonPropertyName("preset")]
-    // public string Preset { get; set; } = null!;
+    // public string Preset { get; set; }
 
     [JsonPropertyName("initial_state")]
     public List<StateEvent>? InitialState { get; set; }

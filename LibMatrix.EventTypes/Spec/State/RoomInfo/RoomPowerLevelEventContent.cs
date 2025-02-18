@@ -20,7 +20,7 @@ public class RoomPowerLevelEventContent : EventContent {
     public long? Kick { get; set; } = 50;
 
     [JsonPropertyName("notifications")]
-    public NotificationsPowerLevels? NotificationsPl { get; set; } // = null!;
+    public NotificationsPowerLevels? NotificationsPl { get; set; }
 
     [JsonPropertyName("redact")]
     public long? Redact { get; set; } = 50;
@@ -29,10 +29,10 @@ public class RoomPowerLevelEventContent : EventContent {
     public long? StateDefault { get; set; } = 50;
 
     [JsonPropertyName("events")]
-    public Dictionary<string, long>? Events { get; set; } // = null!;
+    public Dictionary<string, long>? Events { get; set; }
 
     [JsonPropertyName("users")]
-    public Dictionary<string, long>? Users { get; set; } // = null!;
+    public Dictionary<string, long>? Users { get; set; }
 
     [JsonPropertyName("users_default")]
     public long? UsersDefault { get; set; } = 0;

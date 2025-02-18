@@ -10,24 +10,24 @@ using LibMatrix.Services;
 namespace LibMatrix.Homeservers;
 
 public class RemoteHomeserver {
-    public RemoteHomeserver(string baseUrl, HomeserverResolverService.WellKnownUris wellKnownUris, string? proxy) {
+    public RemoteHomeserver(string serverName, HomeserverResolverService.WellKnownUris wellKnownUris, string? proxy) {
         if (string.IsNullOrWhiteSpace(proxy))
             proxy = null;
-        BaseUrl = baseUrl;
+        ServerNameOrUrl = serverName;
         WellKnownUris = wellKnownUris;
         ClientHttpClient = new MatrixHttpClient {
-            BaseAddress = new Uri(proxy?.TrimEnd('/') ?? wellKnownUris.Client?.TrimEnd('/') ?? throw new InvalidOperationException($"No client URI for {baseUrl}!")),
+            BaseAddress = new Uri(proxy?.TrimEnd('/') ?? wellKnownUris.Client?.TrimEnd('/') ?? throw new InvalidOperationException($"No client URI for {serverName}!")),
             // Timeout = TimeSpan.FromSeconds(300) // TODO: Re-implement this
         };
 
-        if (proxy is not null) ClientHttpClient.DefaultRequestHeaders.Add("MXAE_UPSTREAM", baseUrl);
+        if (proxy is not null) ClientHttpClient.DefaultRequestHeaders.Add("MXAE_UPSTREAM", serverName);
         if (!string.IsNullOrWhiteSpace(wellKnownUris.Server))
             FederationClient = new FederationClient(WellKnownUris.Server!, proxy);
         Auth = new(this);
     }
 
     private Dictionary<string, object> _profileCache { get; set; } = new();
-    public string BaseUrl { get; }
+    public string ServerNameOrUrl { get; }
 
     [JsonIgnore]
     public MatrixHttpClient ClientHttpClient { get; set; }
@@ -111,8 +111,8 @@ public class RemoteHomeserver {
 
 public class AliasResult {
     [JsonPropertyName("room_id")]
-    public string RoomId { get; set; } = null!;
+    public string RoomId { get; set; }
 
     [JsonPropertyName("servers")]
-    public List<string> Servers { get; set; } = null!;
+    public List<string> Servers { get; set; }
 }

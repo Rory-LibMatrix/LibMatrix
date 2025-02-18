@@ -39,11 +39,12 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
     public string UserId => WhoAmI.UserId;
     public string UserLocalpart => UserId.Split(":")[0][1..];
     public string ServerName => UserId.Split(":", 2)[1];
+    public string BaseUrl => ClientHttpClient.BaseAddress!.ToString().TrimEnd('/');
 
     [JsonIgnore]
     public string AccessToken { get; set; }
 
-    public HsNamedCaches NamedCaches { get; set; } = null!;
+    public HsNamedCaches NamedCaches { get; set; }
 
     public GenericRoom GetRoom(string roomId) {
         if (roomId is null || !roomId.StartsWith("!")) throw new ArgumentException("Room ID must start with !", nameof(roomId));
@@ -408,22 +409,22 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
 #region Authenticated Media
 
     // TODO: implement /_matrix/client/v1/media/config when it's actually useful - https://spec.matrix.org/v1.11/client-server-api/#get_matrixclientv1mediaconfig
+    private bool? _serverSupportsAuthMedia;
 
-    private (string ServerName, string MediaId) ParseMxcUri(string mxcUri) {
-        if (!mxcUri.StartsWith("mxc://")) throw new ArgumentException("Matrix Content URIs must start with 'mxc://'", nameof(mxcUri));
-        var parts = mxcUri[6..].Split('/');
-        if (parts.Length != 2) throw new ArgumentException($"Invalid Matrix Content URI '{mxcUri}' passed! Matrix Content URIs must exist of only 2 parts!", nameof(mxcUri));
-        return (parts[0], parts[1]);
-    }
+    public async Task<string> GetMediaUrlAsync(MxcUri mxcUri, string? filename = null, int? timeout = null) {
+        if (_serverSupportsAuthMedia == true) return mxcUri.ToDownloadUri(BaseUrl, filename, timeout);
+        if (_serverSupportsAuthMedia == false) return mxcUri.ToLegacyDownloadUri(BaseUrl, filename, timeout);
 
-    public async Task<Stream> GetMediaStreamAsync(string mxcUri, string? filename = null, int? timeout = null) {
-        var (serverName, mediaId) = ParseMxcUri(mxcUri);
         try {
-            var uri = $"/_matrix/client/v1/media/download/{serverName}/{mediaId}";
-            if (!string.IsNullOrWhiteSpace(filename)) uri += $"/{HttpUtility.UrlEncode(filename)}";
-            if (timeout is not null) uri += $"?timeout_ms={timeout}";
-            var res = await ClientHttpClient.GetAsync(uri);
-            return await res.Content.ReadAsStreamAsync();
+            // Console.WriteLine($"Trying authenticated media URL: {uri}");
+            var res = await ClientHttpClient.SendAsync(new() {
+                Method = HttpMethod.Head,
+                RequestUri = (new Uri(mxcUri.ToDownloadUri(BaseUrl, filename, timeout), string.IsNullOrWhiteSpace(BaseUrl) ? UriKind.Relative : UriKind.Absolute))
+            });
+            if (res.IsSuccessStatusCode) {
+                _serverSupportsAuthMedia = true;
+                return mxcUri.ToDownloadUri(BaseUrl, filename, timeout);
+            }
         }
         catch (MatrixException e) {
             if (e is not { ErrorCode: "M_UNKNOWN" }) throw;
@@ -431,11 +432,15 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
 
         //fallback to legacy media
         try {
-            var uri = $"/_matrix/media/v3/download/{serverName}/{mediaId}";
-            if (!string.IsNullOrWhiteSpace(filename)) uri += $"/{HttpUtility.UrlEncode(filename)}";
-            if (timeout is not null) uri += $"?timeout_ms={timeout}";
-            var res = await ClientHttpClient.GetAsync(uri);
-            return await res.Content.ReadAsStreamAsync();
+            // Console.WriteLine($"Trying legacy media URL: {uri}");
+            var res = await ClientHttpClient.SendAsync(new() {
+                Method = HttpMethod.Head,
+                RequestUri = new(mxcUri.ToLegacyDownloadUri(BaseUrl, filename, timeout), string.IsNullOrWhiteSpace(BaseUrl) ? UriKind.Relative : UriKind.Absolute)
+            });
+            if (res.IsSuccessStatusCode) {
+                _serverSupportsAuthMedia = false;
+                return mxcUri.ToLegacyDownloadUri(BaseUrl, filename, timeout);
+            }
         }
         catch (MatrixException e) {
             if (e is not { ErrorCode: "M_UNKNOWN" }) throw;
@@ -443,13 +448,19 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
 
         throw new LibMatrixException() {
             ErrorCode = LibMatrixException.ErrorCodes.M_UNSUPPORTED,
-            Error = "Failed to download media"
+            Error = "Failed to get media URL"
         };
-        // return default;
     }
 
-    public async Task<Stream> GetThumbnailStreamAsync(string mxcUri, int width, int height, string? method = null, int? timeout = null) {
-        var (serverName, mediaId) = ParseMxcUri(mxcUri);
+    public async Task<Stream> GetMediaStreamAsync(string mxcUri, string? filename = null, int? timeout = null) {
+        var uri = await GetMediaUrlAsync(mxcUri, filename, timeout);
+        var res = await ClientHttpClient.GetAsync(uri);
+        return await res.Content.ReadAsStreamAsync();
+    }
+
+    public async Task<Stream> GetThumbnailStreamAsync(MxcUri mxcUri, int width, int height, string? method = null, int? timeout = null) {
+        var (serverName, mediaId) = mxcUri;
+
         try {
             var uri = new Uri($"/_matrix/client/v1/thumbnail/{serverName}/{mediaId}");
             uri = uri.AddQuery("width", width.ToString());
@@ -494,7 +505,7 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
         catch (MatrixException e) {
             if (e is not { ErrorCode: "M_UNRECOGNIZED" }) throw;
         }
-        
+
         //fallback to legacy media
         try {
             var res = await ClientHttpClient.GetAsync($"/_matrix/media/v3/preview_url?url={HttpUtility.UrlEncode(url)}");
@@ -503,7 +514,7 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
         catch (MatrixException e) {
             if (e is not { ErrorCode: "M_UNRECOGNIZED" }) throw;
         }
-        
+
         throw new LibMatrixException() {
             ErrorCode = LibMatrixException.ErrorCodes.M_UNSUPPORTED,
             Error = "Failed to download URL preview"

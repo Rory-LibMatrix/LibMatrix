@@ -553,5 +553,5 @@ public class GenericRoom {
 
 public class RoomIdResponse {
     [JsonPropertyName("room_id")]
-    public string RoomId { get; set; } = null!;
+    public string RoomId { get; set; }
 }

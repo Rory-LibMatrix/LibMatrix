@@ -8,7 +8,7 @@ internal partial class SyncResponseSerializerContext : JsonSerializerContext { }
 
 public class SyncResponse {
     [JsonPropertyName("next_batch")]
-    public string NextBatch { get; set; } = null!;
+    public string NextBatch { get; set; }
 
     [JsonPropertyName("account_data")]
     public EventList? AccountData { get; set; }
@@ -17,7 +17,7 @@ public class SyncResponse {
     public PresenceDataStructure? Presence { get; set; }
 
     [JsonPropertyName("device_one_time_keys_count")]
-    public Dictionary<string, int>? DeviceOneTimeKeysCount { get; set; } = null!;
+    public Dictionary<string, int>? DeviceOneTimeKeysCount { get; set; }
 
     [JsonPropertyName("rooms")]
     public RoomsDataStructure? Rooms { get; set; }

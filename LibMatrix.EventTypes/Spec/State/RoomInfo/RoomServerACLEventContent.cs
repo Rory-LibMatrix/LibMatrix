@@ -7,10 +7,10 @@ public class RoomServerAclEventContent : EventContent {
     public const string EventId = "m.room.server_acl";
 
     [JsonPropertyName("allow")]
-    public List<string>? Allow { get; set; } // = null!;
+    public List<string>? Allow { get; set; }
 
     [JsonPropertyName("deny")]
-    public List<string>? Deny { get; set; } // = null!;
+    public List<string>? Deny { get; set; }
 
     [JsonPropertyName("allow_ip_literals")]
     public bool AllowIpLiterals { get; set; } // = false;

@@ -24,7 +24,7 @@ var host = Host.CreateDefaultBuilder(args).ConfigureServices((_, services) => {
     }
 
     // services.AddHostedService<ServerRoomSizeCalulator>();
-    services.AddHostedService<DevTestBot>();
+    services.AddHostedService<PingTestBot>();
 }).UseConsoleLifetime().Build();
 
 await host.RunAsync();

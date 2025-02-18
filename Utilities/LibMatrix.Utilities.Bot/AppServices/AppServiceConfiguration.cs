@@ -4,28 +4,28 @@ namespace LibMatrix.Utilities.Bot.AppServices;
 
 public class AppServiceConfiguration {
     [JsonPropertyName("id")]
-    public string Id { get; set; } = null!;
+    public string Id { get; set; }
 
     [JsonPropertyName("url")]
-    public string? Url { get; set; } = null!;
+    public string? Url { get; set; }
 
     [JsonPropertyName("sender_localpart")]
-    public string SenderLocalpart { get; set; } = null!;
+    public string SenderLocalpart { get; set; }
 
     [JsonPropertyName("as_token")]
-    public string AppserviceToken { get; set; } = null!;
+    public string AppserviceToken { get; set; }
 
     [JsonPropertyName("hs_token")]
-    public string HomeserverToken { get; set; } = null!;
+    public string HomeserverToken { get; set; }
 
     [JsonPropertyName("protocols")]
-    public List<string>? Protocols { get; set; } = null!;
+    public List<string>? Protocols { get; set; }
 
     [JsonPropertyName("rate_limited")]
-    public bool? RateLimited { get; set; } = null!;
+    public bool? RateLimited { get; set; }
 
     [JsonPropertyName("namespaces")]
-    public AppserviceNamespaces Namespaces { get; set; } = null!;
+    public AppserviceNamespaces Namespaces { get; set; }
 
     public class AppserviceNamespaces {
         [JsonPropertyName("users")]
@@ -42,7 +42,7 @@ public class AppServiceConfiguration {
             public bool Exclusive { get; set; }
 
             [JsonPropertyName("regex")]
-            public string Regex { get; set; } = null!;
+            public string Regex { get; set; }
         }
     }
 

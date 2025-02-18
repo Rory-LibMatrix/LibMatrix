@@ -18,7 +18,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="ArcaneLibs.StringNormalisation" Version="1.0.0-preview.20250123-182609" Condition="'$(Configuration)' == 'Release'"/>
+        <PackageReference Include="ArcaneLibs.StringNormalisation" Version="1.0.0-preview.20250208-191806" Condition="'$(Configuration)' == 'Release'" />
         <ProjectReference Include="..\..\ArcaneLibs\ArcaneLibs.StringNormalisation\ArcaneLibs.StringNormalisation.csproj" Condition="'$(Configuration)' == 'Debug'"/>
         <ProjectReference Include="..\..\LibMatrix\LibMatrix.csproj"/>
     </ItemGroup>

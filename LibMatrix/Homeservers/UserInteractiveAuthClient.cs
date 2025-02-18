@@ -49,27 +49,27 @@ public class UserInteractiveAuthClient {
 
     internal class RegisterFlowsResponse {
         [JsonPropertyName("session")]
-        public string Session { get; set; } = null!;
+        public string Session { get; set; }
 
         [JsonPropertyName("flows")]
-        public List<RegisterFlow> Flows { get; set; } = null!;
+        public List<RegisterFlow> Flows { get; set; }
 
         [JsonPropertyName("params")]
-        public JsonObject Params { get; set; } = null!;
+        public JsonObject Params { get; set; }
 
         public class RegisterFlow {
             [JsonPropertyName("stages")]
-            public List<string> Stages { get; set; } = null!;
+            public List<string> Stages { get; set; }
         }
     }
 
     internal class LoginFlowsResponse {
         [JsonPropertyName("flows")]
-        public List<LoginFlow> Flows { get; set; } = null!;
+        public List<LoginFlow> Flows { get; set; }
 
         public class LoginFlow {
             [JsonPropertyName("type")]
-            public string Type { get; set; } = null!;
+            public string Type { get; set; }
         }
     }
 

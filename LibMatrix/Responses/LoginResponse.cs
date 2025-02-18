@@ -4,10 +4,10 @@ namespace LibMatrix.Responses;
 
 public class LoginResponse {
     [JsonPropertyName("access_token")]
-    public string AccessToken { get; set; } = null!;
+    public string AccessToken { get; set; }
 
     [JsonPropertyName("device_id")]
-    public string DeviceId { get; set; } = null!;
+    public string DeviceId { get; set; }
 
     private string? _homeserver;
 
@@ -18,7 +18,7 @@ public class LoginResponse {
     }
 
     [JsonPropertyName("user_id")]
-    public string UserId { get; set; } = null!;
+    public string UserId { get; set; }
 
     // public async Task<AuthenticatedHomeserverGeneric> GetAuthenticatedHomeserver(string? proxy = null) {
         // var urls = await new HomeserverResolverService().ResolveHomeserverFromWellKnown(Homeserver);

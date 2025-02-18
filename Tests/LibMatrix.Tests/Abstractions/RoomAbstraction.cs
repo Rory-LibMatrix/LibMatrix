@@ -52,7 +52,7 @@ public static class RoomAbstraction {
         return testRoom;
     }
 
-    private static SemaphoreSlim _spaceSemaphore = null!;
+    private static SemaphoreSlim _spaceSemaphore = new(1, 1);
 
     public static async Task<SpaceRoom> GetTestSpace(AuthenticatedHomeserverGeneric hs, int roomCount = 100, bool addSpaces = false, int spaceSizeReduction = 10) {
         _spaceSemaphore ??= new SemaphoreSlim(roomCount / spaceSizeReduction, roomCount / spaceSizeReduction);
