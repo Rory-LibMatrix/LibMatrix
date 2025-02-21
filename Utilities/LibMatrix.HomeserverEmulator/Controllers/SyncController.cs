@@ -34,10 +34,18 @@ public class SyncController(ILogger<SyncController> logger, TokenService tokenSe
             newSyncState = syncState.Clone();
 
             var newSyncToken = Guid.NewGuid().ToString();
+            long stallTime = 100;
             do {
                 syncResp = IncrementalSync(user, session, syncState);
                 syncResp.NextBatch = newSyncToken;
-            } while (!await HasDataOrStall(syncResp) && sw.ElapsedMilliseconds < timeout);
+
+                var hasData = await HasDataOrStall(syncResp);
+                if (!hasData) {
+                    await Task.Delay((int)Math.Min(stallTime, Math.Max(0, (timeout ?? 10) - sw.ElapsedMilliseconds)));
+                    stallTime *= 2;
+                }
+                else break;
+            } while (sw.ElapsedMilliseconds < timeout);
 
             if (sw.ElapsedMilliseconds > timeout) {
                 logger.LogTrace("Sync timed out after {Elapsed}", sw.Elapsed);
@@ -49,6 +57,7 @@ public class SyncController(ILogger<SyncController> logger, TokenService tokenSe
 
         session.SyncStates[syncResp.NextBatch] = RecalculateSyncStates(newSyncState, syncResp);
         logger.LogTrace("Responding to sync after {totalElapsed}", sw.Elapsed);
+        // logger.LogTrace(syncResp.ToJson(ignoreNull: true));
         return syncResp;
     }
 
@@ -135,6 +144,7 @@ public class SyncController(ILogger<SyncController> logger, TokenService tokenSe
         };
 
         // step 1: check previously synced rooms
+        int updatedRooms = 0;
         foreach (var (roomId, roomPosition) in syncState.RoomPositions) {
             var room = roomStore.GetRoomById(roomId);
             if (room == null) {
@@ -147,9 +157,11 @@ public class SyncController(ILogger<SyncController> logger, TokenService tokenSe
                 var newTimelineEvents = room.Timeline.Skip(roomPosition.TimelinePosition).ToList();
                 var newAccountDataEvents = room.AccountData[user.UserId].Skip(roomPosition.AccountDataPosition).ToList();
                 if (newTimelineEvents.Count == 0 && newAccountDataEvents.Count == 0) continue;
+                if (updatedRooms++ >= 50) break; // performance cap
                 data.Join[room.RoomId] = new() {
                     State = new(newTimelineEvents.GetCalculatedState()),
-                    Timeline = new(newTimelineEvents, false)
+                    Timeline = new(newTimelineEvents, false),
+                    AccountData = new(newAccountDataEvents)
                 };
             }
         }
@@ -160,11 +172,11 @@ public class SyncController(ILogger<SyncController> logger, TokenService tokenSe
         }
 
         // step 2: check newly joined rooms
-        var untrackedRooms = roomStore._rooms.Where(r => !syncState.RoomPositions.ContainsKey(r.RoomId)).ToList();
+        // var untrackedRooms = roomStore._rooms.Where(r => !syncState.RoomPositions.ContainsKey(r.RoomId)).ToList();
 
         var allJoinedRooms = roomStore.GetRoomsByMember(user.UserId).ToArray();
         if (allJoinedRooms.Length == 0) return data;
-        var rooms = Random.Shared.GetItems(allJoinedRooms, Math.Min(allJoinedRooms.Length, 50));
+        var rooms = Random.Shared.GetItems(allJoinedRooms, Math.Min(allJoinedRooms.Length, 1));
         foreach (var membership in rooms) {
             var membershipContent = membership.TypedContent as RoomMemberEventContent ??
                                     throw new InvalidOperationException("Membership event content is not RoomMemberEventContent");
@@ -211,7 +223,7 @@ public class SyncController(ILogger<SyncController> logger, TokenService tokenSe
     private bool HasData(SyncResponse resp) {
         return resp.Rooms?.Invite?.Count > 0 || resp.Rooms?.Join?.Count > 0 || resp.Rooms?.Leave?.Count > 0;
     }
-    
+
     private async Task<bool> HasDataOrStall(SyncResponse resp) {
         // logger.LogTrace("Checking if sync response has data: {resp}", resp.ToJson(indent: false, ignoreNull: true));
         // if (resp.AccountData?.Events?.Count > 0) return true;
@@ -246,29 +258,23 @@ public class SyncController(ILogger<SyncController> logger, TokenService tokenSe
         //     };
 
         var hasData = resp is {
-            AccountData: {
-                Events: { Count: > 0 }
-            }
+            AccountData.Events.Count: > 0
         } or {
-            Presence: {
-                Events: { Count: > 0 }
-            }
+            Presence.Events.Count: > 0
         } or {
             DeviceLists: {
-                Changed: { Count: > 0 },
-                Left: { Count: > 0 }
+                Changed.Count: > 0,
+                Left.Count: > 0
             }
         } or {
-            ToDevice: {
-                Events: { Count: > 0 }
-            }
+            ToDevice.Events.Count: > 0
         } or {
             Rooms: {
-                Invite: { Count: > 0 }
+                Invite.Count: > 0
             } or {
-                Join: { Count: > 0 }
+                Join.Count: > 0
             } or {
-                Leave: { Count: > 0 }
+                Leave.Count: > 0
             }
         };
 
@@ -278,7 +284,7 @@ public class SyncController(ILogger<SyncController> logger, TokenService tokenSe
 
         if (!hasData) {
             // logger.LogDebug($"Sync response has no data, stalling for 1000ms: {resp.ToJson(indent: false, ignoreNull: true)}");
-            await Task.Delay(10);
+            // await Task.Delay(100);
         }
 
         return hasData;

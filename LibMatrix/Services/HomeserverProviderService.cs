@@ -45,6 +45,8 @@ public class HomeserverProviderService(ILogger<HomeserverProviderService> logger
                     else {
                         if (serverVersion is { Server.Name: "Synapse" })
                             hs = new AuthenticatedHomeserverSynapse(homeserver, wellKnownUris, proxy, accessToken);
+                        else if (serverVersion is { Server.Name: "LibMatrix.HomeserverEmulator"})
+                            hs = new AuthenticatedHomeserverHSE(homeserver, wellKnownUris, proxy, accessToken);
                     }
                 }
                 catch (Exception e) {

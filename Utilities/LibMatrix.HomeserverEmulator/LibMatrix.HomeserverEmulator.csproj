@@ -6,7 +6,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <InvariantGlobalization>true</InvariantGlobalization>
         <LangVersion>preview</LangVersion>
-<!--        <GenerateDocumentationFile>true</GenerateDocumentationFile>-->
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
 
     <ItemGroup>
@@ -1027,6 +1027,8 @@
       <_ContentIncludedByDefault Remove="data\rooms\!ffda8b8c-baf0-4938-bda5-12d30ef39fe8.json" />
       <_ContentIncludedByDefault Remove="data\rooms\!ffe1fed4-8e49-4584-8f74-a1f9a58b70ed.json" />
       <_ContentIncludedByDefault Remove="data\rooms\!ffffc7e7-4b1e-40a9-9f24-ebd95267e758.json" />
+      <_ContentIncludedByDefault Remove="data\users\@emma:hse.localhost\tokens.json" />
+      <_ContentIncludedByDefault Remove="data\users\@emma:hse.localhost\user.json" />
     </ItemGroup>
 
 </Project>

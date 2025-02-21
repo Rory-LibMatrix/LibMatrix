@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Web;
@@ -69,6 +70,15 @@ public class RemoteHomeserver {
         return data ?? throw new InvalidOperationException($"Could not resolve alias {alias}");
     }
 
+    public Task<PublicRoomDirectoryResult> GetPublicRoomsAsync(int limit = 100, string? server = null, string? since = null) =>
+        ClientHttpClient.GetFromJsonAsync<PublicRoomDirectoryResult>(buildUriWithParams("/_matrix/client/v3/publicRooms", (nameof(limit), true, limit),
+            (nameof(server), !string.IsNullOrWhiteSpace(server), server), (nameof(since), !string.IsNullOrWhiteSpace(since), since)));
+
+    // TODO: move this somewhere else
+    private string buildUriWithParams(string url, params (string name, bool include, object? value)[] values) {
+        return url + "?" + string.Join("&", values.Where(x => x.include));
+    }
+
 #region Authentication
 
     public async Task<LoginResponse> LoginAsync(string username, string password, string? deviceName = null) {
@@ -107,6 +117,49 @@ public class RemoteHomeserver {
     public virtual string? ResolveMediaUri(string? mxcUri) => null;
 
     public UserInteractiveAuthClient Auth;
+}
+
+public class PublicRoomDirectoryResult {
+    [JsonPropertyName("chunk")]
+    public List<PublicRoomListItem> Chunk { get; set; }
+
+    [JsonPropertyName("next_batch")]
+    public string? NextBatch { get; set; }
+
+    [JsonPropertyName("prev_batch")]
+    public string? PrevBatch { get; set; }
+
+    [JsonPropertyName("total_room_count_estimate")]
+    public int TotalRoomCountEstimate { get; set; }
+
+    public class PublicRoomListItem {
+        [JsonPropertyName("avatar_url")]
+        public string? AvatarUrl { get; set; }
+
+        [JsonPropertyName("canonical_alias")]
+        public string? CanonicalAlias { get; set; }
+
+        [JsonPropertyName("guest_can_join")]
+        public bool GuestCanJoin { get; set; }
+
+        [JsonPropertyName("join_rule")]
+        public string JoinRule { get; set; }
+
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+
+        [JsonPropertyName("num_joined_members")]
+        public int NumJoinedMembers { get; set; }
+
+        [JsonPropertyName("room_id")]
+        public string RoomId { get; set; }
+
+        [JsonPropertyName("topic")]
+        public string? Topic { get; set; }
+
+        [JsonPropertyName("world_readable")]
+        public bool WorldReadable { get; set; }
+    }
 }
 
 public class AliasResult {

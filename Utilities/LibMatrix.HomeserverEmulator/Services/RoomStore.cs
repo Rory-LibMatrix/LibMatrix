@@ -25,7 +25,7 @@ public class RoomStore {
             if (!Directory.Exists(path)) Directory.CreateDirectory(path);
             foreach (var file in Directory.GetFiles(path)) {
                 var room = JsonSerializer.Deserialize<Room>(File.ReadAllText(file));
-                if (room is not null) _rooms.Add(room);
+                if (room is not null && room.State.Any(x => x.Type == RoomCreateEventContent.EventId)) _rooms.Add(room);
             }
         }
         else
@@ -33,7 +33,7 @@ public class RoomStore {
 
         RebuildIndexes();
     }
-    
+
     private void RebuildIndexes() {
         _roomsById = _rooms.ToFrozenDictionary(u => u.RoomId);
     }
@@ -58,6 +58,7 @@ public class RoomStore {
 
         foreach (var (key, value) in request.CreationContent) {
             newCreateEvent.RawContent[key] = value.DeepClone();
+            Console.WriteLine($"RawContent[{key}] = {value.DeepClone().ToJson(ignoreNull: true)}");
         }
 
         if (user != null) {
@@ -189,7 +190,7 @@ public class RoomStore {
                     : JsonSerializer.Deserialize<JsonObject>(JsonSerializer.Serialize(request.TypedContent)))
             };
             Timeline.Add(state);
-            if(state.StateKey != null)
+            if (state.StateKey != null)
                 RebuildState();
             return state;
         }
@@ -208,32 +209,36 @@ public class RoomStore {
         }
 
         // public async Task SaveDebounced() {
-            // if (!HSEConfiguration.Current.StoreData) return;
-            // await _debounceCts.CancelAsync();
-            // _debounceCts = new CancellationTokenSource();
-            // try {
-                // await Task.Delay(250, _debounceCts.Token);
-                // // Ensure all state events are in the timeline
-                // State.Where(s => !Timeline.Contains(s)).ToList().ForEach(s => Timeline.Add(s));
-                // var path = Path.Combine(HSEConfiguration.Current.DataStoragePath, "rooms", $"{RoomId}.json");
-                // Console.WriteLine($"Saving room {RoomId} to {path}!");
-                // await File.WriteAllTextAsync(path, this.ToJson(ignoreNull: true));
-            // }
-            // catch (TaskCanceledException) { }
+        // if (!HSEConfiguration.Current.StoreData) return;
+        // await _debounceCts.CancelAsync();
+        // _debounceCts = new CancellationTokenSource();
+        // try {
+        // await Task.Delay(250, _debounceCts.Token);
+        // // Ensure all state events are in the timeline
+        // State.Where(s => !Timeline.Contains(s)).ToList().ForEach(s => Timeline.Add(s));
+        // var path = Path.Combine(HSEConfiguration.Current.DataStoragePath, "rooms", $"{RoomId}.json");
+        // Console.WriteLine($"Saving room {RoomId} to {path}!");
+        // await File.WriteAllTextAsync(path, this.ToJson(ignoreNull: true));
+        // }
+        // catch (TaskCanceledException) { }
         // }
 
         private SemaphoreSlim saveSemaphore = new(1, 1);
 
+        private CancellationTokenSource _saveCts = new();
+
         public async Task SaveDebounced() {
             Task.Run(async () => {
-                await saveSemaphore.WaitAsync();
+                // await saveSemaphore.WaitAsync();
+                await _saveCts.CancelAsync();
+                _saveCts = new();
                 try {
                     var path = Path.Combine(HseConfiguration.Current.DataStoragePath, "rooms", $"{RoomId}.json");
-                    Console.WriteLine($"Saving room {RoomId} to {path}!");
-                    await File.WriteAllTextAsync(path, this.ToJson(ignoreNull: true));
+                    // Console.WriteLine($"Saving room {RoomId} to {path}!");
+                    await File.WriteAllTextAsync(path, this.ToJson(ignoreNull: true), _saveCts.Token);
                 }
                 finally {
-                    saveSemaphore.Release();
+                    // saveSemaphore.Release();
                 }
             });
         }

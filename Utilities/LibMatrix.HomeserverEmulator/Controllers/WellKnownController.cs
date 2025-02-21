@@ -10,7 +10,8 @@ public class WellKnownController(ILogger<WellKnownController> logger) : Controll
     public JsonObject GetClientWellKnown() {
         var obj = new JsonObject() {
             ["m.homeserver"] = new JsonObject() {
-                ["base_url"] = $"{Request.Scheme}://{Request.Host}"
+                // ["base_url"] = $"{Request.Scheme}://{Request.Host}"
+                ["base_url"] = $"https://{Request.Host}"
             }
         };
 
@@ -18,10 +19,12 @@ public class WellKnownController(ILogger<WellKnownController> logger) : Controll
 
         return obj;
     }
+
     [HttpGet("server")]
     public JsonObject GetServerWellKnown() {
         var obj = new JsonObject() {
-            ["m.server"] = $"{Request.Scheme}://{Request.Host}"
+            // ["m.server"] = $"{Request.Scheme}://{Request.Host}"
+            ["m.server"] = $"https://{Request.Host}"
         };
 
         logger.LogInformation("Serving server well-known: {}", obj);

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace LibMatrix.Responses;
@@ -9,20 +10,19 @@ public class LoginResponse {
     [JsonPropertyName("device_id")]
     public string DeviceId { get; set; }
 
-    private string? _homeserver;
-
     [JsonPropertyName("home_server")]
+    [field: AllowNull, MaybeNull]
     public string Homeserver {
-        get => _homeserver ?? UserId.Split(':', 2).Last();
-        protected init => _homeserver = value;
+        get => field ?? UserId.Split(':', 2).Last();
+        set;
     }
 
     [JsonPropertyName("user_id")]
     public string UserId { get; set; }
 
     // public async Task<AuthenticatedHomeserverGeneric> GetAuthenticatedHomeserver(string? proxy = null) {
-        // var urls = await new HomeserverResolverService().ResolveHomeserverFromWellKnown(Homeserver);
-        // await AuthenticatedHomeserverGeneric.Create<AuthenticatedHomeserverGeneric>(Homeserver, AccessToken, proxy);
+    // var urls = await new HomeserverResolverService().ResolveHomeserverFromWellKnown(Homeserver);
+    // await AuthenticatedHomeserverGeneric.Create<AuthenticatedHomeserverGeneric>(Homeserver, AccessToken, proxy);
     // }
 }
 

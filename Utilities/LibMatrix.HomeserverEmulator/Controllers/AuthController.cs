@@ -12,13 +12,10 @@ public class AuthController(ILogger<AuthController> logger, UserStore userStore,
     public async Task<LoginResponse> Login(LoginRequest request) {
         if (!request.Identifier.User.StartsWith('@'))
             request.Identifier.User = $"@{request.Identifier.User}:{tokenService.GenerateServerName(HttpContext)}";
-        if (request.Identifier.User.EndsWith("localhost"))
-            request.Identifier.User = request.Identifier.User.Replace("localhost", tokenService.GenerateServerName(HttpContext));
+        // if (request.Identifier.User.EndsWith("localhost"))
+            // request.Identifier.User = request.Identifier.User.Replace("localhost", tokenService.GenerateServerName(HttpContext));
 
-        var user = await userStore.GetUserById(request.Identifier.User);
-        if (user is null) {
-            user = await userStore.CreateUser(request.Identifier.User);
-        }
+        var user = await userStore.GetUserById(request.Identifier.User) ?? await userStore.CreateUser(request.Identifier.User);
 
         return user.Login();
     }

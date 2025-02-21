@@ -21,6 +21,7 @@ public class RoomTimelineController(
     TokenService tokenService,
     UserStore userStore,
     RoomStore roomStore,
+    HseConfiguration hseConfig,
     HomeserverProviderService hsProvider) : ControllerBase {
     [HttpPut("send/{eventType}/{txnId}")]
     public async Task<EventIdResponse> SendMessage(string roomId, string eventType, string txnId, [FromBody] JsonObject content) {
@@ -34,21 +35,21 @@ public class RoomTimelineController(
                 Error = "Room not found"
             };
 
+        var evt = new StateEvent() {
+            RawContent = content,
+            Type = eventType
+        }.ToStateEvent(user, room);
+
+        if (evt.Type == RoomMessageEventContent.EventId && (evt.TypedContent as RoomMessageEventContent).Body.StartsWith("!hse"))
+            _ = Task.Run(() => HandleHseCommand(evt, room, user));
+
         if (!room.JoinedMembers.Any(x => x.StateKey == user.UserId))
             throw new MatrixException() {
                 ErrorCode = "M_FORBIDDEN",
                 Error = "User is not in the room"
             };
 
-        var evt = new StateEvent() {
-            RawContent = content,
-            Type = eventType
-        }.ToStateEvent(user, room);
-
         room.Timeline.Add(evt);
-        if (evt.Type == RoomMessageEventContent.EventId && (evt.TypedContent as RoomMessageEventContent).Body.StartsWith("!hse"))
-            _ = Task.Run(() => HandleHseCommand(evt, room, user));
-        // else
 
         return new() {
             EventId = evt.EventId
@@ -256,7 +257,8 @@ public class RoomTimelineController(
         room.Timeline.Add(new StateEventResponse() {
             Type = RoomMessageEventContent.EventId,
             TypedContent = content,
-            Sender = $"@hse:{tokenService.GenerateServerName(HttpContext)}",
+            // Sender = $"@hse:{tokenService.GenerateServerName(HttpContext)}",
+            Sender = $"@hse:{hseConfig.ServerName}",
             RoomId = room.RoomId,
             EventId = "$" + string.Join("", Random.Shared.GetItems("abcdefghijklmnopqrstuvwxyzABCDEFGHIJLKMNOPQRSTUVWXYZ0123456789".ToCharArray(), 100)),
             OriginServerTs = DateTimeOffset.Now.ToUnixTimeMilliseconds()
@@ -299,7 +301,7 @@ public class RoomTimelineController(
 
                         InternalSendMessage(room, url + "&i=" + i);
                         if (i % 5000 == 0 || i == 9999) {
-                            Thread.Sleep(5000);
+                            // Thread.Sleep(1000);
 
                             do {
                                 InternalSendMessage(room,
@@ -320,7 +322,7 @@ public class RoomTimelineController(
                     var count = 1000;
                     for (int i = 0; i < count; i++) {
                         var crq = new CreateRoomRequest() {
-                            Name = "Test room",
+                            Name = $"Test room {i}",
                             CreationContent = new() {
                                 ["version"] = "11"
                             },

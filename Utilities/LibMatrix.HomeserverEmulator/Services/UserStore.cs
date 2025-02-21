@@ -137,7 +137,7 @@ public class UserStore {
         private ObservableDictionary<string, object> _profile;
         private ObservableCollection<StateEventResponse> _accountData;
         private ObservableDictionary<string, RoomKeysResponse> _roomKeys;
-        private ObservableDictionary<string, AuthorizedSession> _authorizedSessions;
+        private ObservableDictionary<string, LoginResponse> _authorizedSessions;
 
         public string UserId {
             get => _userId;
@@ -194,7 +194,7 @@ public class UserStore {
             }
         }
 
-        public ObservableDictionary<string, AuthorizedSession> AuthorizedSessions {
+        public ObservableDictionary<string, LoginResponse> AuthorizedSessions {
             get => _authorizedSessions;
             set {
                 if (value == _authorizedSessions) return;
@@ -262,11 +262,6 @@ public class UserStore {
                 DeviceId = session.DeviceId,
                 UserId = UserId
             };
-        }
-
-        public class AuthorizedSession {
-            public string Homeserver { get; set; }
-            public string AccessToken { get; set; }
         }
     }
 }

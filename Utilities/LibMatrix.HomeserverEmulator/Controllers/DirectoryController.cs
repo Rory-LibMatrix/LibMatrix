@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using ArcaneLibs.Extensions;
 using LibMatrix.EventTypes.Spec.State.RoomInfo;
 using LibMatrix.HomeserverEmulator.Services;
@@ -32,6 +33,70 @@ public class DirectoryController(ILogger<DirectoryController> logger, RoomStore 
         };
     }
 
+    [HttpGet("client/v3/publicRooms")]
+    public async Task<PublicRoomDirectoryResult> GetPublicRooms(int limit = 100, string? server = null, string? since = null) {
+        var rooms = roomStore._rooms.OrderByDescending(x => x.JoinedMembers.Count).AsEnumerable();
+
+        if (since != null) {
+            rooms = rooms.SkipWhile(x => x.RoomId != since).Skip(1);
+        }
+
+        if (server != null) {
+            rooms = rooms.Where(x => x.State.Any(y => y.Type == RoomMemberEventContent.EventId && y.StateKey!.EndsWith(server)));
+        }
+
+        var count = rooms.Count();
+        rooms = rooms.Take(limit);
+
+        return new PublicRoomDirectoryResult() {
+            Chunk = rooms.Select(x => new PublicRoomDirectoryResult.PublicRoomListItem() {
+                RoomId = x.RoomId,
+                Name = x.State.FirstOrDefault(y => y.Type == RoomNameEventContent.EventId)?.RawContent?["name"]?.ToString(),
+                Topic = x.State.FirstOrDefault(y => y.Type == RoomTopicEventContent.EventId)?.RawContent?["topic"]?.ToString(),
+                AvatarUrl = x.State.FirstOrDefault(y => y.Type == RoomAvatarEventContent.EventId)?.RawContent?["url"]?.ToString(),
+                GuestCanJoin = x.State.Any(y => y.Type == RoomGuestAccessEventContent.EventId && y.RawContent?["guest_access"]?.ToString() == "can_join"),
+                NumJoinedMembers = x.JoinedMembers.Count,
+                WorldReadable = x.State.Any(y => y.Type == RoomHistoryVisibilityEventContent.EventId && y.RawContent?["history_visibility"]?.ToString() == "world_readable"),
+                JoinRule = x.State.FirstOrDefault(y => y.Type == RoomJoinRulesEventContent.EventId)?.RawContent?["join_rule"]?.ToString(),
+                CanonicalAlias = x.State.FirstOrDefault(y => y.Type == RoomCanonicalAliasEventContent.EventId)?.RawContent?["alias"]?.ToString()
+            }).ToList(),
+            NextBatch = count > limit ? rooms.Last().RoomId : null,
+            TotalRoomCountEstimate = count
+        };
+    }
+
+    [HttpPost("client/v3/publicRooms")]
+    public async Task<PublicRoomDirectoryResult> GetFilteredPublicRooms([FromBody] PublicRoomDirectoryRequest request, [FromQuery] string? server = null) {
+        var rooms = roomStore._rooms.OrderByDescending(x => x.JoinedMembers.Count).AsEnumerable();
+
+        if (request.Since != null) {
+            rooms = rooms.SkipWhile(x => x.RoomId != request.Since).Skip(1);
+        }
+
+        if (server != null) {
+            rooms = rooms.Where(x => x.State.Any(y => y.Type == RoomMemberEventContent.EventId && y.StateKey!.EndsWith(server)));
+        }
+
+        var count = rooms.Count();
+        rooms = rooms.Take(request.Limit ?? 100);
+
+        return new PublicRoomDirectoryResult() {
+            Chunk = rooms.Select(x => new PublicRoomDirectoryResult.PublicRoomListItem() {
+                RoomId = x.RoomId,
+                Name = x.State.FirstOrDefault(y => y.Type == RoomNameEventContent.EventId)?.RawContent?["name"]?.ToString(),
+                Topic = x.State.FirstOrDefault(y => y.Type == RoomTopicEventContent.EventId)?.RawContent?["topic"]?.ToString(),
+                AvatarUrl = x.State.FirstOrDefault(y => y.Type == RoomAvatarEventContent.EventId)?.RawContent?["url"]?.ToString(),
+                GuestCanJoin = x.State.Any(y => y.Type == RoomGuestAccessEventContent.EventId && y.RawContent?["guest_access"]?.ToString() == "can_join"),
+                NumJoinedMembers = x.JoinedMembers.Count,
+                WorldReadable = x.State.Any(y => y.Type == RoomHistoryVisibilityEventContent.EventId && y.RawContent?["history_visibility"]?.ToString() == "world_readable"),
+                JoinRule = x.State.FirstOrDefault(y => y.Type == RoomJoinRulesEventContent.EventId)?.RawContent?["join_rule"]?.ToString(),
+                CanonicalAlias = x.State.FirstOrDefault(y => y.Type == RoomCanonicalAliasEventContent.EventId)?.RawContent?["alias"]?.ToString()
+            }).ToList(),
+            NextBatch = count > request.Limit ? rooms.Last().RoomId : null,
+            TotalRoomCountEstimate = count
+        };
+    }
+
 #endregion
 
 #region User directory
@@ -61,4 +126,29 @@ public class DirectoryController(ILogger<DirectoryController> logger, RoomStore 
     }
 
 #endregion
+}
+
+public class PublicRoomDirectoryRequest {
+    [JsonPropertyName("filter")]
+    public PublicRoomDirectoryFilter Filter { get; set; }
+
+    [JsonPropertyName("include_all_networks")]
+    public bool IncludeAllNetworks { get; set; }
+
+    [JsonPropertyName("limit")]
+    public int? Limit { get; set; }
+
+    [JsonPropertyName("since")]
+    public string? Since { get; set; }
+
+    [JsonPropertyName("third_party_instance_id")]
+    public string? ThirdPartyInstanceId { get; set; }
+
+    public class PublicRoomDirectoryFilter {
+        [JsonPropertyName("generic_search_term")]
+        public string? GenericSearchTerm { get; set; }
+
+        [JsonPropertyName("room_types")]
+        public List<string>? RoomTypes { get; set; }
+    }
 }
