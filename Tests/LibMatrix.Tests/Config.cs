@@ -18,7 +18,7 @@ public class Config {
         { "matrix.org", "https://matrix-client.matrix.org" },
         { "rory.gay", "https://matrix.rory.gay" },
         { "feline.support", "https://matrix.feline.support" },
-        { "transfem.dev", "https://matrix.transfem.dev" },
+        { "transfem.dev", "https://matrix.transfem.dev/" },
         { "the-apothecary.club", "https://the-apothecary.club" },
         { "nixos.org", "https://matrix.nixos.org" },
         { "fedora.im", "https://fedora.ems.host" }

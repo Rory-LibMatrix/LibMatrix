@@ -76,7 +76,8 @@ public class MatrixHttpClient {
         Console.WriteLine($"Sending {request.Method} {BaseAddress}{request.RequestUri} ({Util.BytesToString(request.GetContentLength())})");
 
         if (request.RequestUri is null) throw new NullReferenceException("RequestUri is null");
-        if (!request.RequestUri.IsAbsoluteUri) request.RequestUri = new Uri(BaseAddress ?? throw new InvalidOperationException("Relative URI passed, but no BaseAddress is specified!"), request.RequestUri);
+        if (!request.RequestUri.IsAbsoluteUri)
+            request.RequestUri = new Uri(BaseAddress ?? throw new InvalidOperationException("Relative URI passed, but no BaseAddress is specified!"), request.RequestUri);
         foreach (var (key, value) in AdditionalQueryParameters) request.RequestUri = request.RequestUri.AddQuery(key, value);
         foreach (var (key, value) in DefaultRequestHeaders) {
             if (request.Headers.Contains(key)) continue;
@@ -90,8 +91,9 @@ public class MatrixHttpClient {
             responseMessage = await Client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         }
         catch (Exception e) {
-            Console.WriteLine(
-                $"Failed to send request {request.Method} {BaseAddress}{request.RequestUri} ({Util.BytesToString(request.Content?.Headers.ContentLength ?? 0)}):\n{e}");
+            if (!e.Message.StartsWith("TypeError: NetworkError"))
+                Console.WriteLine(
+                    $"Failed to send request {request.Method} {BaseAddress}{request.RequestUri} ({Util.BytesToString(request.Content?.Headers.ContentLength ?? 0)}):\n{e}");
             throw;
         }
 #if SYNC_HTTPCLIENT
@@ -109,13 +111,13 @@ public class MatrixHttpClient {
     public async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken = default) {
         var responseMessage = await SendUnhandledAsync(request, cancellationToken);
         if (responseMessage.IsSuccessStatusCode) return responseMessage;
-        
+
         //retry on gateway timeout
         if (responseMessage.StatusCode == HttpStatusCode.GatewayTimeout) {
             request.ResetSendStatus();
             return await SendAsync(request, cancellationToken);
         }
-        
+
         //error handling
         var content = await responseMessage.Content.ReadAsStringAsync(cancellationToken);
         if (content.Length == 0)

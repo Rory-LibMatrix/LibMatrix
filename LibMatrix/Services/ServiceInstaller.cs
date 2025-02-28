@@ -1,5 +1,5 @@
+using LibMatrix.Services.WellKnownResolvers;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace LibMatrix.Services;
 
@@ -9,7 +9,10 @@ public static class ServiceInstaller {
         services.AddSingleton(config ?? new RoryLibMatrixConfiguration());
 
         //Add services
-        services.AddSingleton<HomeserverResolverService>(sp => new HomeserverResolverService(sp.GetRequiredService<ILogger<HomeserverResolverService>>()));
+        services.AddSingleton<ClientWellKnownResolver>();
+        services.AddSingleton<WellKnownResolverService>();
+        // Legacy
+        services.AddSingleton<HomeserverResolverService>();
         services.AddSingleton<HomeserverProviderService>();
 
         return services;

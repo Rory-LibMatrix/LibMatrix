@@ -5,11 +5,11 @@ using Xunit.Microsoft.DependencyInjection.Abstracts;
 
 namespace LibMatrix.Tests.Tests;
 
-public class HomeserverResolverTests : TestBed<TestFixture> {
+public class LegacyHomeserverResolverTests : TestBed<TestFixture> {
     private readonly Config _config;
     private readonly HomeserverResolverService _resolver;
 
-    public HomeserverResolverTests(ITestOutputHelper testOutputHelper, TestFixture fixture) : base(testOutputHelper, fixture) {
+    public LegacyHomeserverResolverTests(ITestOutputHelper testOutputHelper, TestFixture fixture) : base(testOutputHelper, fixture) {
         _config = _fixture.GetService<Config>(_testOutputHelper) ?? throw new InvalidOperationException($"Failed to get {nameof(Config)}");
         _resolver = _fixture.GetService<HomeserverResolverService>(_testOutputHelper) ?? throw new InvalidOperationException($"Failed to get {nameof(HomeserverResolverService)}");
     }
