@@ -143,7 +143,7 @@ public class GenericRoom {
         var url = $"/_matrix/client/v3/rooms/{RoomId}/messages?dir={dir}";
         if (!string.IsNullOrWhiteSpace(from)) url += $"&from={from}";
         if (limit is not null) url += $"&limit={limit}";
-        else if (!string.IsNullOrWhiteSpace(filter)) url += $"&filter={filter}";
+        if (!string.IsNullOrWhiteSpace(filter)) url += $"&filter={filter}";
 
         var res = await Homeserver.ClientHttpClient.GetFromJsonAsync<MessagesResponse>(url);
         return res;

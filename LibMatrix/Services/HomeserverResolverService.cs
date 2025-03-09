@@ -49,6 +49,7 @@ public class HomeserverResolverService {
         ArgumentNullException.ThrowIfNull(homeserver);
         _logger.LogTrace("Resolving client well-known: {homeserver}", homeserver);
         ClientWellKnown? clientWellKnown = null;
+        homeserver = homeserver.TrimEnd('/');
         // check if homeserver has a client well-known
         if (homeserver.StartsWith("https://")) {
             clientWellKnown = await _httpClient.TryGetFromJsonAsync<ClientWellKnown>($"{homeserver}/.well-known/matrix/client");
@@ -80,6 +81,7 @@ public class HomeserverResolverService {
         ArgumentNullException.ThrowIfNull(homeserver);
         _logger.LogTrace($"Resolving server well-known: {homeserver}");
         ServerWellKnown? serverWellKnown = null;
+        homeserver = homeserver.TrimEnd('/');
         // check if homeserver has a server well-known
         if (homeserver.StartsWith("https://")) {
             serverWellKnown = await _httpClient.TryGetFromJsonAsync<ServerWellKnown>($"{homeserver}/.well-known/matrix/server");
@@ -95,7 +97,7 @@ public class HomeserverResolverService {
         _logger.LogInformation("Server well-known for {hs}: {json}", homeserver, serverWellKnown?.ToJson() ?? "null");
 
         if (!string.IsNullOrWhiteSpace(serverWellKnown?.Homeserver)) {
-            var resolved = serverWellKnown.Homeserver;
+            var resolved = serverWellKnown.Homeserver.TrimEnd('/');
             if (resolved.StartsWith("https://") || resolved.StartsWith("http://"))
                 return resolved;
             if (await _httpClient.CheckSuccessStatus($"https://{resolved}/_matrix/federation/v1/version"))
@@ -106,7 +108,7 @@ public class HomeserverResolverService {
         }
 
         // fallback: most servers host C2S and S2S on the same domain
-        var clientUrl = await _tryResolveClientEndpoint(homeserver);
+        var clientUrl = (await _tryResolveClientEndpoint(homeserver)).TrimEnd('/');
         if (clientUrl is not null && await _httpClient.CheckSuccessStatus($"{clientUrl}/_matrix/federation/v1/version"))
             return clientUrl;
 

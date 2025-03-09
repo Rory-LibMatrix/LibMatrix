@@ -1,5 +1,5 @@
 using LibMatrix.Services;
-using LibMatrix.Services.WellKnownResolvers;
+using LibMatrix.Services.WellKnownResolver.WellKnownResolvers;
 using LibMatrix.Tests.Fixtures;
 using Xunit.Abstractions;
 using Xunit.Microsoft.DependencyInjection.Abstracts;
@@ -18,16 +18,16 @@ public class ClientWellKnownResolverTests : TestBed<TestFixture> {
     [Fact]
     public async Task ResolveServerClient() {
         var tasks = _config.ExpectedHomeserverClientMappings.Select(async mapping => {
-            var server = await _resolver.TryResolveClientWellKnown(mapping.Key);
-            Assert.Equal(mapping.Value, server.WellKnown.Homeserver.BaseUrl);
+            var server = await _resolver.TryResolveWellKnown(mapping.Key);
+            Assert.Equal(mapping.Value, server.Content.Homeserver.BaseUrl);
             return server;
         }).ToList();
         await Task.WhenAll(tasks);
     }
 
     private async Task AssertClientWellKnown(string homeserver, string expected) {
-        var server = await _resolver.TryResolveClientWellKnown(homeserver);
-        Assert.Equal(expected, server.WellKnown.Homeserver.BaseUrl);
+        var server = await _resolver.TryResolveWellKnown(homeserver);
+        Assert.Equal(expected, server.Content.Homeserver.BaseUrl);
     }
 
     [Fact]

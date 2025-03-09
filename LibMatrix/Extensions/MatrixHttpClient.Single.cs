@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using ArcaneLibs;
 using ArcaneLibs.Extensions;
+using LibMatrix.Homeservers.ImplementationDetails.Synapse.Models.Requests;
 
 namespace LibMatrix.Extensions;
 
@@ -91,7 +92,14 @@ public class MatrixHttpClient {
             responseMessage = await Client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         }
         catch (Exception e) {
-            if (!e.Message.StartsWith("TypeError: NetworkError"))
+            if (e is TaskCanceledException or TimeoutException) {
+                if (request.Method == HttpMethod.Get && !cancellationToken.IsCancellationRequested) {
+                    await Task.Delay(Random.Shared.Next(500, 2500), cancellationToken);
+                    request.ResetSendStatus();
+                    return await SendAsync(request, cancellationToken);
+                }
+            }
+            else if (!e.ToString().StartsWith("TypeError: NetworkError"))
                 Console.WriteLine(
                     $"Failed to send request {request.Method} {BaseAddress}{request.RequestUri} ({Util.BytesToString(request.Content?.Headers.ContentLength ?? 0)}):\n{e}");
             throw;
@@ -237,6 +245,18 @@ public class MatrixHttpClient {
             Content = content
         };
         return await SendAsync(request, cancellationToken);
+    }
+
+    public async Task DeleteAsync(string url) {
+        var request = new HttpRequestMessage(HttpMethod.Delete, url);
+        await SendAsync(request);
+    }
+
+    public async Task<HttpResponseMessage> DeleteAsJsonAsync<T>(string url, T payload) {
+        var request = new HttpRequestMessage(HttpMethod.Delete, url) {
+            Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json")
+        };
+        return await SendAsync(request);
     }
 }
 #endif
