@@ -54,6 +54,8 @@ public class RemoteHomeserver {
 
         return data;
     }
+    
+    // TODO: Do we need to support retrieving individual profile properties? Is there any use for that besides just getting the full profile?
 
     public async Task<ClientVersionsResponse> GetClientVersionsAsync() {
         var resp = await ClientHttpClient.GetAsync($"/_matrix/client/versions");

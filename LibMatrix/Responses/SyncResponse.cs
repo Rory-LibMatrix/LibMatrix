@@ -1,4 +1,7 @@
 using System.Text.Json.Serialization;
+using LibMatrix.EventTypes.Spec.Ephemeral;
+using LibMatrix.EventTypes.Spec.State;
+using LibMatrix.EventTypes.Spec.State.RoomInfo;
 
 namespace LibMatrix.Responses;
 
@@ -14,7 +17,7 @@ public class SyncResponse {
     public EventList? AccountData { get; set; }
 
     [JsonPropertyName("presence")]
-    public PresenceDataStructure? Presence { get; set; }
+    public EventList? Presence { get; set; }
 
     [JsonPropertyName("device_one_time_keys_count")]
     public Dictionary<string, int>? DeviceOneTimeKeysCount { get; set; }
@@ -61,6 +64,12 @@ public class SyncResponse {
 
             [JsonPropertyName("state")]
             public EventList? State { get; set; }
+
+            public override string ToString() {
+                var lastEvent = Timeline?.Events?.LastOrDefault(x => x.Type == "m.room.member");
+                var membership = (lastEvent?.TypedContent as RoomMemberEventContent);
+                return $"LeftRoomDataStructure: {lastEvent?.Sender} {membership?.Membership} ({membership?.Reason})";
+            }
         }
 
         public class JoinedRoomDataStructure {
@@ -82,7 +91,7 @@ public class SyncResponse {
             [JsonPropertyName("summary")]
             public SummaryDataStructure? Summary { get; set; }
 
-            public class TimelineDataStructure {
+            public class TimelineDataStructure : EventList {
                 public TimelineDataStructure() { }
 
                 public TimelineDataStructure(List<StateEventResponse>? events, bool? limited) {
@@ -90,8 +99,8 @@ public class SyncResponse {
                     Limited = limited;
                 }
 
-                [JsonPropertyName("events")]
-                public List<StateEventResponse>? Events { get; set; }
+                // [JsonPropertyName("events")]
+                // public List<StateEventResponse>? Events { get; set; }
 
                 [JsonPropertyName("prev_batch")]
                 public string? PrevBatch { get; set; }
@@ -124,5 +133,16 @@ public class SyncResponse {
             [JsonPropertyName("invite_state")]
             public EventList? InviteState { get; set; }
         }
+    }
+
+    public long GetDerivedSyncTime() {
+        return ((long[]) [
+            AccountData?.Events?.Max(x => x.OriginServerTs) ?? 0,
+            Presence?.Events?.Max(x => x.OriginServerTs) ?? 0,
+            ToDevice?.Events?.Max(x => x.OriginServerTs) ?? 0,
+            Rooms?.Join?.Values?.Max(x => x.Timeline?.Events?.Max(y => y.OriginServerTs)) ?? 0,
+            Rooms?.Invite?.Values?.Max(x => x.InviteState?.Events?.Max(y => y.OriginServerTs)) ?? 0,
+            Rooms?.Leave?.Values?.Max(x => x.Timeline?.Events?.Max(y => y.OriginServerTs)) ?? 0
+        ]).Max();
     }
 }

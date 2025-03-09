@@ -105,7 +105,7 @@ public class MessageBuilder(string msgType = "m.text", string format = "org.matr
 
     public MessageBuilder WithTable(Action<TableBuilder> tableBuilder) {
         var tb = new TableBuilder(this);
-        this.WithHtmlTag("table", msb => tableBuilder(tb));
+        WithHtmlTag("table", msb => tableBuilder(tb));
         return this;
     }
 

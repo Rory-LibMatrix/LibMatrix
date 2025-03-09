@@ -47,7 +47,6 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
     public HsNamedCaches NamedCaches { get; set; }
 
     public GenericRoom GetRoom(string roomId) {
-        if (roomId is null || !roomId.StartsWith("!")) throw new ArgumentException("Room ID must start with !", nameof(roomId));
         return new GenericRoom(this, roomId);
     }
 
@@ -185,6 +184,17 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
 
 #endregion
 
+#region MSC 4133
+
+    public async Task UpdateProfilePropertyAsync(string name, object? value) {
+        var caps = await GetCapabilitiesAsync();
+        if(caps is null) throw new Exception("Failed to get capabilities");
+
+    }
+
+#endregion
+
+    [Obsolete("This method assumes no support for MSC 4069 and MSC 4133")]
     public async Task UpdateProfileAsync(UserProfileResponse? newProfile, bool preserveCustomRoomProfile = true) {
         if (newProfile is null) return;
         Console.WriteLine($"Updating profile for {WhoAmI.UserId} to {newProfile.ToJson(ignoreNull: true)} (preserving room profiles: {preserveCustomRoomProfile})");
@@ -522,4 +532,8 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
     }
 
 #endregion
+    private class CapabilitiesResponse {
+        [JsonPropertyName("capabilities")]
+        public Dictionary<string, object>? Capabilities { get; set; }
+    }
 }

@@ -120,7 +120,7 @@ public class RoomStore {
 
         public Room(string roomId) {
             if (string.IsNullOrWhiteSpace(roomId)) throw new ArgumentException("Value cannot be null or whitespace.", nameof(roomId));
-            if (roomId[0] != '!') throw new ArgumentException("Room ID must start with !", nameof(roomId));
+            if (roomId[0] != '!') throw new ArgumentException($"Room ID must start with '!', provided value: {roomId ?? "null"}", nameof(roomId));
             RoomId = roomId;
             Timeline = new();
             AccountData = new();

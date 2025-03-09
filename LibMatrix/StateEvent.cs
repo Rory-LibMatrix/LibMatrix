@@ -141,7 +141,7 @@ public class StateEventResponse : StateEvent {
     public string? EventId { get; set; }
 
     public class UnsignedData {
-        [JsonPropertyName("age")]
+        [JsonPropertyName("age"), JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
         public ulong? Age { get; set; }
 
         [JsonPropertyName("redacted_because")]

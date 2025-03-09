@@ -31,7 +31,7 @@ public interface IStorageProvider {
     }
 
     // get all keys
-    public Task<List<string>> GetAllKeysAsync() {
+    public Task<IEnumerable<string>> GetAllKeysAsync() {
         Console.WriteLine($"StorageProvider<{GetType().Name}> does not implement GetAllKeys()!");
         throw new NotImplementedException();
     }
@@ -52,5 +52,19 @@ public interface IStorageProvider {
     public Task<Stream?> LoadStreamAsync(string key) {
         Console.WriteLine($"StorageProvider<{GetType().Name}> does not implement LoadStream(key)!");
         throw new NotImplementedException();
+    }
+
+    // copy
+    public async Task CopyObjectAsync(string sourceKey, string destKey) {
+        Console.WriteLine($"StorageProvider<{GetType().Name}> does not implement CopyObject(sourceKey, destKey), using load + save!");
+        var data = await LoadObjectAsync<object>(sourceKey);
+        await SaveObjectAsync(destKey, data);
+    }
+
+    // move
+    public async Task MoveObjectAsync(string sourceKey, string destKey) {
+        Console.WriteLine($"StorageProvider<{GetType().Name}> does not implement MoveObject(sourceKey, destKey), using copy + delete!");
+        await CopyObjectAsync(sourceKey, destKey);
+        await DeleteObjectAsync(sourceKey);
     }
 }

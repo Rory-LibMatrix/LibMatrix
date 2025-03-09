@@ -3,9 +3,17 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using ArcaneLibs.Extensions;
 using LibMatrix.Homeservers.ImplementationDetails.Synapse.Models.Filters;
 using LibMatrix.Homeservers.ImplementationDetails.Synapse.Models.Requests;
+using LibMatrix.Homeservers.ImplementationDetails.Synapse.Models.Responses;
+using LibMatrix.Responses;
+using LibMatrix.Filters;
+using LibMatrix.Homeservers.ImplementationDetails.Synapse.Models.Filters;
 using LibMatrix.Homeservers.ImplementationDetails.Synapse.Models.Responses;
 using LibMatrix.Responses;
 
