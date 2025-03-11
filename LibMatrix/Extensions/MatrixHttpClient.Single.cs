@@ -79,8 +79,6 @@ public class MatrixHttpClient {
         await _rateLimitSemaphore.WaitAsync(cancellationToken);
 #endif
 
-        Console.WriteLine($"Sending {request.Method} {BaseAddress}{request.RequestUri} ({Util.BytesToString(request.GetContentLength())})");
-
         if (request.RequestUri is null) throw new NullReferenceException("RequestUri is null");
         if (!request.RequestUri.IsAbsoluteUri)
             request.RequestUri = new Uri(BaseAddress ?? throw new InvalidOperationException("Relative URI passed, but no BaseAddress is specified!"), request.RequestUri);
