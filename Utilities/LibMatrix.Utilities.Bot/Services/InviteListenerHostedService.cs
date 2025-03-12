@@ -77,4 +77,8 @@ public class InviteHandlerHostedService : IHostedService {
         public StateEventResponse MemberEvent { get; set; }
         public AuthenticatedHomeserverGeneric Homeserver { get; set; }
     }
+
+    public interface IInviteHandler {
+        public Task HandleInviteAsync(InviteEventArgs args);
+    }
 }
