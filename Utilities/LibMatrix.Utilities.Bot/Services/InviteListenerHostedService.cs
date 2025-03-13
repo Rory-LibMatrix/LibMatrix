@@ -1,6 +1,7 @@
 using LibMatrix.Filters;
 using LibMatrix.Helpers;
 using LibMatrix.Homeservers;
+using LibMatrix.Responses;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -51,7 +52,8 @@ public class InviteHandlerHostedService : IHostedService {
 
             var inviteEventArgs = new InviteEventArgs() {
                 RoomId = invite.Key,
-                MemberEvent = invite.Value.InviteState.Events.First(x => x.Type == "m.room.member" && x.StateKey == _hs.WhoAmI.UserId),
+                InviteData = invite.Value,
+                MemberEvent = invite.Value.InviteState?.Events?.First(x => x.Type == "m.room.member" && x.StateKey == _hs.WhoAmI.UserId),
                 Homeserver = _hs
             };
             await _inviteHandler(inviteEventArgs);
@@ -74,11 +76,12 @@ public class InviteHandlerHostedService : IHostedService {
 
     public class InviteEventArgs {
         public string RoomId { get; set; }
-        public StateEventResponse MemberEvent { get; set; }
         public AuthenticatedHomeserverGeneric Homeserver { get; set; }
+        public StateEventResponse MemberEvent { get; set; }
+        public SyncResponse.RoomsDataStructure.InvitedRoomDataStructure InviteData { get; set; }
     }
 
     public interface IInviteHandler {
-        public Task HandleInviteAsync(InviteEventArgs args);
+        public Task HandleInviteAsync(InviteEventArgs invite);
     }
 }
