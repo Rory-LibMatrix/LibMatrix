@@ -1,3 +1,5 @@
+using System.Text.Json.Nodes;
+using ArcaneLibs.Extensions;
 using LibMatrix.Filters;
 using LibMatrix.Utilities;
 
@@ -16,7 +18,13 @@ public class NamedFilterCache(AuthenticatedHomeserverGeneric hs) : NamedCache<st
     public async Task<string> GetOrSetValueAsync(string key, SyncFilter? filter = null) {
         var existingValue = await GetValueAsync(key);
         if (existingValue != null) {
-            return existingValue;
+            try {
+                var existingFilter = await hs.GetFilterAsync(existingValue);
+                return existingValue;
+            }
+            catch {
+                // ignored
+            }
         }
 
         if (filter is null) {

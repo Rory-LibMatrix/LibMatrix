@@ -73,6 +73,8 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
         else if (Filter is not null)
             _filterId = (await homeserver.UploadFilterAsync(Filter)).FilterId;
         else _filterId = null;
+        
+        _filterIsDirty = false;
     }
 
     public async Task<SyncResponse?> SyncAsync(CancellationToken? cancellationToken = null) {
@@ -115,7 +117,7 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
         // logger?.LogInformation("SyncHelper: Calling: {}", url);
 
         try {
-            SyncResponse? resp = null;
+            SyncResponse? resp;
             if (UseInternalStreamingSync) {
                 resp = await homeserver.ClientHttpClient.GetFromJsonAsync<SyncResponse>(url, cancellationToken: cancellationToken ?? CancellationToken.None);
                 logger?.LogInformation("Got sync response: ~{} bytes, {} elapsed", resp.ToJson(false, true, true).Length, sw.Elapsed);

@@ -94,7 +94,7 @@ public class MatrixHttpClient {
         request.Options.Set(new HttpRequestOptionsKey<bool>("WebAssemblyEnableStreamingResponse"), true);
 
         if (LogRequests)
-            Console.WriteLine("Sending " + request.Summarise(includeHeaders: true, includeQuery: true, includeContentIfText: true, hideHeaders: ["Accept"]));
+            Console.WriteLine("Sending " + request.Summarise(includeHeaders: true, includeQuery: true, includeContentIfText: false, hideHeaders: ["Accept"]));
 
         HttpResponseMessage? responseMessage;
         try {

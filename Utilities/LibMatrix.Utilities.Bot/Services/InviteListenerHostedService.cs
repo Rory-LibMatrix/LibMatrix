@@ -1,73 +1,84 @@
+using System.Diagnostics.CodeAnalysis;
 using LibMatrix.Filters;
 using LibMatrix.Helpers;
 using LibMatrix.Homeservers;
 using LibMatrix.Responses;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace LibMatrix.Utilities.Bot.Services;
 
-public class InviteHandlerHostedService : IHostedService {
-    private readonly AuthenticatedHomeserverGeneric _hs;
-    private readonly ILogger<InviteHandlerHostedService> _logger;
-    private readonly Func<InviteEventArgs, Task> _inviteHandler;
-
+public class InviteHandlerHostedService(
+    ILogger<InviteHandlerHostedService> logger,
+    AuthenticatedHomeserverGeneric hs,
+    InviteHandlerHostedService.InviteListenerSyncConfiguration listenerSyncConfiguration,
+    Func<InviteHandlerHostedService.InviteEventArgs, Task> inviteHandler
+) : IHostedService {
     private Task? _listenerTask;
 
-    public InviteHandlerHostedService(AuthenticatedHomeserverGeneric hs, ILogger<InviteHandlerHostedService> logger,
-        Func<InviteEventArgs, Task> inviteHandler) {
-        logger.LogInformation("{} instantiated!", GetType().Name);
-        _hs = hs;
-        _logger = logger;
-        _inviteHandler = inviteHandler;
-    }
+    private SyncHelper syncHelper = new SyncHelper(hs, logger) {
+        Timeout = listenerSyncConfiguration.Timeout ?? 30_000,
+        MinimumDelay = listenerSyncConfiguration.MinimumSyncTime ?? new(0),
+        SetPresence = listenerSyncConfiguration.Presence ?? "online"
+    };
 
     /// <summary>Triggered when the application host is ready to start the service.</summary>
     /// <param name="cancellationToken">Indicates that the start process has been aborted.</param>
     public Task StartAsync(CancellationToken cancellationToken) {
         _listenerTask = Run(cancellationToken);
-        _logger.LogInformation("Command listener started (StartAsync)!");
+        logger.LogInformation("Command listener started (StartAsync)!");
         return Task.CompletedTask;
     }
 
     private async Task? Run(CancellationToken cancellationToken) {
-        _logger.LogInformation("Starting invite listener!");
-        var filter = await _hs.NamedCaches.FilterCache.GetOrSetValueAsync("gay.rory.libmatrix.utilities.bot.command_listener_syncfilter.dev2", new SyncFilter() {
-            AccountData = new SyncFilter.EventFilter(notTypes: ["*"], limit: 1),
-            Presence = new SyncFilter.EventFilter(notTypes: ["*"]),
-            Room = new SyncFilter.RoomFilter() {
-                AccountData = new SyncFilter.RoomFilter.StateFilter(notTypes: ["*"]),
-                Ephemeral = new SyncFilter.RoomFilter.StateFilter(notTypes: ["*"]),
-                State = new SyncFilter.RoomFilter.StateFilter(notTypes: ["*"]),
-                Timeline = new SyncFilter.RoomFilter.StateFilter(types: ["m.room.message"], notSenders: [_hs.WhoAmI.UserId]),
-            }
-        });
+        logger.LogInformation("Starting invite listener!");
+        var nextBatchFile = $"inviteHandler.{hs.WhoAmI.UserId}.{hs.WhoAmI.DeviceId}.nextBatch";
+        if (listenerSyncConfiguration.Filter is not null) {
+            syncHelper.Filter = listenerSyncConfiguration.Filter;
+        }
+        else {
+            syncHelper.FilterId = await hs.NamedCaches.FilterCache.GetOrSetValueAsync("gay.rory.libmatrix.utilities.bot.invite_listener_syncfilter.dev", new SyncFilter() {
+                AccountData = new SyncFilter.EventFilter(types: [], limit: 1),
+                Presence = new SyncFilter.EventFilter(types: ["*"]),
+                Room = new SyncFilter.RoomFilter {
+                    AccountData = new SyncFilter.RoomFilter.StateFilter(types: [], limit: 1),
+                    Ephemeral = new SyncFilter.RoomFilter.StateFilter(types: [], limit: 1),
+                    State = new SyncFilter.RoomFilter.StateFilter(types: []),
+                    Timeline = new SyncFilter.RoomFilter.StateFilter(types: [], notSenders: [hs.WhoAmI.UserId]),
+                }
+            });
+        }
+        
+        if (File.Exists(nextBatchFile)) {
+            syncHelper.Since = await File.ReadAllTextAsync(nextBatchFile, cancellationToken);
+        }
 
-        var syncHelper = new SyncHelper(_hs, _logger) {
-            Timeout = 300_000,
-            FilterId = filter
-        };
         syncHelper.InviteReceivedHandlers.Add(async invite => {
-            _logger.LogInformation("Received invite to room {}", invite.Key);
-
+            logger.LogInformation("Received invite to room {}", invite.Key);
             var inviteEventArgs = new InviteEventArgs() {
                 RoomId = invite.Key,
                 InviteData = invite.Value,
-                MemberEvent = invite.Value.InviteState?.Events?.First(x => x.Type == "m.room.member" && x.StateKey == _hs.WhoAmI.UserId),
-                Homeserver = _hs
+                MemberEvent = invite.Value.InviteState?.Events?.First(x => x.Type == "m.room.member" && x.StateKey == hs.WhoAmI.UserId)
+                              ?? throw new LibMatrixException() {
+                                  ErrorCode = LibMatrixException.ErrorCodes.M_NOT_FOUND,
+                                  Error = "Room invite doesn't contain a membership event!"
+                              },
+                Homeserver = hs
             };
-            await _inviteHandler(inviteEventArgs);
+            await inviteHandler(inviteEventArgs);
         });
 
+        syncHelper.SyncReceivedHandlers.Add(sync => File.WriteAllTextAsync(nextBatchFile, sync.NextBatch, cancellationToken));
         await syncHelper.RunSyncLoopAsync(cancellationToken: cancellationToken);
     }
 
     /// <summary>Triggered when the application host is performing a graceful shutdown.</summary>
     /// <param name="cancellationToken">Indicates that the shutdown process should no longer be graceful.</param>
     public async Task StopAsync(CancellationToken cancellationToken) {
-        _logger.LogInformation("Shutting down invite listener!");
+        logger.LogInformation("Shutting down invite listener!");
         if (_listenerTask is null) {
-            _logger.LogError("Could not shut down invite listener task because it was null!");
+            logger.LogError("Could not shut down invite listener task because it was null!");
             return;
         }
 
@@ -75,13 +86,23 @@ public class InviteHandlerHostedService : IHostedService {
     }
 
     public class InviteEventArgs {
-        public string RoomId { get; set; }
-        public AuthenticatedHomeserverGeneric Homeserver { get; set; }
-        public StateEventResponse MemberEvent { get; set; }
-        public SyncResponse.RoomsDataStructure.InvitedRoomDataStructure InviteData { get; set; }
+        public required string RoomId { get; init; }
+        public required AuthenticatedHomeserverGeneric Homeserver { get; init; }
+        public required StateEventResponse MemberEvent { get; init; }
+        public required SyncResponse.RoomsDataStructure.InvitedRoomDataStructure InviteData { get; init; }
     }
 
     public interface IInviteHandler {
         public Task HandleInviteAsync(InviteEventArgs invite);
+    }
+
+    [SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Global", Justification = "Configuration")]
+    [SuppressMessage("ReSharper", "ClassNeverInstantiated.Global", Justification = "Configuration")]
+    public class InviteListenerSyncConfiguration {
+        public InviteListenerSyncConfiguration(IConfiguration config) => config.GetSection("LibMatrixBot:InviteHandler:SyncConfiguration").Bind(this);
+        public SyncFilter? Filter { get; set; }
+        public TimeSpan? MinimumSyncTime { get; set; }
+        public int? Timeout { get; set; }
+        public string? Presence { get; set; }
     }
 }

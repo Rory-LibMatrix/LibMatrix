@@ -72,6 +72,7 @@ public class BotInstaller(IServiceCollection services) {
     public BotInstaller WithInviteHandler(Func<InviteHandlerHostedService.InviteEventArgs, Task> inviteHandler) {
         services.AddSingleton(inviteHandler);
         services.AddHostedService<InviteHandlerHostedService>();
+        services.AddSingleton<InviteHandlerHostedService.InviteListenerSyncConfiguration>();
         return this;
     }
 
@@ -79,6 +80,7 @@ public class BotInstaller(IServiceCollection services) {
         services.AddSingleton<T>();
         services.AddSingleton<Func<InviteHandlerHostedService.InviteEventArgs, Task>>(sp => sp.GetRequiredService<T>().HandleInviteAsync);
         services.AddHostedService<InviteHandlerHostedService>();
+        services.AddSingleton<InviteHandlerHostedService.InviteListenerSyncConfiguration>();
         return this;
     }
 
