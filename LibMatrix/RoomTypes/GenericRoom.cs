@@ -23,8 +23,6 @@ public class GenericRoom {
             throw new ArgumentException("Room ID cannot be null or whitespace", nameof(roomId));
         Homeserver = homeserver;
         RoomId = roomId;
-        // if (GetType() != typeof(SpaceRoom))
-        if (GetType() == typeof(GenericRoom)) AsSpace = new SpaceRoom(homeserver, RoomId);
     }
 
     public string RoomId { get; set; }
@@ -206,7 +204,7 @@ public class GenericRoom {
 
     public async Task<string?> GetNameAsync() => (await GetStateOrNullAsync<RoomNameEventContent>("m.room.name"))?.Name;
 
-    public async Task<RoomIdResponse> JoinAsync(string[]? homeservers = null, string? reason = null, bool checkIfAlreadyMember = true) {
+    public async Task<RoomIdResponse> JoinAsync(IEnumerable<string>? homeservers = null, string? reason = null, bool checkIfAlreadyMember = true) {
         if (checkIfAlreadyMember)
             try {
                 var ser = await GetStateEventOrNullAsync(RoomMemberEventContent.EventId, Homeserver.UserId);
@@ -215,12 +213,19 @@ public class GenericRoom {
                         RoomId = RoomId
                     };
             }
-            catch { } //ignore
+            catch {
+                // ignored
+            }
 
         var joinUrl = $"/_matrix/client/v3/join/{HttpUtility.UrlEncode(RoomId)}";
-        Console.WriteLine($"Calling {joinUrl} with {homeservers?.Length ?? 0} via's...");
-        if (homeservers == null || homeservers.Length == 0) homeservers = new[] { RoomId.Split(':', 2)[1] };
-        var fullJoinUrl = $"{joinUrl}?server_name=" + string.Join("&server_name=", homeservers);
+
+        var materialisedHomeservers = homeservers as string[] ?? homeservers?.ToArray() ?? [];
+        if (!materialisedHomeservers.Any()) materialisedHomeservers = [RoomId.Split(':', 2)[1]];
+
+        Console.WriteLine($"Calling {joinUrl} with {materialisedHomeservers.Length} via(s)...");
+
+        var fullJoinUrl = $"{joinUrl}?server_name=" + string.Join("&server_name=", materialisedHomeservers);
+
         var res = await Homeserver.ClientHttpClient.PostAsJsonAsync(fullJoinUrl, new {
             reason
         });
@@ -228,54 +233,35 @@ public class GenericRoom {
     }
 
     public async IAsyncEnumerable<StateEventResponse> GetMembersEnumerableAsync(bool joinedOnly = true) {
-        // var sw = Stopwatch.StartNew();
         var res = await Homeserver.ClientHttpClient.GetAsync($"/_matrix/client/v3/rooms/{RoomId}/members");
-        // if (sw.ElapsedMilliseconds > 1000)
-        // Console.WriteLine($"Members call responded in {sw.GetElapsedAndRestart()}");
-        // else sw.Restart();
-        // var resText = await res.Content.ReadAsStringAsync();
-        // Console.WriteLine($"Members call response read in {sw.GetElapsedAndRestart()}");
         var result = await JsonSerializer.DeserializeAsync<ChunkedStateEventResponse>(await res.Content.ReadAsStreamAsync(), new JsonSerializerOptions() {
             TypeInfoResolver = ChunkedStateEventResponseSerializerContext.Default
         });
+
         if (result is null) throw new Exception("Failed to deserialise members response");
-        // if (sw.ElapsedMilliseconds > 100)
-        // Console.WriteLine($"Members call deserialised in {sw.GetElapsedAndRestart()}");
-        // else sw.Restart();
+
         foreach (var resp in result.Chunk ?? []) {
-            if (resp?.Type != "m.room.member") continue;
+            if (resp.Type != "m.room.member") continue;
             if (joinedOnly && resp.RawContent?["membership"]?.GetValue<string>() != "join") continue;
             yield return resp;
         }
-
-        // if (sw.ElapsedMilliseconds > 100)
-        // Console.WriteLine($"Members call iterated in {sw.GetElapsedAndRestart()}");
     }
 
     public async Task<FrozenSet<StateEventResponse>> GetMembersListAsync(bool joinedOnly = true) {
-        // var sw = Stopwatch.StartNew();
         var res = await Homeserver.ClientHttpClient.GetAsync($"/_matrix/client/v3/rooms/{RoomId}/members");
-        // if (sw.ElapsedMilliseconds > 1000)
-        // Console.WriteLine($"Members call responded in {sw.GetElapsedAndRestart()}");
-        // else sw.Restart();
-        // var resText = await res.Content.ReadAsStringAsync();
-        // Console.WriteLine($"Members call response read in {sw.GetElapsedAndRestart()}");
         var result = await JsonSerializer.DeserializeAsync<ChunkedStateEventResponse>(await res.Content.ReadAsStreamAsync(), new JsonSerializerOptions() {
             TypeInfoResolver = ChunkedStateEventResponseSerializerContext.Default
         });
+
         if (result is null) throw new Exception("Failed to deserialise members response");
-        // if (sw.ElapsedMilliseconds > 100)
-        // Console.WriteLine($"Members call deserialised in {sw.GetElapsedAndRestart()}");
-        // else sw.Restart();
+
         var members = new List<StateEventResponse>();
         foreach (var resp in result.Chunk ?? []) {
-            if (resp?.Type != "m.room.member") continue;
+            if (resp.Type != "m.room.member") continue;
             if (joinedOnly && resp.RawContent?["membership"]?.GetValue<string>() != "join") continue;
             members.Add(resp);
         }
 
-        // if (sw.ElapsedMilliseconds > 100)
-        // Console.WriteLine($"Members call iterated in {sw.GetElapsedAndRestart()}");
         return members.ToFrozenSet();
     }
 
@@ -286,7 +272,7 @@ public class GenericRoom {
 
     public async Task<List<string>?> GetAliasesAsync() {
         var res = await GetStateAsync<RoomAliasEventContent>("m.room.aliases");
-        return res.Aliases;
+        return res?.Aliases;
     }
 
     public Task<RoomCanonicalAliasEventContent?> GetCanonicalAliasAsync() =>
@@ -550,7 +536,8 @@ public class GenericRoom {
         }
     }
 
-    public readonly SpaceRoom AsSpace;
+    public SpaceRoom AsSpace() => new SpaceRoom(Homeserver, RoomId);
+    public PolicyRoom AsPolicyRoom() => new PolicyRoom(Homeserver, RoomId);
 }
 
 public class RoomIdResponse {
