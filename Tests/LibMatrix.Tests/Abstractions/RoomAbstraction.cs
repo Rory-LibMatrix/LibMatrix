@@ -96,7 +96,7 @@ public static class RoomAbstraction {
                 });
             }
 
-        var testSpace = (await hs.CreateRoom(crq)).AsSpace;
+        var testSpace = (await hs.CreateRoom(crq)).AsSpace();
 
         await testSpace.SendStateEventAsync("gay.rory.libmatrix.unit_test_room", new object());
 

@@ -51,7 +51,7 @@ public class MatrixHttpClient {
     internal SemaphoreSlim _rateLimitSemaphore { get; } = new(1, 1);
 #endif
 
-    private const bool LogRequests = true;
+    public static bool LogRequests = true;
     public Dictionary<string, string> AdditionalQueryParameters { get; set; } = new();
 
     public Uri? BaseAddress { get; set; }

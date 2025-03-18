@@ -17,7 +17,7 @@ public class InviteHandlerHostedService(
 ) : IHostedService {
     private Task? _listenerTask;
 
-    private SyncHelper syncHelper = new SyncHelper(hs, logger) {
+    private SyncHelper syncHelper = new(hs, logger) {
         Timeout = listenerSyncConfiguration.Timeout ?? 30_000,
         MinimumDelay = listenerSyncConfiguration.MinimumSyncTime ?? new(0),
         SetPresence = listenerSyncConfiguration.Presence ?? "online"

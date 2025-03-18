@@ -23,7 +23,7 @@ public class SpaceTests : TestBed<TestFixture> {
             Name = "Test space"
         };
         crq.CreationContent["type"] = SpaceRoom.TypeName;
-        var space = (await hs.CreateRoom(crq)).AsSpace;
+        var space = (await hs.CreateRoom(crq)).AsSpace();
 
         var child = await hs.CreateRoom(new CreateRoomRequest() {
             Name = "Test child"
@@ -45,7 +45,7 @@ public class SpaceTests : TestBed<TestFixture> {
             Name = "Test space"
         };
         crq.CreationContent["type"] = SpaceRoom.TypeName;
-        var space = (await hs.CreateRoom(crq)).AsSpace;
+        var space = (await hs.CreateRoom(crq)).AsSpace();
 
         var child = await hs.CreateRoom(new CreateRoomRequest() {
             Name = "Test child"
@@ -83,7 +83,7 @@ public class SpaceTests : TestBed<TestFixture> {
             }).ToList()
         };
         crq.CreationContent["type"] = SpaceRoom.TypeName;
-        var space = (await hs.CreateRoom(crq)).AsSpace;
+        var space = (await hs.CreateRoom(crq)).AsSpace();
 
         var children = space.GetChildrenAsync().ToBlockingEnumerable().ToList();
         Assert.NotNull(children);

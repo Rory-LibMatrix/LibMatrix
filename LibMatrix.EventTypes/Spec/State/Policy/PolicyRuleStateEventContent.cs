@@ -32,7 +32,7 @@ public class RoomPolicyRuleEventContent : PolicyRuleEventContent {
 }
 
 public abstract class PolicyRuleEventContent : EventContent {
-    public PolicyRuleEventContent() => Console.WriteLine($"init policy {GetType().Name}");
+    // public PolicyRuleEventContent() => Console.WriteLine($"init policy {GetType().Name}");
     private string? _reason;
 
     /// <summary>
