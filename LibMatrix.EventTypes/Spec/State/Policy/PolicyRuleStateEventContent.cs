@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -31,6 +32,7 @@ public class RoomPolicyRuleEventContent : PolicyRuleEventContent {
     public const string EventId = "m.policy.rule.room";
 }
 
+[DebuggerDisplay("""{GetType().Name.Replace("PolicyRuleEventContent", ""),nq} policy matching {Entity}, Reason: {Reason}""")]
 public abstract class PolicyRuleEventContent : EventContent {
     // public PolicyRuleEventContent() => Console.WriteLine($"init policy {GetType().Name}");
     private string? _reason;
