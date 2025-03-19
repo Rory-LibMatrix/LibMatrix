@@ -23,7 +23,7 @@ public class PolicyRoom(AuthenticatedHomeserverGeneric homeserver, string roomId
     }
 
     public async IAsyncEnumerable<StateEventResponse> GetUserPoliciesAsync() {
-        var fullRoomState = GetFullStateAsync();
+        var fullRoomState = GetPoliciesAsync();
         await foreach (var eventResponse in fullRoomState) {
             if (UserPolicyEventTypes.Contains(eventResponse!.Type)) {
                 yield return eventResponse;
@@ -32,7 +32,7 @@ public class PolicyRoom(AuthenticatedHomeserverGeneric homeserver, string roomId
     }
 
     public async IAsyncEnumerable<StateEventResponse> GetServerPoliciesAsync() {
-        var fullRoomState = GetFullStateAsync();
+        var fullRoomState = GetPoliciesAsync();
         await foreach (var eventResponse in fullRoomState) {
             if (ServerPolicyEventTypes.Contains(eventResponse!.Type)) {
                 yield return eventResponse;
@@ -41,7 +41,7 @@ public class PolicyRoom(AuthenticatedHomeserverGeneric homeserver, string roomId
     }
 
     public async IAsyncEnumerable<StateEventResponse> GetRoomPoliciesAsync() {
-        var fullRoomState = GetFullStateAsync();
+        var fullRoomState = GetPoliciesAsync();
         await foreach (var eventResponse in fullRoomState) {
             if (RoomPolicyEventTypes.Contains(eventResponse!.Type)) {
                 yield return eventResponse;

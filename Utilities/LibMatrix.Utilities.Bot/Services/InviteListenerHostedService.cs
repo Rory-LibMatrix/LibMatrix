@@ -17,7 +17,7 @@ public class InviteHandlerHostedService(
 ) : IHostedService {
     private Task? _listenerTask;
 
-    private SyncHelper syncHelper = new(hs, logger) {
+    private readonly SyncHelper _syncHelper = new(hs, logger) {
         Timeout = listenerSyncConfiguration.Timeout ?? 30_000,
         MinimumDelay = listenerSyncConfiguration.MinimumSyncTime ?? new(0),
         SetPresence = listenerSyncConfiguration.Presence ?? "online"
@@ -27,7 +27,6 @@ public class InviteHandlerHostedService(
     /// <param name="cancellationToken">Indicates that the start process has been aborted.</param>
     public Task StartAsync(CancellationToken cancellationToken) {
         _listenerTask = Run(cancellationToken);
-        logger.LogInformation("Command listener started (StartAsync)!");
         return Task.CompletedTask;
     }
 
@@ -35,10 +34,10 @@ public class InviteHandlerHostedService(
         logger.LogInformation("Starting invite listener!");
         var nextBatchFile = $"inviteHandler.{hs.WhoAmI.UserId}.{hs.WhoAmI.DeviceId}.nextBatch";
         if (listenerSyncConfiguration.Filter is not null) {
-            syncHelper.Filter = listenerSyncConfiguration.Filter;
+            _syncHelper.Filter = listenerSyncConfiguration.Filter;
         }
         else {
-            syncHelper.FilterId = await hs.NamedCaches.FilterCache.GetOrSetValueAsync("gay.rory.libmatrix.utilities.bot.invite_listener_syncfilter.dev", new SyncFilter() {
+            _syncHelper.FilterId = await hs.NamedCaches.FilterCache.GetOrSetValueAsync("gay.rory.libmatrix.utilities.bot.invite_listener_syncfilter.dev", new SyncFilter() {
                 AccountData = new SyncFilter.EventFilter(types: [], limit: 1),
                 Presence = new SyncFilter.EventFilter(types: ["*"]),
                 Room = new SyncFilter.RoomFilter {
@@ -49,12 +48,12 @@ public class InviteHandlerHostedService(
                 }
             });
         }
-        
-        if (File.Exists(nextBatchFile)) {
-            syncHelper.Since = await File.ReadAllTextAsync(nextBatchFile, cancellationToken);
+
+        if (File.Exists(nextBatchFile) && !listenerSyncConfiguration.InitialSyncOnStartup) {
+            _syncHelper.Since = await File.ReadAllTextAsync(nextBatchFile, cancellationToken);
         }
 
-        syncHelper.InviteReceivedHandlers.Add(async invite => {
+        _syncHelper.InviteReceivedHandlers.Add(async invite => {
             logger.LogInformation("Received invite to room {}", invite.Key);
             var inviteEventArgs = new InviteEventArgs() {
                 RoomId = invite.Key,
@@ -69,8 +68,9 @@ public class InviteHandlerHostedService(
             await inviteHandler(inviteEventArgs);
         });
 
-        syncHelper.SyncReceivedHandlers.Add(sync => File.WriteAllTextAsync(nextBatchFile, sync.NextBatch, cancellationToken));
-        await syncHelper.RunSyncLoopAsync(cancellationToken: cancellationToken);
+        if (listenerSyncConfiguration.InitialSyncOnStartup)
+            _syncHelper.SyncReceivedHandlers.Add(sync => File.WriteAllTextAsync(nextBatchFile, sync.NextBatch, cancellationToken));
+        await _syncHelper.RunSyncLoopAsync(cancellationToken: cancellationToken);
     }
 
     /// <summary>Triggered when the application host is performing a graceful shutdown.</summary>
@@ -104,5 +104,6 @@ public class InviteHandlerHostedService(
         public TimeSpan? MinimumSyncTime { get; set; }
         public int? Timeout { get; set; }
         public string? Presence { get; set; }
+        public bool InitialSyncOnStartup { get; set; }
     }
 }
