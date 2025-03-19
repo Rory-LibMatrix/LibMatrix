@@ -68,7 +68,7 @@ public class InviteHandlerHostedService(
             await inviteHandler(inviteEventArgs);
         });
 
-        if (listenerSyncConfiguration.InitialSyncOnStartup)
+        if (!listenerSyncConfiguration.InitialSyncOnStartup)
             _syncHelper.SyncReceivedHandlers.Add(sync => File.WriteAllTextAsync(nextBatchFile, sync.NextBatch, cancellationToken));
         await _syncHelper.RunSyncLoopAsync(cancellationToken: cancellationToken);
     }
