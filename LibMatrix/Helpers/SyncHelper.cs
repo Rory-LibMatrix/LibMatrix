@@ -51,6 +51,9 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
         }
     }
 
+    /// <summary>
+    /// Always include all rooms, and their full state according to passed filter
+    /// </summary>
     public bool FullState { get; set; }
 
     public bool IsInitialSync { get; set; } = true;
