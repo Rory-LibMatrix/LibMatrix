@@ -8,10 +8,10 @@ namespace LibMatrix.RoomTypes;
 public class PolicyRoom(AuthenticatedHomeserverGeneric homeserver, string roomId) : GenericRoom(homeserver, roomId) {
     public const string TypeName = "support.feline.policy.lists.msc.v1";
     
-    private static readonly FrozenSet<string> UserPolicyEventTypes = EventContent.GetMatchingEventTypes<UserPolicyRuleEventContent>().ToFrozenSet();
-    private static readonly FrozenSet<string> ServerPolicyEventTypes = EventContent.GetMatchingEventTypes<ServerPolicyRuleEventContent>().ToFrozenSet();
-    private static readonly FrozenSet<string> RoomPolicyEventTypes = EventContent.GetMatchingEventTypes<RoomPolicyRuleEventContent>().ToFrozenSet();
-    private static readonly FrozenSet<string> SpecPolicyEventTypes = [..UserPolicyEventTypes, ..ServerPolicyEventTypes, ..RoomPolicyEventTypes];
+    public static readonly FrozenSet<string> UserPolicyEventTypes = EventContent.GetMatchingEventTypes<UserPolicyRuleEventContent>().ToFrozenSet();
+    public static readonly FrozenSet<string> ServerPolicyEventTypes = EventContent.GetMatchingEventTypes<ServerPolicyRuleEventContent>().ToFrozenSet();
+    public static readonly FrozenSet<string> RoomPolicyEventTypes = EventContent.GetMatchingEventTypes<RoomPolicyRuleEventContent>().ToFrozenSet();
+    public static readonly FrozenSet<string> SpecPolicyEventTypes = [..UserPolicyEventTypes, ..ServerPolicyEventTypes, ..RoomPolicyEventTypes];
 
     public async IAsyncEnumerable<StateEventResponse> GetPoliciesAsync() {
         var fullRoomState = GetFullStateAsync();

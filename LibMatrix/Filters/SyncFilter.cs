@@ -34,6 +34,15 @@ public class SyncFilter {
         [JsonPropertyName("include_leave")]
         public bool? IncludeLeave { get; set; }
 
+        private static readonly RoomFilter Empty = new() {
+            Rooms = [],
+            IncludeLeave = false,
+            AccountData = StateFilter.Empty,
+            Ephemeral = StateFilter.Empty,
+            State = StateFilter.Empty,
+            Timeline = StateFilter.Empty,
+        };
+
         public class StateFilter(
             bool? containsUrl = null,
             bool? includeRedundantMembers = null,
@@ -65,6 +74,8 @@ public class SyncFilter {
 
             [JsonPropertyName("unread_thread_notifications")]
             public bool? UnreadThreadNotifications { get; set; } = unreadThreadNotifications;
+
+            public static readonly StateFilter Empty = new(limit: 0, senders: [], types: [], rooms: []);
         }
     }
 
@@ -83,5 +94,7 @@ public class SyncFilter {
 
         [JsonPropertyName("not_senders")]
         public List<string>? NotSenders { get; set; } = notSenders;
+
+        public static readonly EventFilter Empty = new(limit: 0, senders: [], types: []);
     }
 }

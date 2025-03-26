@@ -69,16 +69,16 @@ public class BotInstaller(IServiceCollection services) {
         return this;
     }
 
-    public BotInstaller WithInviteHandler(Func<InviteHandlerHostedService.InviteEventArgs, Task> inviteHandler) {
+    public BotInstaller WithInviteHandler(Func<RoomInviteContext, Task> inviteHandler) {
         services.AddSingleton(inviteHandler);
         services.AddHostedService<InviteHandlerHostedService>();
         services.AddSingleton<InviteHandlerHostedService.InviteListenerSyncConfiguration>();
         return this;
     }
 
-    public BotInstaller WithInviteHandler<T>() where T : class, InviteHandlerHostedService.IInviteHandler {
+    public BotInstaller WithInviteHandler<T>() where T : class, IRoomInviteHandler {
         services.AddSingleton<T>();
-        services.AddSingleton<Func<InviteHandlerHostedService.InviteEventArgs, Task>>(sp => sp.GetRequiredService<T>().HandleInviteAsync);
+        services.AddSingleton<Func<RoomInviteContext, Task>>(sp => sp.GetRequiredService<T>().HandleInviteAsync);
         services.AddHostedService<InviteHandlerHostedService>();
         services.AddSingleton<InviteHandlerHostedService.InviteListenerSyncConfiguration>();
         return this;

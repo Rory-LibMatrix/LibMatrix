@@ -304,7 +304,6 @@ public class GenericRoom {
     public Task<RoomPowerLevelEventContent?> GetPowerLevelsAsync() =>
         GetStateAsync<RoomPowerLevelEventContent>("m.room.power_levels");
 
-    [Obsolete("This method will be merged into GetNameAsync() in the future.")]
     public async Task<string> GetNameOrFallbackAsync(int maxMemberNames = 2) {
         try {
             var name = await GetNameAsync();
