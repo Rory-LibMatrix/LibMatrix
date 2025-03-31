@@ -51,7 +51,7 @@ public class SyncStateResolver(AuthenticatedHomeserverGeneric homeserver, ILogge
         var keys = (await storageProvider.GetAllKeysAsync()).Where(x => !x.StartsWith("old/")).ToFrozenSet();
         var count = keys.Count - 1;
         int total = count;
-        Console.WriteLine($"Found {count} entries to optimise.");
+        Console.WriteLine($"Found {count} entries to optimise in {totalSw.Elapsed}.");
 
         var merged = await initLoadTask;
         if (merged is null) return;
@@ -109,10 +109,6 @@ public class SyncStateResolver(AuthenticatedHomeserverGeneric homeserver, ILogge
             await Task.WhenAll(traceSaveTask, slowTraceSaveTask, slow1sTraceSaveTask);
 #endif
         }
-
-        // var traceString = string.Join("\n", traces.Select(x => $"{x.Key}\t{x.Value.ToJson(indent: false)}"));
-        // var ms = new MemoryStream(Encoding.UTF8.GetBytes(traceString));
-        // await storageProvider.SaveStreamAsync($"traces/{oldPath}", ms);
 
         await storageProvider.SaveObjectAsync("init", merged);
         await Task.WhenAll(moveTasks);

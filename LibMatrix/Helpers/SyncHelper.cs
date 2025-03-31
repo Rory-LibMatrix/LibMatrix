@@ -149,6 +149,7 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
         catch (Exception e) {
             Console.WriteLine(e);
             logger?.LogError(e, "Failed to sync!\n{}", e.ToString());
+            await Task.WhenAll(ExceptionHandlers.Select(x => x.Invoke(e)).ToList());
         }
 
         return null;
@@ -256,6 +257,11 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
     /// Event fired when an account data event is received
     /// </summary>
     public List<Func<StateEventResponse, Task>> AccountDataReceivedHandlers { get; } = new();
+
+    /// <summary>
+    /// Event fired when an exception is thrown
+    /// </summary>
+    public List<Func<Exception, Task>> ExceptionHandlers { get; } = new();
 
     private void Log(string message) {
         if (logger is null) Console.WriteLine(message);

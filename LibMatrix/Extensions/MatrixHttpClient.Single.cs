@@ -148,10 +148,10 @@ public class MatrixHttpClient {
         if (responseMessage.IsSuccessStatusCode) return responseMessage;
 
         //retry on gateway timeout
-        if (responseMessage.StatusCode == HttpStatusCode.GatewayTimeout) {
-            request.ResetSendStatus();
-            return await SendAsync(request, cancellationToken);
-        }
+        // if (responseMessage.StatusCode == HttpStatusCode.GatewayTimeout) {
+            // request.ResetSendStatus();
+            // return await SendAsync(request, cancellationToken);
+        // }
 
         //error handling
         var content = await responseMessage.Content.ReadAsStringAsync(cancellationToken);
@@ -160,7 +160,12 @@ public class MatrixHttpClient {
                 ErrorCode = "M_UNKNOWN",
                 Error = "Unknown error, server returned no content"
             };
-        if (!content.StartsWith('{')) throw new InvalidDataException("Encountered invalid data:\n" + content);
+        
+        // if (!content.StartsWith('{')) throw new InvalidDataException("Encountered invalid data:\n" + content);
+        if (!content.TrimStart().StartsWith('{')) {
+            responseMessage.EnsureSuccessStatusCode();
+            throw new InvalidDataException("Encountered invalid data:\n" + content);
+        }
         //we have a matrix error
 
         MatrixException? ex;
