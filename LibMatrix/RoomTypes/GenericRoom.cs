@@ -477,12 +477,21 @@ public class GenericRoom {
     /// <summary>
     /// Updates the marker for the given receipt type to the event ID specified.
     /// </summary>
+    /// <param name="eventId">The event ID to acknowledge up to.</param>
+    /// <param name="threadId">
+    /// The root thread event’s ID (or main) for which thread this receipt is intended to be under.
+    /// If not specified, the read receipt is unthreaded (default).
+    /// </param>
+    /// <param name="isPrivate">
+    /// If set to true, a receipt type of m.read.private is sent instead of m.read, which marks the
+    /// room as "read" only for the current user
+    /// </param>
     public async Task SendReadReceiptAsync(string eventId, string? threadId = null, bool isPrivate = false) {
         var request = new JsonObject();
         if (threadId != null)
             request.Add("thread_id", threadId);
         await Homeserver.ClientHttpClient.PostAsJsonAsync(
-            $"/_matrix/client/v3/rooms/{RoomId}/receipt/m.read{(isPrivate ? ".private" : "")}/{eventId}", request, 
+            $"/_matrix/client/v3/rooms/{RoomId}/receipt/m.read{(isPrivate ? ".private" : "")}/{eventId}", request,
             new JsonSerializerOptions {
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             });
