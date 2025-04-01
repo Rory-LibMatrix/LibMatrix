@@ -455,6 +455,41 @@ public class GenericRoom {
 
 #endregion
 
+#region Ephemeral Events
+
+    /// <summary>
+    /// This tells the server that the user is typing for the next N milliseconds where
+    /// N is the value specified in the timeout key. Alternatively, if typing is false,
+    /// it tells the server that the user has stopped typing.
+    /// </summary>
+    /// <param name="typing">Whether the user is typing or not.</param>
+    /// <param name="timeout">The length of time in milliseconds to mark this user as typing.</param>
+    public async Task SendTypingNotificationAsync(bool typing, int timeout = 30000) {
+        await Homeserver.ClientHttpClient.PutAsJsonAsync(
+            $"/_matrix/client/v3/rooms/{RoomId}/typing/{Homeserver.UserId}", new JsonObject {
+                ["timeout"] = typing ? timeout : null,
+                ["typing"] = typing
+            }, new JsonSerializerOptions {
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            });
+    }
+
+    /// <summary>
+    /// Updates the marker for the given receipt type to the event ID specified.
+    /// </summary>
+    public async Task SendReadReceiptAsync(string eventId, string? threadId = null, bool isPrivate = false) {
+        var request = new JsonObject();
+        if (threadId != null)
+            request.Add("thread_id", threadId);
+        await Homeserver.ClientHttpClient.PostAsJsonAsync(
+            $"/_matrix/client/v3/rooms/{RoomId}/receipt/m.read{(isPrivate ? ".private" : "")}/{eventId}", request, 
+            new JsonSerializerOptions {
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            });
+    }
+
+#endregion
+
 #region Utilities
 
     public async Task<Dictionary<string, List<string>>> GetMembersByHomeserverAsync(bool joinedOnly = true) {
