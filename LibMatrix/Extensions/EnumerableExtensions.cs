@@ -4,9 +4,6 @@ using System.Collections.Immutable;
 namespace LibMatrix.Extensions;
 
 public static class EnumerableExtensions {
-    public static int insertions = 0;
-    public static int replacements = 0;
-
     public static void MergeStateEventLists(this IList<StateEvent> oldState, IList<StateEvent> newState) {
         // foreach (var stateEvent in newState) {
         //     var old = oldState.FirstOrDefault(x => x.Type == stateEvent.Type && x.StateKey == stateEvent.StateKey);
@@ -69,11 +66,9 @@ public static class EnumerableExtensions {
             switch (FindIndex(e)) {
                 case -1:
                     oldState.Add(e);
-                    insertions++;
                     break;
                 case var index:
                     oldState[index] = e;
-                    replacements++;
                     break;
             }
         }

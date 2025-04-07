@@ -63,7 +63,7 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
     public async Task<int> GetUnoptimisedStoreCount() {
         if (storageProvider is null) return -1;
         var keys = await storageProvider.GetAllKeysAsync();
-        return keys.Count(x => !x.StartsWith("old/")) - 1;
+        return keys.Count(static x => !x.StartsWith("old/")) - 1;
     }
 
     private async Task UpdateFilterAsync() {

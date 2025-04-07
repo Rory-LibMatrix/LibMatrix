@@ -1,3 +1,7 @@
+using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
+using LibMatrix.Responses;
+
 namespace LibMatrix.Interfaces.Services;
 
 public interface IStorageProvider {
@@ -17,11 +21,24 @@ public interface IStorageProvider {
         Console.WriteLine($"StorageProvider<{GetType().Name}> does not implement SaveObject<T>(key, value)!");
         throw new NotImplementedException();
     }
+    
+    public Task SaveObjectAsync<T>(string key, T value, JsonTypeInfo<T> jsonTypeInfo) {
+        Console.WriteLine($"StorageProvider<{GetType().Name}> does not implement SaveObjectAsync<T>(key, value, typeInfo), using default implementation w/ MemoryStream!");
+        var ms = new MemoryStream();
+        JsonSerializer.Serialize(ms, value, jsonTypeInfo);
+        return SaveStreamAsync(key, ms);
+    }
 
     // load
     public Task<T?> LoadObjectAsync<T>(string key) {
         Console.WriteLine($"StorageProvider<{GetType().Name}> does not implement LoadObject<T>(key)!");
         throw new NotImplementedException();
+    }
+
+    public async Task<T?> LoadObjectAsync<T>(string key, JsonTypeInfo<T> jsonTypeInfo) {
+        Console.WriteLine($"StorageProvider<{GetType().Name}> does not implement SaveObject<T>(key, typeInfo), using default implementation!");
+        await using var stream = await LoadStreamAsync(key);
+        return JsonSerializer.Deserialize(stream!, jsonTypeInfo);
     }
 
     // check if exists
