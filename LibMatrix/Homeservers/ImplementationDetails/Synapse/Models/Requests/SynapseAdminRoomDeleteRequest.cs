@@ -31,7 +31,13 @@ public class SynapseAdminRoomDeleteStatusList {
     [JsonPropertyName("results")]
     public List<SynapseAdminRoomDeleteStatus> Results { get; set; }
 }
+
 public class SynapseAdminRoomDeleteStatus {
+    public const string Scheduled = "scheduled";
+    public const string Active = "active";
+    public const string Complete = "complete";
+    public const string Failed = "failed";
+
     [JsonPropertyName("status")]
     public string Status { get; set; } = null!;
 

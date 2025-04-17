@@ -16,6 +16,7 @@ public class RemoteHomeserver {
             proxy = null;
         ServerNameOrUrl = serverName;
         WellKnownUris = wellKnownUris;
+        Proxy = proxy;
         ClientHttpClient = new MatrixHttpClient {
             BaseAddress = new Uri(proxy?.TrimEnd('/') ?? wellKnownUris.Client?.TrimEnd('/') ?? throw new InvalidOperationException($"No client URI for {serverName}!")),
             // Timeout = TimeSpan.FromSeconds(300) // TODO: Re-implement this
@@ -29,6 +30,7 @@ public class RemoteHomeserver {
 
     private Dictionary<string, object> _profileCache { get; set; } = new();
     public string ServerNameOrUrl { get; }
+    public string? Proxy { get; }
 
     [JsonIgnore]
     public MatrixHttpClient ClientHttpClient { get; set; }

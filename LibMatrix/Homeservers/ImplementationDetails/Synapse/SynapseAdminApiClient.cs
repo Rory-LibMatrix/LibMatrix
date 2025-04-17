@@ -144,7 +144,7 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
 #endif
                         continue;
                     }
-                    
+
                     if (room.JoinedMembers < localFilter.JoinedMembersGreaterThan || room.JoinedMembers > localFilter.JoinedMembersLessThan) {
                         totalRooms--;
 #if LOG_SKIP
@@ -210,6 +210,15 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
         var loginResp = await resp.Content.ReadFromJsonAsync<LoginResponse>();
         loginResp.UserId = userId; // Synapse only returns the access token
         return loginResp;
+    }
+
+    public async Task<AuthenticatedHomeserverSynapse> GetHomeserverForUserAsync(string userId, TimeSpan expireAfter) {
+        var loginResp = await LoginUserAsync(userId, expireAfter);
+        var homeserver = new AuthenticatedHomeserverSynapse(
+            authenticatedHomeserver.ServerName, authenticatedHomeserver.WellKnownUris, authenticatedHomeserver.Proxy, loginResp.AccessToken
+        );
+        await homeserver.Initialise();
+        return homeserver;
     }
 
 #endregion
@@ -517,6 +526,10 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
         return await authenticatedHomeserver.ClientHttpClient.GetFromJsonAsync<SynapseAdminRoomMemberListResult>($"/_synapse/admin/v1/rooms/{roomId}/members");
     }
 
+    public async Task<SynapseAdminRoomStateResult> GetRoomStateAsync(string roomId, string? type = null) {
+        return await authenticatedHomeserver.ClientHttpClient.GetFromJsonAsync<SynapseAdminRoomStateResult>($"/_synapse/admin/v1/rooms/{roomId}/state");
+    }
+
     public async Task QuarantineMediaByRoomId(string roomId) {
         await authenticatedHomeserver.ClientHttpClient.PutAsJsonAsync($"/_synapse/admin/v1/room/{roomId}/media/quarantine", new { });
     }
@@ -524,11 +537,11 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
     public async Task QuarantineMediaByUserId(string mxid) {
         await authenticatedHomeserver.ClientHttpClient.PutAsJsonAsync($"/_synapse/admin/v1/user/{mxid}/media/quarantine", new { });
     }
-    
+
     public async Task QuarantineMediaById(string serverName, string mediaId) {
         await authenticatedHomeserver.ClientHttpClient.PutAsJsonAsync($"/_synapse/admin/v1/media/quarantine/{serverName}/{mediaId}", new { });
     }
-    
+
     public async Task QuarantineMediaById(MxcUri mxcUri) {
         await authenticatedHomeserver.ClientHttpClient.PutAsJsonAsync($"/_synapse/admin/v1/media/quarantine/{mxcUri.ServerName}/{mxcUri.MediaId}", new { });
     }
@@ -536,7 +549,7 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
     public async Task DeleteMediaById(string serverName, string mediaId) {
         await authenticatedHomeserver.ClientHttpClient.DeleteAsync($"/_synapse/admin/v1/media/{serverName}/{mediaId}");
     }
-    
+
     public async Task DeleteMediaById(MxcUri mxcUri) {
         await authenticatedHomeserver.ClientHttpClient.DeleteAsync($"/_synapse/admin/v1/media/{mxcUri.ServerName}/{mxcUri.MediaId}");
     }
