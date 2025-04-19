@@ -13,7 +13,14 @@ public class NamedCache<T>(AuthenticatedHomeserverGeneric hs, string name) where
     /// </summary>
     /// <returns>The updated data</returns>
     public async Task<Dictionary<string, T>> ReadCacheMapAsync() {
-        _cache = await hs.GetAccountDataAsync<Dictionary<string, T>>(name);
+        try {
+            _cache = await hs.GetAccountDataAsync<Dictionary<string, T>>(name);
+        }
+        catch (MatrixException e) {
+            if (e is { ErrorCode: MatrixException.ErrorCodes.M_NOT_FOUND })
+                _cache = [];
+            else throw;
+        }
 
         return _cache ?? new();
     }
@@ -54,7 +61,7 @@ public class NamedCache<T>(AuthenticatedHomeserverGeneric hs, string name) where
         var removedValue = cache[key];
         cache.Remove(key);
         await hs.SetAccountDataAsync(name, cache);
-        
+
         if (!unsafeUseCache)
             _lock.Release();
 
