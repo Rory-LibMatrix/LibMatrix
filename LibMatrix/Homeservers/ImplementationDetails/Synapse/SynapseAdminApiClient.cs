@@ -492,13 +492,13 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
     }
 
     public async Task BlockRoom(string roomId, bool block = true) {
-        await authenticatedHomeserver.ClientHttpClient.PutAsJsonAsync($"/_synapse/admin/v1/rooms/{roomId}/block", new {
+        await authenticatedHomeserver.ClientHttpClient.PutAsJsonAsync($"/_synapse/admin/v1/rooms/{roomId.UrlEncode()}/block", new {
             block
         });
     }
 
     public async Task<SynapseAdminRoomDeleteResponse> DeleteRoom(string roomId, SynapseAdminRoomDeleteRequest request, bool waitForCompletion = true) {
-        var resp = await authenticatedHomeserver.ClientHttpClient.DeleteAsJsonAsync($"/_synapse/admin/v2/rooms/{roomId}", request);
+        var resp = await authenticatedHomeserver.ClientHttpClient.DeleteAsJsonAsync($"/_synapse/admin/v2/rooms/{roomId.UrlEncode()}", request);
         var deleteResp = await resp.Content.ReadFromJsonAsync<SynapseAdminRoomDeleteResponse>();
 
         if (waitForCompletion) {
@@ -514,7 +514,7 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
 
     public async Task<SynapseAdminRoomDeleteStatus> GetRoomDeleteStatusByRoomId(string roomId) {
         return await authenticatedHomeserver.ClientHttpClient.GetFromJsonAsync<SynapseAdminRoomDeleteStatus>(
-            $"/_synapse/admin/v2/rooms/{roomId}/delete_status");
+            $"/_synapse/admin/v2/rooms/{roomId.UrlEncode()}/delete_status");
     }
 
     public async Task<SynapseAdminRoomDeleteStatus> GetRoomDeleteStatus(string deleteId) {
@@ -523,15 +523,17 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
     }
 
     public async Task<SynapseAdminRoomMemberListResult> GetRoomMembersAsync(string roomId) {
-        return await authenticatedHomeserver.ClientHttpClient.GetFromJsonAsync<SynapseAdminRoomMemberListResult>($"/_synapse/admin/v1/rooms/{roomId}/members");
+        return await authenticatedHomeserver.ClientHttpClient.GetFromJsonAsync<SynapseAdminRoomMemberListResult>($"/_synapse/admin/v1/rooms/{roomId.UrlEncode()}/members");
     }
 
     public async Task<SynapseAdminRoomStateResult> GetRoomStateAsync(string roomId, string? type = null) {
-        return await authenticatedHomeserver.ClientHttpClient.GetFromJsonAsync<SynapseAdminRoomStateResult>($"/_synapse/admin/v1/rooms/{roomId}/state");
+        return string.IsNullOrWhiteSpace(type)
+            ? await authenticatedHomeserver.ClientHttpClient.GetFromJsonAsync<SynapseAdminRoomStateResult>($"/_synapse/admin/v1/rooms/{roomId.UrlEncode()}/state")
+            : await authenticatedHomeserver.ClientHttpClient.GetFromJsonAsync<SynapseAdminRoomStateResult>($"/_synapse/admin/v1/rooms/{roomId.UrlEncode()}/state?type={type}");
     }
 
     public async Task QuarantineMediaByRoomId(string roomId) {
-        await authenticatedHomeserver.ClientHttpClient.PutAsJsonAsync($"/_synapse/admin/v1/room/{roomId}/media/quarantine", new { });
+        await authenticatedHomeserver.ClientHttpClient.PutAsJsonAsync($"/_synapse/admin/v1/room/{roomId.UrlEncode()}/media/quarantine", new { });
     }
 
     public async Task QuarantineMediaByUserId(string mxid) {
