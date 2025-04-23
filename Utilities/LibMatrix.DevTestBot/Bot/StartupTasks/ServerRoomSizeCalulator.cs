@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using LibMatrix.ExampleBot.Bot.Interfaces;
 using LibMatrix.Homeservers;
 using LibMatrix.Services;
 using Microsoft.Extensions.Hosting;
@@ -11,10 +10,9 @@ public class ServerRoomSizeCalulator : IHostedService {
     private readonly HomeserverProviderService _homeserverProviderService;
     private readonly ILogger<ServerRoomSizeCalulator> _logger;
     private readonly DevTestBotConfiguration _configuration;
-    private readonly IEnumerable<ICommand> _commands;
 
     public ServerRoomSizeCalulator(HomeserverProviderService homeserverProviderService, ILogger<ServerRoomSizeCalulator> logger,
-        DevTestBotConfiguration configuration, IServiceProvider services) {
+        DevTestBotConfiguration configuration) {
         logger.LogInformation("Server room size calculator hosted service instantiated!");
         _homeserverProviderService = homeserverProviderService;
         _logger = logger;

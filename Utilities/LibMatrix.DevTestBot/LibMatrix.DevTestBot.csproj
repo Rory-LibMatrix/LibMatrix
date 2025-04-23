@@ -21,6 +21,7 @@
         <PackageReference Include="ArcaneLibs.StringNormalisation" Version="1.0.0-preview.20250313-104848" Condition="'$(Configuration)' == 'Release'" />
         <ProjectReference Include="..\..\ArcaneLibs\ArcaneLibs.StringNormalisation\ArcaneLibs.StringNormalisation.csproj" Condition="'$(Configuration)' == 'Debug'"/>
         <ProjectReference Include="..\..\LibMatrix\LibMatrix.csproj"/>
+        <ProjectReference Include="..\LibMatrix.Utilities.Bot\LibMatrix.Utilities.Bot.csproj" />
     </ItemGroup>
 
     <ItemGroup>

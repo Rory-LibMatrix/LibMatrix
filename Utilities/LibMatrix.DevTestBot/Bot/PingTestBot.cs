@@ -1,8 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Windows.Input;
 using ArcaneLibs.Extensions;
 using LibMatrix.EventTypes.Spec;
-using LibMatrix.EventTypes.Spec.State.RoomInfo;
-using LibMatrix.ExampleBot.Bot.Interfaces;
 using LibMatrix.Filters;
 using LibMatrix.Helpers;
 using LibMatrix.Homeservers;
@@ -86,33 +85,34 @@ public class PingTestBot : IHostedService {
         //             await hs.GetRoom(args.Key).LeaveAsync("I was unable to join the room: " + e);
         //         }
         // });
-        syncHelper.TimelineEventHandlers.Add(async @event => {
-            _logger.LogInformation(
-                "Got timeline event in {}: {}", @event.RoomId, @event.ToJson(false, true));
-
-            var room = hs.GetRoom(@event.RoomId);
-            // _logger.LogInformation(eventResponse.ToJson(indent: false));
-            if (@event is not { Sender: "@emma:rory.gay" }) return;
-            if (@event is { Type: "m.room.message", TypedContent: RoomMessageEventContent message })
-                if (message is { MessageType: "m.text" } && message.Body.StartsWith(_configuration.Prefix)) {
-                    var command = _commands.FirstOrDefault(x => x.Name == message.Body.Split(' ')[0][_configuration.Prefix.Length..]);
-                    if (command == null) {
-                        await room.SendMessageEventAsync(
-                            new RoomMessageEventContent("m.text", "Command not found!"));
-                        return;
-                    }
-
-                    var ctx = new CommandContext {
-                        Room = room,
-                        MessageEvent = @event
-                    };
-                    if (await command.CanInvoke(ctx))
-                        await command.Invoke(ctx);
-                    else
-                        await room.SendMessageEventAsync(
-                            new RoomMessageEventContent("m.text", "You do not have permission to run this command!"));
-                }
-        });
+        // Deprecated, using Bot Utils instead:
+        // syncHelper.TimelineEventHandlers.Add(async @event => {
+        //     _logger.LogInformation(
+        //         "Got timeline event in {}: {}", @event.RoomId, @event.ToJson(false, true));
+        //
+        //     var room = hs.GetRoom(@event.RoomId);
+        //     // _logger.LogInformation(eventResponse.ToJson(indent: false));
+        //     if (@event is not { Sender: "@emma:rory.gay" }) return;
+        //     if (@event is { Type: "m.room.message", TypedContent: RoomMessageEventContent message })
+        //         if (message is { MessageType: "m.text" } && message.Body.StartsWith(_configuration.Prefix)) {
+        //             var command = _commands.FirstOrDefault(x => x.Name == message.Body.Split(' ')[0][_configuration.Prefix.Length..]);
+        //             if (command == null) {
+        //                 await room.SendMessageEventAsync(
+        //                     new RoomMessageEventContent("m.text", "Command not found!"));
+        //                 return;
+        //             }
+        //
+        //             var ctx = new CommandContext {
+        //                 Room = room,
+        //                 MessageEvent = @event
+        //             };
+        //             if (await command.CanInvoke(ctx))
+        //                 await command.Invoke(ctx);
+        //             else
+        //                 await room.SendMessageEventAsync(
+        //                     new RoomMessageEventContent("m.text", "You do not have permission to run this command!"));
+        //         }
+        // });
         await syncHelper.RunSyncLoopAsync(cancellationToken: cancellationToken);
     }
 

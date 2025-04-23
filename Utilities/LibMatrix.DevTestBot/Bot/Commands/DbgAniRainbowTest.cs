@@ -1,14 +1,19 @@
 using System.Diagnostics;
 using LibMatrix.EventTypes.Spec;
-using LibMatrix.ExampleBot.Bot.Interfaces;
 using LibMatrix.Helpers;
 using LibMatrix.Services;
+using LibMatrix.Utilities.Bot.Interfaces;
 
 namespace ModerationBot.Commands;
 
 public class DbgAniRainbowTest(IServiceProvider services, HomeserverProviderService hsProvider, HomeserverResolverService hsResolver) : ICommand {
     public string Name { get; } = "ani-rainbow";
+
+    public string[]? Aliases => [];
+    public bool Unlisted => false;
+
     public string Description { get; } = "[Debug] animated rainbow :)";
+
 
     public async Task<bool> CanInvoke(CommandContext ctx) => ctx.Room.RoomId == "!hLEefBaYvNfJwcTjmt:rory.gay";
 

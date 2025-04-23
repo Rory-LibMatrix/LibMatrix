@@ -1,27 +1,21 @@
 // See https://aka.ms/new-console-template for more information
 
-using ArcaneLibs;
 using LibMatrix.ExampleBot.Bot;
-using LibMatrix.ExampleBot.Bot.Interfaces;
 using LibMatrix.Services;
+using LibMatrix.Utilities.Bot;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 Console.WriteLine("Hello, World!");
 
 var host = Host.CreateDefaultBuilder(args).ConfigureServices((_, services) => {
-    // services.AddScoped<TieredStorageService>(x =>
-    // new TieredStorageService(
-    // cacheStorageProvider: new FileStorageProvider("bot_data/cache/"),
-    // dataStorageProvider: new FileStorageProvider("bot_data/data/")
-    // )
-    // );
     services.AddScoped<DevTestBotConfiguration>();
     services.AddRoryLibMatrixServices();
-    foreach (var commandClass in ClassCollector<ICommand>.ResolveFromAllAccessibleAssemblies()) {
-        Console.WriteLine($"Adding command {commandClass.Name}");
-        services.AddScoped(typeof(ICommand), commandClass);
-    }
+
+    services.AddMatrixBot()
+        .AddCommandHandler()
+        .DiscoverAllCommands()
+        .WithInviteHandler(ctx => Task.FromResult(ctx.MemberEvent.Sender!.EndsWith(":rory.gay")));
 
     // services.AddHostedService<ServerRoomSizeCalulator>();
     services.AddHostedService<PingTestBot>();

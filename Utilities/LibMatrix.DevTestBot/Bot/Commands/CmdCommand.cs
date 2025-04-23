@@ -1,11 +1,13 @@
 using ArcaneLibs.StringNormalisation;
 using LibMatrix.EventTypes.Spec;
-using LibMatrix.ExampleBot.Bot.Interfaces;
+using LibMatrix.Utilities.Bot.Interfaces;
 
 namespace LibMatrix.ExampleBot.Bot.Commands;
 
 public class CmdCommand : ICommand {
     public string Name => "cmd";
+    public string[]? Aliases => [];
+    public bool Unlisted => false;
     public string Description => "Runs a command on the host system";
 
     public Task<bool> CanInvoke(CommandContext ctx) => Task.FromResult(ctx.MessageEvent.Sender.EndsWith(":rory.gay") || ctx.MessageEvent.Sender.EndsWith(":conduit.rory.gay"));

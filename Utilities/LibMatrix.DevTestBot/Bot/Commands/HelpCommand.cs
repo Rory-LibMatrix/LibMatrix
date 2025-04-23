@@ -1,12 +1,14 @@
 using System.Text;
 using LibMatrix.EventTypes.Spec;
-using LibMatrix.ExampleBot.Bot.Interfaces;
+using LibMatrix.Utilities.Bot.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LibMatrix.ExampleBot.Bot.Commands;
 
 public class HelpCommand(IServiceProvider services) : ICommand {
     public string Name { get; } = "help";
+    public string[]? Aliases => [];
+    public bool Unlisted => false;
     public string Description { get; } = "Displays this help message";
 
     public async Task Invoke(CommandContext ctx) {

@@ -1,10 +1,12 @@
 using LibMatrix.EventTypes.Spec;
-using LibMatrix.ExampleBot.Bot.Interfaces;
+using LibMatrix.Utilities.Bot.Interfaces;
 
 namespace LibMatrix.ExampleBot.Bot.Commands;
 
 public class PingCommand : ICommand {
-    public string Name { get; } = "ping";
+    public string Name { get; } = "do-ping";
+    public string[]? Aliases => [];
+    public bool Unlisted => false;
     public string Description { get; } = "Pong!";
 
     // public async Task Invoke(CommandContext ctx) => await ctx.Room.SendMessageEventAsync(new RoomMessageEventContent(body: "pong!"));

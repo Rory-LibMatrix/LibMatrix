@@ -2,7 +2,6 @@ using System.Diagnostics.CodeAnalysis;
 using ArcaneLibs.Extensions;
 using LibMatrix.EventTypes.Spec;
 using LibMatrix.EventTypes.Spec.State.RoomInfo;
-using LibMatrix.ExampleBot.Bot.Interfaces;
 using LibMatrix.Helpers;
 using LibMatrix.Homeservers;
 using LibMatrix.Services;
@@ -16,17 +15,13 @@ public class DevTestBot : IHostedService {
     private readonly HomeserverProviderService _homeserverProviderService;
     private readonly ILogger<DevTestBot> _logger;
     private readonly DevTestBotConfiguration _configuration;
-    private readonly IEnumerable<ICommand> _commands;
 
     public DevTestBot(HomeserverProviderService homeserverProviderService, ILogger<DevTestBot> logger,
-        DevTestBotConfiguration configuration, IServiceProvider services) {
+        DevTestBotConfiguration configuration) {
         logger.LogInformation("{} instantiated!", GetType().Name);
         _homeserverProviderService = homeserverProviderService;
         _logger = logger;
         _configuration = configuration;
-        _logger.LogInformation("Getting commands...");
-        _commands = services.GetServices<ICommand>();
-        _logger.LogInformation("Got {} commands!", _commands.Count());
     }
 
     /// <summary>Triggered when the application host is ready to start the service.</summary>
@@ -59,48 +54,6 @@ public class DevTestBot : IHostedService {
         //     _logger.LogInformation($"Got room state for {room.RoomId}!");
         // }
 
-        syncHelper.InviteReceivedHandlers.Add(async Task (args) => {
-            var inviteEvent =
-                args.Value.InviteState.Events.FirstOrDefault(x =>
-                    x.Type == "m.room.member" && x.StateKey == hs.UserId);
-            _logger.LogInformation(
-                $"Got invite to {args.Key} by {inviteEvent.Sender} with reason: {(inviteEvent.TypedContent as RoomMemberEventContent).Reason}");
-            if (inviteEvent.Sender.EndsWith(":rory.gay") || inviteEvent.Sender == "@mxidupwitch:the-apothecary.club")
-                try {
-                    var senderProfile = await hs.GetProfileAsync(inviteEvent.Sender);
-                    await hs.GetRoom(args.Key).JoinAsync(reason: $"I was invited by {senderProfile.DisplayName ?? inviteEvent.Sender}!");
-                }
-                catch (Exception e) {
-                    _logger.LogError("{}", e.ToString());
-                    await hs.GetRoom(args.Key).LeaveAsync("I was unable to join the room: " + e);
-                }
-        });
-        syncHelper.TimelineEventHandlers.Add(async @event => {
-            _logger.LogInformation(
-                "Got timeline event in {}: {}", @event.RoomId, @event.ToJson(false, true));
-
-            var room = hs.GetRoom(@event.RoomId);
-            // _logger.LogInformation(eventResponse.ToJson(indent: false));
-            if (@event is { Type: "m.room.message", TypedContent: RoomMessageEventContent message })
-                if (message is { MessageType: "m.text" } && message.Body.StartsWith(_configuration.Prefix)) {
-                    var command = _commands.FirstOrDefault(x => x.Name == message.Body.Split(' ')[0][_configuration.Prefix.Length..]);
-                    if (command == null) {
-                        await room.SendMessageEventAsync(
-                            new RoomMessageEventContent("m.text", "Command not found!"));
-                        return;
-                    }
-
-                    var ctx = new CommandContext {
-                        Room = room,
-                        MessageEvent = @event
-                    };
-                    if (await command.CanInvoke(ctx))
-                        await command.Invoke(ctx);
-                    else
-                        await room.SendMessageEventAsync(
-                            new RoomMessageEventContent("m.text", "You do not have permission to run this command!"));
-                }
-        });
         await syncHelper.RunSyncLoopAsync(cancellationToken: cancellationToken);
     }
 
