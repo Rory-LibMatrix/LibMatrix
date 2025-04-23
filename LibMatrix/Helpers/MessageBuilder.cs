@@ -10,9 +10,9 @@ public class MessageBuilder(string msgType = "m.text", string format = "org.matr
 
     public RoomMessageEventContent Build() => Content;
 
-    public MessageBuilder WithBody(string body) {
+    public MessageBuilder WithBody(string body, string? formattedBody = null) {
         Content.Body += body;
-        Content.FormattedBody += body;
+        Content.FormattedBody += formattedBody ?? body;
         return this;
     }
 
@@ -112,7 +112,7 @@ public class MessageBuilder(string msgType = "m.text", string format = "org.matr
     public class TableBuilder(MessageBuilder msb) {
         public TableBuilder WithTitle(string title, int colspan) {
             msb.Content.Body += title + "\n";
-            msb.Content.FormattedBody += $"<thead><tr><th colspan=\"{colspan}\">{title}</th></tr></thead>";
+            msb.Content.FormattedBody += $"<thead><tr><th colspan=\"{colspan}\">{title}</th></tr></thead><br/>";
             return this;
         }
 

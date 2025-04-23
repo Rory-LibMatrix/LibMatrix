@@ -137,15 +137,19 @@ public class CommandListenerHostedService : IHostedService {
         var room = _hs.GetRoom(evt.RoomId!);
 
         var commandWithoutPrefix = message.BodyWithoutReplyFallback[usedPrefix.Length..].Trim();
+        var usedCommand = _commands
+            .SelectMany<ICommand, string>(x => [x.Name, ..x.Aliases ?? []])
+            .OrderByDescending(x => x.Length)
+            .FirstOrDefault(commandWithoutPrefix.StartsWith);
         var ctx = new CommandContext {
             Room = room,
             MessageEvent = @evt,
             Homeserver = _hs,
             Args = commandWithoutPrefix.Split(' ').Length == 1 ? [] : commandWithoutPrefix.Split(' ')[1..],
-            CommandName = commandWithoutPrefix.Split(' ')[0]
+            CommandName = usedCommand ?? commandWithoutPrefix.Split(' ')[0]
         };
         try {
-            var command = _commands.SingleOrDefault(x => x.Name == commandWithoutPrefix.Split(' ')[0] || x.Aliases?.Contains(commandWithoutPrefix.Split(' ')[0]) == true);
+            var command = _commands.SingleOrDefault(x => x.Name == ctx.CommandName || x.Aliases?.Contains(ctx.CommandName) == true);
             if (command == null) {
                 await room.SendMessageEventAsync(
                     new RoomMessageEventContent("m.notice", $"Command \"{ctx.CommandName}\" not found!"));
