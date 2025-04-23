@@ -32,7 +32,7 @@ public class BotInstaller(IServiceCollection services) {
 
             if (!string.IsNullOrWhiteSpace(config.AccessTokenPath)) {
                 var token = File.ReadAllText(config.AccessTokenPath);
-                config.AccessToken = token;
+                config.AccessToken = token.Trim();
             }
 
             var hs = hsProvider.GetAuthenticatedWithToken(config.Homeserver, config.AccessToken).Result;

@@ -19,6 +19,7 @@ public class CommandListenerHostedService : IHostedService {
     private readonly Func<CommandResult, Task>? _commandResultHandler;
 
     private Task? _listenerTask;
+    private CancellationTokenSource _cts = new();
 
     public CommandListenerHostedService(AuthenticatedHomeserverGeneric hs, ILogger<CommandListenerHostedService> logger, IServiceProvider services,
         LibMatrixBotConfiguration config, Func<CommandResult, Task>? commandResultHandler = null) {
@@ -35,7 +36,7 @@ public class CommandListenerHostedService : IHostedService {
     /// <summary>Triggered when the application host is ready to start the service.</summary>
     /// <param name="cancellationToken">Indicates that the start process has been aborted.</param>
     public Task StartAsync(CancellationToken cancellationToken) {
-        _listenerTask = Run(cancellationToken);
+        _listenerTask = Run(_cts.Token);
         _logger.LogInformation("Command listener started (StartAsync)!");
         return Task.CompletedTask;
     }
@@ -54,7 +55,7 @@ public class CommandListenerHostedService : IHostedService {
         });
 
         var syncHelper = new SyncHelper(_hs, _logger) {
-            Timeout = 300_000,
+            Timeout = 30_000,
             FilterId = filter
         };
 
@@ -96,7 +97,7 @@ public class CommandListenerHostedService : IHostedService {
             }
         });
 
-        await syncHelper.RunSyncLoopAsync(cancellationToken: cancellationToken);
+        await syncHelper.RunSyncLoopAsync(cancellationToken: _cts.Token);
     }
 
     /// <summary>Triggered when the application host is performing a graceful shutdown.</summary>
@@ -108,7 +109,7 @@ public class CommandListenerHostedService : IHostedService {
             return;
         }
 
-        await _listenerTask.WaitAsync(cancellationToken);
+        await _cts.CancelAsync();
     }
 
     private async Task<string?> GetUsedPrefix(StateEventResponse evt) {

@@ -46,7 +46,7 @@ public class SyncStateResolver(AuthenticatedHomeserverGeneric homeserver, ILogge
         _syncHelper.Filter = Filter;
         _syncHelper.FullState = FullState;
 
-        var sync = await _syncHelper.SyncAsync(cancellationToken);
+        var sync = await _syncHelper.SyncAsync(cancellationToken, noDelay: false);
         if (sync is null) return await ContinueAsync(cancellationToken);
 
         if (MergedState is null) MergedState = sync;

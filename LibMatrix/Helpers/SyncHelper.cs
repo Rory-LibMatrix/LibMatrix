@@ -80,7 +80,7 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
         _filterIsDirty = false;
     }
 
-    public async Task<SyncResponse?> SyncAsync(CancellationToken? cancellationToken = null) {
+    public async Task<SyncResponse?> SyncAsync(CancellationToken? cancellationToken = null, bool noDelay = false) {
         if (homeserver is null) {
             Console.WriteLine("Null passed as homeserver for SyncHelper!");
             throw new ArgumentNullException(nameof(homeserver), "Null passed as homeserver for SyncHelper!");
@@ -91,7 +91,7 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
             throw new ArgumentNullException(nameof(homeserver.ClientHttpClient), "Null passed as homeserver for SyncHelper!");
         }
 
-        if (storageProvider is null) return await SyncAsyncInternal(cancellationToken);
+        if (storageProvider is null) return await SyncAsyncInternal(cancellationToken, noDelay);
 
         var key = Since ?? "init";
         if (await storageProvider.ObjectExistsAsync(key)) {
@@ -103,13 +103,13 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
             }
         }
 
-        var sync = await SyncAsyncInternal(cancellationToken);
+        var sync = await SyncAsyncInternal(cancellationToken, noDelay);
         // Ditto here.
         if (sync is not null && sync.NextBatch != Since) await storageProvider.SaveObjectAsync(key, sync);
         return sync;
     }
 
-    private async Task<SyncResponse?> SyncAsyncInternal(CancellationToken? cancellationToken = null) {
+    private async Task<SyncResponse?> SyncAsyncInternal(CancellationToken? cancellationToken = null, bool noDelay = false) {
         var sw = Stopwatch.StartNew();
         if (_filterIsDirty) await UpdateFilterAsync();
 
@@ -138,8 +138,11 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
             }
 
             var timeToWait = MinimumDelay.Subtract(sw.Elapsed);
-            if (timeToWait.TotalMilliseconds > 0)
+            if (!noDelay && timeToWait.TotalMilliseconds > 0) {
+                logger?.LogWarning("SyncAsyncInternal: Waiting {delay}", timeToWait);
                 await Task.Delay(timeToWait);
+            }
+
             return resp;
         }
         catch (TaskCanceledException) {
@@ -157,10 +160,18 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
 
     public async IAsyncEnumerable<SyncResponse> EnumerateSyncAsync(CancellationToken? cancellationToken = null) {
         while (!cancellationToken?.IsCancellationRequested ?? true) {
-            var sync = await SyncAsync(cancellationToken);
+            var sw = Stopwatch.StartNew();
+            var sync = await SyncAsync(cancellationToken, noDelay: true);
             if (sync is null) continue;
             if (!string.IsNullOrWhiteSpace(sync.NextBatch)) Since = sync.NextBatch;
             yield return sync;
+            
+            
+            var timeToWait = MinimumDelay.Subtract(sw.Elapsed);
+            if (timeToWait.TotalMilliseconds > 0) {
+                logger?.LogWarning("EnumerateSyncAsync: Waiting {delay}", timeToWait);   
+                await Task.Delay(timeToWait);
+            }
         }
     }
 
