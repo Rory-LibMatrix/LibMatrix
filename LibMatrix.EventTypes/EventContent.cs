@@ -53,6 +53,9 @@ public abstract class TimelineEventContent : EventContent {
         // used for reactions
         [JsonPropertyName("key")]
         public string? Key { get; set; }
+        
+        [JsonExtensionData]
+        public Dictionary<string, object>? AdditionalData { get; set; } = [];
 
         public class EventInReplyTo {
             [JsonPropertyName("event_id")]
