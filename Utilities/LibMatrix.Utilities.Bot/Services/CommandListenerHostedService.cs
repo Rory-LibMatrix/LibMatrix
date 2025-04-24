@@ -141,11 +141,13 @@ public class CommandListenerHostedService : IHostedService {
             .SelectMany<ICommand, string>(x => [x.Name, ..x.Aliases ?? []])
             .OrderByDescending(x => x.Length)
             .FirstOrDefault(commandWithoutPrefix.StartsWith);
+        var args =
+            usedCommand == null ? [] : commandWithoutPrefix[(usedCommand.Length + 1)..].Split(' ');
         var ctx = new CommandContext {
             Room = room,
-            MessageEvent = @evt,
+            MessageEvent = evt,
             Homeserver = _hs,
-            Args = commandWithoutPrefix.Split(' ').Length == 1 ? [] : commandWithoutPrefix.Split(' ')[1..],
+            Args = args,
             CommandName = usedCommand ?? commandWithoutPrefix.Split(' ')[0]
         };
         try {
