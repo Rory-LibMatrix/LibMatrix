@@ -7,7 +7,7 @@ namespace LibMatrix.EventTypes;
 
 public abstract class EventContent {
     [JsonExtensionData]
-    public Dictionary<string, JsonElement>? AdditionalData { get; set; } = [];
+    public Dictionary<string, object>? AdditionalData { get; set; } = [];
 
     public static List<string> GetMatchingEventTypes<T>() where T : EventContent {
         var type = typeof(T);
