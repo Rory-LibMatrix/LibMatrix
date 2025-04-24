@@ -6,7 +6,7 @@ namespace LibMatrix.Utilities.Bot.Commands;
 
 public class HelpCommand(IServiceProvider services) : ICommand {
     public string Name { get; } = "help";
-    public string[]? Aliases { get; } = new[] { "?" };
+    public string[]? Aliases { get; } = ["?"];
     public string Description { get; } = "Displays this help message";
     public bool Unlisted { get; }
 

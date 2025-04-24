@@ -142,7 +142,9 @@ public class CommandListenerHostedService : IHostedService {
             .OrderByDescending(x => x.Length)
             .FirstOrDefault(commandWithoutPrefix.StartsWith);
         var args =
-            usedCommand == null ? [] : commandWithoutPrefix[(usedCommand.Length + 1)..].Split(' ');
+            usedCommand == null || commandWithoutPrefix.Length <= usedCommand.Length
+                ? [] 
+                : commandWithoutPrefix[(usedCommand.Length + 1)..].Split(' ');
         var ctx = new CommandContext {
             Room = room,
             MessageEvent = evt,
@@ -153,8 +155,6 @@ public class CommandListenerHostedService : IHostedService {
         try {
             var command = _commands.SingleOrDefault(x => x.Name == ctx.CommandName || x.Aliases?.Contains(ctx.CommandName) == true);
             if (command == null) {
-                await room.SendMessageEventAsync(
-                    new RoomMessageEventContent("m.notice", $"Command \"{ctx.CommandName}\" not found!"));
                 return new() {
                     Success = false,
                     Result = CommandResult.CommandResultType.Failure_InvalidCommand,
