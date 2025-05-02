@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Web;
 using ArcaneLibs.Extensions;
+using LibMatrix.EventTypes.Spec;
 using LibMatrix.EventTypes.Spec.State.RoomInfo;
 using LibMatrix.Filters;
 using LibMatrix.Helpers;
@@ -169,8 +170,9 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
         try {
             return await GetAccountDataAsync<T>(key);
         }
-        catch (Exception e) {
-            return default;
+        catch (MatrixException e) {
+            if (e is { ErrorCode: MatrixException.ErrorCodes.M_NOT_FOUND }) return default;
+            throw;
         }
     }
 
@@ -188,8 +190,7 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
 
     public async Task UpdateProfilePropertyAsync(string name, object? value) {
         var caps = await GetCapabilitiesAsync();
-        if(caps is null) throw new Exception("Failed to get capabilities");
-
+        if (caps is null) throw new Exception("Failed to get capabilities");
     }
 
 #endregion
@@ -532,6 +533,47 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
     }
 
 #endregion
+
+    public Task ReportRoomAsync(string roomId, string reason) =>
+        ClientHttpClient.PostAsJsonAsync($"/_matrix/client/v3/rooms/{roomId}/report", new {
+            reason
+        });
+
+    public async Task ReportRoomEventAsync(string roomId, string eventId, string reason, int score = 0, bool ignoreSender = false) {
+        await ClientHttpClient.PostAsJsonAsync($"/_matrix/client/v3/rooms/{roomId}/report/{eventId}", new {
+            reason,
+            score
+        });
+
+        if (ignoreSender) {
+            var eventContent = await GetRoom(roomId).GetEventAsync(eventId);
+            var sender = eventContent.Sender;
+            await IgnoreUserAsync(sender);
+        }
+    }
+
+    public async Task ReportUserAsync(string userId, string reason, bool ignore = false) {
+        await ClientHttpClient.PostAsJsonAsync($"/_matrix/client/v3/users/{userId}/report", new {
+            reason
+        });
+
+        if (ignore) {
+            await IgnoreUserAsync(userId);
+        }
+    }
+
+    public async Task<IgnoredUserListEventContent> GetIgnoredUserListAsync() {
+        return await GetAccountDataOrNullAsync<IgnoredUserListEventContent>(IgnoredUserListEventContent.EventId) ?? new();
+    }
+
+    public async Task IgnoreUserAsync(string userId, IgnoredUserListEventContent.IgnoredUserContent? content = null) {
+        content ??= new();
+
+        var ignoredUserList = await GetIgnoredUserListAsync();
+        ignoredUserList.IgnoredUsers.TryAdd(userId, content);
+        await SetAccountDataAsync(IgnoredUserListEventContent.EventId, ignoredUserList);
+    }
+
     private class CapabilitiesResponse {
         [JsonPropertyName("capabilities")]
         public Dictionary<string, object>? Capabilities { get; set; }

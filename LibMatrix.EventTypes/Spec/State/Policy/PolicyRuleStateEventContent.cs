@@ -97,16 +97,27 @@ public abstract class PolicyRuleEventContent : EventContent {
 
     public Regex? GetEntityRegex() => Entity is null ? null : new(Entity.Replace(".", "\\.").Replace("*", ".*").Replace("?", "."));
 
+    public bool IsGlobRule() =>
+        Entity != null
+        && (Entity.Contains('*') || Entity.Contains('?'));
+
     public bool EntityMatches(string entity) =>
         Entity != null
         && (
             Entity == entity
             || (
-                Entity.Contains("*") || Entity.Contains("?")
+                IsGlobRule()
                     ? GetEntityRegex()!.IsMatch(entity)
                     : entity == Entity
             )
         );
+
+    public string? GetNormalizedRecommendation() {
+        if (Recommendation is "m.ban" or "org.matrix.mjolnir.ban")
+            return PolicyRecommendationTypes.Ban;
+
+        return Recommendation;
+    }
 }
 
 public static class PolicyRecommendationTypes {
