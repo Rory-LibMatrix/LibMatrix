@@ -5,6 +5,7 @@ using ArcaneLibs.Collections;
 using System.Text.Json.Nodes;
 using ArcaneLibs.Extensions;
 using LibMatrix.Filters;
+using LibMatrix.Helpers.SyncProcessors;
 using LibMatrix.Homeservers;
 using LibMatrix.Interfaces.Services;
 using LibMatrix.Responses;
@@ -22,6 +23,10 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
     public int Timeout { get; set; } = 30000;
     public string? SetPresence { get; set; } = "online";
     public bool UseInternalStreamingSync { get; set; } = true;
+
+    public List<Func<SyncResponse?, SyncResponse?>> SyncPreprocessors { get; } = [
+        SimpleSyncProcessors.FillRoomIds
+    ];
 
     public string? FilterId {
         get => _filterId;
@@ -76,7 +81,7 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
         else if (Filter is not null)
             _filterId = (await homeserver.UploadFilterAsync(Filter)).FilterId;
         else _filterId = null;
-        
+
         _filterIsDirty = false;
     }
 
@@ -106,6 +111,11 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
         var sync = await SyncAsyncInternal(cancellationToken, noDelay);
         // Ditto here.
         if (sync is not null && sync.NextBatch != Since) await storageProvider.SaveObjectAsync(key, sync);
+
+        foreach (var preprocessor in SyncPreprocessors) {
+            sync = preprocessor(sync);
+        }
+
         return sync;
     }
 
@@ -165,11 +175,10 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
             if (sync is null) continue;
             if (!string.IsNullOrWhiteSpace(sync.NextBatch)) Since = sync.NextBatch;
             yield return sync;
-            
-            
+
             var timeToWait = MinimumDelay.Subtract(sw.Elapsed);
             if (timeToWait.TotalMilliseconds > 0) {
-                logger?.LogWarning("EnumerateSyncAsync: Waiting {delay}", timeToWait);   
+                logger?.LogWarning("EnumerateSyncAsync: Waiting {delay}", timeToWait);
                 await Task.Delay(timeToWait);
             }
         }
