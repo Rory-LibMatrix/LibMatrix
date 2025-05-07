@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Net.Http.Json;
+using System.Reflection;
 using System.Text.Json;
 using ArcaneLibs.Collections;
 using System.Text.Json.Nodes;
@@ -14,6 +15,8 @@ using Microsoft.Extensions.Logging;
 namespace LibMatrix.Helpers;
 
 public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logger = null, IStorageProvider? storageProvider = null) {
+    private readonly Func<SyncResponse?, Task<SyncResponse?>> _msc4222EmulationSyncProcessor = new Msc4222EmulationSyncProcessor(homeserver).EmulateMsc4222;
+
     private SyncFilter? _filter;
     private string? _namedFilterName;
     private bool _filterIsDirty;
@@ -24,9 +27,26 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
     public string? SetPresence { get; set; } = "online";
     public bool UseInternalStreamingSync { get; set; } = true;
 
+    public bool UseMsc4222StateAfter {
+        get;
+        set {
+            field = value;
+            if (value) {
+                AsyncSyncPreprocessors.Add(_msc4222EmulationSyncProcessor);
+                Console.WriteLine($"Added MSC4222 emulation sync processor");
+            }
+            else {
+                AsyncSyncPreprocessors.Remove(_msc4222EmulationSyncProcessor);
+                Console.WriteLine($"Removed MSC4222 emulation sync processor");
+            }
+        }
+    } = false;
+
     public List<Func<SyncResponse?, SyncResponse?>> SyncPreprocessors { get; } = [
         SimpleSyncProcessors.FillRoomIds
     ];
+
+    public List<Func<SyncResponse?, Task<SyncResponse?>>> AsyncSyncPreprocessors { get; } = [];
 
     public string? FilterId {
         get => _filterId;
@@ -96,7 +116,21 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
             throw new ArgumentNullException(nameof(homeserver.ClientHttpClient), "Null passed as homeserver for SyncHelper!");
         }
 
-        if (storageProvider is null) return await SyncAsyncInternal(cancellationToken, noDelay);
+        if (storageProvider is null) {
+            var res =  await SyncAsyncInternal(cancellationToken, noDelay);
+            if (res is null) return null;
+            if (UseMsc4222StateAfter) res.Msc4222Method = SyncResponse.Msc4222SyncType.Server;
+
+            foreach (var preprocessor in SyncPreprocessors) {
+                res = preprocessor(res);
+            }
+
+            foreach (var preprocessor in AsyncSyncPreprocessors) {
+                res = await preprocessor(res);
+            }
+
+            return res;
+        }
 
         var key = Since ?? "init";
         if (await storageProvider.ObjectExistsAsync(key)) {
@@ -109,11 +143,18 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
         }
 
         var sync = await SyncAsyncInternal(cancellationToken, noDelay);
+        if (sync is null) return null;
         // Ditto here.
-        if (sync is not null && sync.NextBatch != Since) await storageProvider.SaveObjectAsync(key, sync);
+        if (sync.NextBatch != Since) await storageProvider.SaveObjectAsync(key, sync);
+
+        if (UseMsc4222StateAfter) sync.Msc4222Method = SyncResponse.Msc4222SyncType.Server;
 
         foreach (var preprocessor in SyncPreprocessors) {
             sync = preprocessor(sync);
+        }
+
+        foreach (var preprocessor in AsyncSyncPreprocessors) {
+            sync = await preprocessor(sync);
         }
 
         return sync;
@@ -126,6 +167,7 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
         var url = $"/_matrix/client/v3/sync?timeout={Timeout}&set_presence={SetPresence}&full_state={(FullState ? "true" : "false")}";
         if (!string.IsNullOrWhiteSpace(Since)) url += $"&since={Since}";
         if (_filterId is not null) url += $"&filter={_filterId}";
+        if (UseMsc4222StateAfter) url += "&org.matrix.msc4222.use_state_after=true&use_state_after=true"; // We use both unstable and stable names for compatibility
 
         // logger?.LogInformation("SyncHelper: Calling: {}", url);
 
