@@ -29,11 +29,11 @@ public class Msc4222EmulationSyncProcessor(AuthenticatedHomeserverGeneric homese
         var modified = false;
         List<Task<bool>> tasks = [];
         if (resp.Rooms is { Join.Count: > 0 }) {
-            tasks.AddRange(resp.Rooms.Join.Select(ProcessJoinedRooms));
+            tasks.AddRange(resp.Rooms.Join.Select(ProcessJoinedRooms).ToList());
         }
 
         if (resp.Rooms is { Leave.Count: > 0 }) {
-            tasks.AddRange(resp.Rooms.Leave.Select(ProcessLeftRooms));
+            tasks.AddRange(resp.Rooms.Leave.Select(ProcessLeftRooms).ToList());
         }
 
         var tasksEnum = tasks.ToAsyncEnumerable();
@@ -43,7 +43,7 @@ public class Msc4222EmulationSyncProcessor(AuthenticatedHomeserverGeneric homese
             }
         }
 
-        Console.WriteLine($"Msc4222EmulationSyncProcessor.EmulateMsc4222 processed {resp.Rooms?.Join?.Count}/{resp.Rooms?.Leave?.Count} rooms in {sw.Elapsed}");
+        Console.WriteLine($"Msc4222EmulationSyncProcessor.EmulateMsc4222 processed {resp.Rooms?.Join?.Count}/{resp.Rooms?.Leave?.Count} rooms in {sw.Elapsed} (modified: {modified})");
         if (modified)
             resp.Msc4222Method = SyncResponse.Msc4222SyncType.Emulated;
 

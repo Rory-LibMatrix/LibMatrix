@@ -25,6 +25,10 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
     public string? Since { get; set; }
     public int Timeout { get; set; } = 30000;
     public string? SetPresence { get; set; } = "online";
+    
+    /// <summary>
+    /// Disabling this uses a technically slower code path, useful for checking whether delay comes from waiting for server or deserialising responses
+    /// </summary>
     public bool UseInternalStreamingSync { get; set; } = true;
 
     public bool UseMsc4222StateAfter {
