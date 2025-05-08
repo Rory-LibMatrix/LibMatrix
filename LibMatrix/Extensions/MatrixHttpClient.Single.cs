@@ -70,7 +70,7 @@ public class MatrixHttpClient {
         return options;
     }
 
-    public async Task<HttpResponseMessage> SendUnhandledAsync(HttpRequestMessage request, CancellationToken cancellationToken) {
+    public async Task<HttpResponseMessage> SendUnhandledAsync(HttpRequestMessage request, CancellationToken cancellationToken, int attempt = 0) {
         if (request.RequestUri is null) throw new NullReferenceException("RequestUri is null");
         // if (!request.RequestUri.IsAbsoluteUri)
         request.RequestUri = request.RequestUri.EnsureAbsolute(BaseAddress!);
@@ -84,7 +84,7 @@ public class MatrixHttpClient {
             request.RequestUri = new Uri(BaseAddress ?? throw new InvalidOperationException("Relative URI passed, but no BaseAddress is specified!"), request.RequestUri);
         swWait.Stop();
         var swExec = Stopwatch.StartNew();
-        
+
         foreach (var (key, value) in AdditionalQueryParameters) request.RequestUri = request.RequestUri.AddQuery(key, value);
         foreach (var (key, value) in DefaultRequestHeaders) {
             if (request.Headers.Contains(key)) continue;
@@ -101,16 +101,23 @@ public class MatrixHttpClient {
             responseMessage = await Client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         }
         catch (Exception e) {
-            if (e is TaskCanceledException or TimeoutException) {
+            if (attempt >= 5) {
+                Console.WriteLine(
+                    $"Failed to send request {request.Method} {BaseAddress}{request.RequestUri} ({Util.BytesToString(request.Content?.Headers.ContentLength ?? 0)}):\n{e}");
+                throw;
+            }
+
+            if (e is TaskCanceledException or TimeoutException or HttpRequestException) {
                 if (request.Method == HttpMethod.Get && !cancellationToken.IsCancellationRequested) {
                     await Task.Delay(Random.Shared.Next(500, 2500), cancellationToken);
                     request.ResetSendStatus();
-                    return await SendAsync(request, cancellationToken);
+                    return await SendUnhandledAsync(request, cancellationToken, attempt + 1);
                 }
             }
             else if (!e.ToString().StartsWith("TypeError: NetworkError"))
                 Console.WriteLine(
                     $"Failed to send request {request.Method} {BaseAddress}{request.RequestUri} ({Util.BytesToString(request.Content?.Headers.ContentLength ?? 0)}):\n{e}");
+
             throw;
         }
 #if SYNC_HTTPCLIENT
@@ -149,8 +156,8 @@ public class MatrixHttpClient {
 
         //retry on gateway timeout
         // if (responseMessage.StatusCode == HttpStatusCode.GatewayTimeout) {
-            // request.ResetSendStatus();
-            // return await SendAsync(request, cancellationToken);
+        // request.ResetSendStatus();
+        // return await SendAsync(request, cancellationToken);
         // }
 
         //error handling
@@ -160,7 +167,7 @@ public class MatrixHttpClient {
                 ErrorCode = "M_UNKNOWN",
                 Error = "Unknown error, server returned no content"
             };
-        
+
         // if (!content.StartsWith('{')) throw new InvalidDataException("Encountered invalid data:\n" + content);
         if (!content.TrimStart().StartsWith('{')) {
             responseMessage.EnsureSuccessStatusCode();

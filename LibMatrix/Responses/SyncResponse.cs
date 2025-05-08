@@ -28,7 +28,7 @@ public class SyncResponse {
 
     [JsonPropertyName("device_lists")]
     public DeviceListsDataStructure? DeviceLists { get; set; }
-    
+
     [JsonPropertyName("gay.rory.libmatrix.msc4222_sync_type")]
     public Msc4222SyncType Msc4222Method { get; set; } = Msc4222SyncType.None;
 
@@ -65,10 +65,16 @@ public class SyncResponse {
 
             [JsonPropertyName("state")]
             public EventList? State { get; set; }
-            
+
             [JsonPropertyName("state_after")]
             public EventList? StateAfter { get; set; }
 
+            [Obsolete("This property is only used for de/serialisation")]
+            [JsonPropertyName("org.matrix.msc4222.state_after")]
+            public EventList? StateAfterUnstable {
+                get => StateAfter;
+                set => StateAfter = value;
+            }
 
             public override string ToString() {
                 var lastEvent = Timeline?.Events?.LastOrDefault(x => x.Type == "m.room.member");
@@ -83,9 +89,16 @@ public class SyncResponse {
 
             [JsonPropertyName("state")]
             public EventList? State { get; set; }
-            
+
             [JsonPropertyName("state_after")]
             public EventList? StateAfter { get; set; }
+
+            [Obsolete("This property is only used for de/serialisation")]
+            [JsonPropertyName("org.matrix.msc4222.state_after")]
+            public EventList? StateAfterUnstable {
+                get => StateAfter;
+                set => StateAfter = value;
+            }
 
             [JsonPropertyName("account_data")]
             public EventList? AccountData { get; set; }
@@ -153,7 +166,7 @@ public class SyncResponse {
             Rooms?.Leave?.Values?.Max(x => x.Timeline?.Events?.Max(y => y.OriginServerTs)) ?? 0
         ]).Max();
     }
-    
+
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum Msc4222SyncType {
         None,
