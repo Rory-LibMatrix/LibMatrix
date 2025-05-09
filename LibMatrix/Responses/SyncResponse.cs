@@ -167,7 +167,7 @@ public class SyncResponse {
         ]).Max();
     }
 
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonConverter(typeof(JsonStringEnumConverter<Msc4222SyncType>))]
     public enum Msc4222SyncType {
         None,
         Server,

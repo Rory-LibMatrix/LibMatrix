@@ -100,13 +100,10 @@ public class StateEvent {
     [JsonPropertyName("replaces_state")]
     public string? ReplacesState { get; set; }
 
-    private JsonObject? _rawContent;
-
     [JsonPropertyName("content")]
-    public JsonObject? RawContent {
-        get => _rawContent;
-        set => _rawContent = value;
-    }
+    // [field: AllowNull, MaybeNull]
+    [NotNull]
+    public JsonObject? RawContent { get; set; }
 
     //debug
     [JsonIgnore]
@@ -122,6 +119,9 @@ public class StateEvent {
 
     [JsonIgnore]
     public string InternalContentTypeName => TypedContent?.GetType().Name ?? "null";
+
+    public static bool TypeKeyPairMatches(StateEventResponse x, StateEventResponse y) => x.Type == y.Type && x.StateKey == y.StateKey;
+    public static bool Equals(StateEventResponse x, StateEventResponse y) => x.Type == y.Type && x.StateKey == y.StateKey && x.RawContent.Equals(y.RawContent);
 }
 
 public class StateEventResponse : StateEvent {
