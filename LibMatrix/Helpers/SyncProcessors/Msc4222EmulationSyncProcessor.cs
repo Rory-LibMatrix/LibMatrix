@@ -26,6 +26,12 @@ public class Msc4222EmulationSyncProcessor(AuthenticatedHomeserverGeneric homese
             return resp;
         }
 
+        resp = await EmulateMsc4222Internal(resp, sw);
+        
+        return SimpleSyncProcessors.FillRoomIds(resp);
+    }
+
+    private async Task<SyncResponse?> EmulateMsc4222Internal(SyncResponse? resp, Stopwatch sw) {
         var modified = false;
         List<Task<bool>> tasks = [];
         if (resp.Rooms is { Join.Count: > 0 }) {

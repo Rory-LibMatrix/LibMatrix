@@ -18,6 +18,8 @@ public class SimpleSyncProcessors {
                     Parallel.ForEach(data.Timeline.Events, evt => evt.RoomId = id);
                 if (data.State is { Events.Count: > 0 })
                     Parallel.ForEach(data.State.Events, evt => evt.RoomId = id);
+                if (data.StateAfter is { Events.Count: > 0 })
+                    Parallel.ForEach(data.StateAfter.Events, evt => evt.RoomId = id);
             });
         if (resp.Rooms.Leave is { Count: > 0 })
             Parallel.ForEach(resp.Rooms.Leave, (roomEntry) => {
@@ -28,6 +30,8 @@ public class SimpleSyncProcessors {
                     Parallel.ForEach(data.Timeline.Events, evt => evt.RoomId = id);
                 if (data.State is { Events.Count: > 0 })
                     Parallel.ForEach(data.State.Events, evt => evt.RoomId = id);
+                if (data.StateAfter is { Events.Count: > 0 })
+                    Parallel.ForEach(data.StateAfter.Events, evt => evt.RoomId = id);
             });
         if (resp.Rooms.Invite is { Count: > 0 })
             Parallel.ForEach(resp.Rooms.Invite, (roomEntry) => {

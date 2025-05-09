@@ -16,12 +16,16 @@ public class IgnoredUserListEventContent : EventContent {
         [JsonExtensionData]
         public Dictionary<string, object>? AdditionalData { get; set; } = [];
 
-        public T GetAdditionalData<T>(string key) {
+        public T? GetAdditionalData<T>(string key) where T : class {
             if (AdditionalData == null || !AdditionalData.TryGetValue(key, out var value))
-                throw new KeyNotFoundException($"Key '{key}' not found in AdditionalData.");
+                return null;
+            
             if (value is T tValue)
                 return tValue;
-            throw new InvalidCastException($"Value for key '{key}' cannot be cast to type '{typeof(T)}'. Cannot continue.");
+            if (value is JsonElement jsonElement)
+                return jsonElement.Deserialize<T>();
+
+            throw new InvalidCastException($"Value for key '{key}' ({value.GetType()}) cannot be cast to type '{typeof(T)}'. Cannot continue.");
         }
     }
 }
