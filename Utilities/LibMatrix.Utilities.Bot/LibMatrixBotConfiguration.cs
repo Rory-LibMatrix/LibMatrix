@@ -10,4 +10,5 @@ public class LibMatrixBotConfiguration {
     public List<string> Prefixes { get; set; }
     public bool MentionPrefix { get; set; }
     public string? LogRoom { get; set; }
+    public bool SelfCommandsOnly { get; set; } = true;
 }

@@ -300,7 +300,7 @@ public class RoomTests : TestBed<TestFixture> {
         });
         
         await room.InviteUsersAsync(users.Select(u => u.UserId));
-        var members = await room.GetMembersListAsync(false);
+        var members = await room.GetMembersListAsync();
         Assert.NotNull(members);
         Assert.NotEmpty(members);
         Assert.All(members, Assert.NotNull);

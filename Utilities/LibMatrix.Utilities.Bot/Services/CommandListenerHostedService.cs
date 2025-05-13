@@ -20,6 +20,7 @@ public class CommandListenerHostedService : IHostedService {
 
     private Task? _listenerTask;
     private CancellationTokenSource _cts = new();
+    private long _startupTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
     public CommandListenerHostedService(AuthenticatedHomeserverGeneric hs, ILogger<CommandListenerHostedService> logger, IServiceProvider services,
         LibMatrixBotConfiguration config, Func<CommandResult, Task>? commandResultHandler = null) {
@@ -43,16 +44,20 @@ public class CommandListenerHostedService : IHostedService {
 
     private async Task? Run(CancellationToken cancellationToken) {
         _logger.LogInformation("Starting command listener!");
-        var filter = await _hs.NamedCaches.FilterCache.GetOrSetValueAsync("gay.rory.libmatrix.utilities.bot.command_listener_syncfilter.dev2", new SyncFilter() {
-            AccountData = new SyncFilter.EventFilter(notTypes: ["*"], limit: 1),
-            Presence = new SyncFilter.EventFilter(notTypes: ["*"]),
-            Room = new SyncFilter.RoomFilter() {
-                AccountData = new SyncFilter.RoomFilter.StateFilter(notTypes: ["*"]),
-                Ephemeral = new SyncFilter.RoomFilter.StateFilter(notTypes: ["*"]),
-                State = new SyncFilter.RoomFilter.StateFilter(notTypes: ["*"]),
-                Timeline = new SyncFilter.RoomFilter.StateFilter(types: ["m.room.message"], notSenders: [_hs.WhoAmI.UserId]),
-            }
-        });
+        var filter = await _hs.NamedCaches.FilterCache.GetOrSetValueAsync("gay.rory.libmatrix.utilities.bot.command_listener_syncfilter.dev3" + (_config.SelfCommandsOnly),
+            new SyncFilter() {
+                AccountData = new SyncFilter.EventFilter(notTypes: ["*"], limit: 1),
+                Presence = new SyncFilter.EventFilter(notTypes: ["*"]),
+                Room = new SyncFilter.RoomFilter() {
+                    AccountData = new SyncFilter.RoomFilter.StateFilter(notTypes: ["*"]),
+                    Ephemeral = new SyncFilter.RoomFilter.StateFilter(notTypes: ["*"]),
+                    State = new SyncFilter.RoomFilter.StateFilter(notTypes: ["*"]),
+                    Timeline = new SyncFilter.RoomFilter.StateFilter(types: ["m.room.message"],
+                        notSenders: _config.SelfCommandsOnly ? null : [_hs.WhoAmI.UserId],
+                        senders: _config.SelfCommandsOnly ? [_hs.WhoAmI.UserId] : null
+                    ),
+                }
+            });
 
         var syncHelper = new SyncHelper(_hs, _logger) {
             Timeout = 30_000,
@@ -62,9 +67,13 @@ public class CommandListenerHostedService : IHostedService {
         syncHelper.SyncReceivedHandlers.Add(async sync => {
             _logger.LogInformation("Sync received!");
             foreach (var roomResp in sync.Rooms?.Join ?? []) {
-                if (roomResp.Value.Timeline?.Events is null or { Count: > 5 }) continue;
+                // if (roomResp.Value.Timeline?.Events is null or { Count: > 5 }) continue;
+                if (roomResp.Value.Timeline?.Events is null) continue;
                 foreach (var @event in roomResp.Value.Timeline.Events) {
                     @event.RoomId = roomResp.Key;
+                    if (_config.SelfCommandsOnly && @event.Sender != _hs.WhoAmI.UserId) continue;
+                    if (@event.OriginServerTs < _startupTime) continue; // ignore events older than startup time
+                    
                     try {
                         // var room = _hs.GetRoom(@event.RoomId);
                         // _logger.LogInformation(eventResponse.ToJson(indent: false));
@@ -143,8 +152,8 @@ public class CommandListenerHostedService : IHostedService {
             .FirstOrDefault(commandWithoutPrefix.StartsWith);
         var args =
             usedCommand == null || commandWithoutPrefix.Length <= usedCommand.Length
-                ? [] 
-                : commandWithoutPrefix[(usedCommand.Length + 1)..].Split(' ');
+                ? []
+                : commandWithoutPrefix[(usedCommand.Length + 1)..].Split(' ').SelectMany(x=>x.Split('\n')).ToArray();
         var ctx = new CommandContext {
             Room = room,
             MessageEvent = evt,

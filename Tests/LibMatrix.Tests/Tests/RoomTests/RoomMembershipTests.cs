@@ -162,7 +162,7 @@ public class RoomMembershipTests : TestBed<TestFixture> {
             await otherUser.GetRoom(room.RoomId).JoinAsync(reason: "Unit test!");
         }
 
-        var states = await room.GetMembersListAsync(false);
+        var states = await room.GetMembersListAsync();
         Assert.Equal(count + 1, states.Count);
         
         await room.LeaveAsync();

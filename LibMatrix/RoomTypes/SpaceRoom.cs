@@ -17,7 +17,7 @@ public class SpaceRoom(AuthenticatedHomeserverGeneric homeserver, string roomId)
     }
 
     public async Task<EventIdResponse> AddChildAsync(GenericRoom room) {
-        var members = room.GetMembersEnumerableAsync(true);
+        var members = room.GetMembersEnumerableAsync("join");
         Dictionary<string, int> memberCountByHs = new();
         await foreach (var member in members) {
             var server = member.StateKey.Split(':')[1];

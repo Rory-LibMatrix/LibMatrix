@@ -232,8 +232,11 @@ public class GenericRoom {
         return await res.Content.ReadFromJsonAsync<RoomIdResponse>() ?? throw new Exception("Failed to join room?");
     }
 
-    public async IAsyncEnumerable<StateEventResponse> GetMembersEnumerableAsync(bool joinedOnly = true) {
-        var res = await Homeserver.ClientHttpClient.GetAsync($"/_matrix/client/v3/rooms/{RoomId}/members");
+    public async IAsyncEnumerable<StateEventResponse> GetMembersEnumerableAsync(string? membership = null) {
+        var url = $"/_matrix/client/v3/rooms/{RoomId}/members";
+        var isMembershipSet = !string.IsNullOrWhiteSpace(membership);
+        if (isMembershipSet) url += $"?membership={membership}";
+        var res = await Homeserver.ClientHttpClient.GetAsync(url);
         var result = await JsonSerializer.DeserializeAsync<ChunkedStateEventResponse>(await res.Content.ReadAsStreamAsync(), new JsonSerializerOptions() {
             TypeInfoResolver = ChunkedStateEventResponseSerializerContext.Default
         });
@@ -242,13 +245,16 @@ public class GenericRoom {
 
         foreach (var resp in result.Chunk ?? []) {
             if (resp.Type != "m.room.member") continue;
-            if (joinedOnly && resp.RawContent?["membership"]?.GetValue<string>() != "join") continue;
+            if (isMembershipSet && resp.RawContent?["membership"]?.GetValue<string>() != membership) continue;
             yield return resp;
         }
     }
 
-    public async Task<FrozenSet<StateEventResponse>> GetMembersListAsync(bool joinedOnly = true) {
-        var res = await Homeserver.ClientHttpClient.GetAsync($"/_matrix/client/v3/rooms/{RoomId}/members");
+    public async Task<FrozenSet<StateEventResponse>> GetMembersListAsync(string? membership = null) {
+        var url = $"/_matrix/client/v3/rooms/{RoomId}/members";
+        var isMembershipSet = !string.IsNullOrWhiteSpace(membership);
+        if (isMembershipSet) url += $"?membership={membership}";
+        var res = await Homeserver.ClientHttpClient.GetAsync(url);
         var result = await JsonSerializer.DeserializeAsync<ChunkedStateEventResponse>(await res.Content.ReadAsStreamAsync(), new JsonSerializerOptions() {
             TypeInfoResolver = ChunkedStateEventResponseSerializerContext.Default
         });
@@ -258,11 +264,21 @@ public class GenericRoom {
         var members = new List<StateEventResponse>();
         foreach (var resp in result.Chunk ?? []) {
             if (resp.Type != "m.room.member") continue;
-            if (joinedOnly && resp.RawContent?["membership"]?.GetValue<string>() != "join") continue;
+            if (isMembershipSet && resp.RawContent?["membership"]?.GetValue<string>() != membership) continue;
             members.Add(resp);
         }
 
         return members.ToFrozenSet();
+    }
+
+    public async IAsyncEnumerable<string> GetMemberIdsEnumerableAsync(string? membership = null) {
+        await foreach (var evt in GetMembersEnumerableAsync(membership))
+            yield return evt.StateKey!;
+    }
+    
+    public async Task<FrozenSet<string>> GetMemberIdsListAsync(string? membership = null) {
+        var members = await GetMembersListAsync(membership);
+        return members.Select(x => x.StateKey!).ToFrozenSet();
     }
 
 #region Utility shortcuts
@@ -392,6 +408,15 @@ public class GenericRoom {
             });
         return await res.Content.ReadFromJsonAsync<EventIdResponse>() ?? throw new Exception("Failed to send event");
     }
+
+    public async Task<EventIdResponse> SendReactionAsync(string eventId, string key) =>
+        await SendTimelineEventAsync("m.reaction", new RoomMessageReactionEventContent() {
+            RelatesTo = new() {
+                RelationType = "m.annotation",
+                EventId = eventId,
+                Key = key
+            }
+        });
 
     public async Task<EventIdResponse?> SendFileAsync(string fileName, Stream fileStream, string messageType = "m.file", string contentType = "application/octet-stream") {
         var url = await Homeserver.UploadFile(fileName, fileStream);
