@@ -1,9 +1,11 @@
+using System.Collections.Frozen;
 using ArcaneLibs.Extensions;
 using LibMatrix.EventTypes.Spec;
 using LibMatrix.EventTypes.Spec.State.RoomInfo;
 using LibMatrix.Filters;
 using LibMatrix.Helpers;
 using LibMatrix.Homeservers;
+using LibMatrix.Utilities.Bot.Configuration;
 using LibMatrix.Utilities.Bot.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -11,40 +13,35 @@ using Microsoft.Extensions.Logging;
 
 namespace LibMatrix.Utilities.Bot.Services;
 
-public class CommandListenerHostedService : IHostedService {
-    private readonly AuthenticatedHomeserverGeneric _hs;
-    private readonly ILogger<CommandListenerHostedService> _logger;
-    private readonly IEnumerable<ICommand> _commands;
-    private readonly LibMatrixBotConfiguration _config;
-    private readonly Func<CommandResult, Task>? _commandResultHandler;
+public class CommandListenerHostedService(
+    AuthenticatedHomeserverGeneric hs,
+    ILogger<CommandListenerHostedService> logger,
+    IServiceProvider services,
+    LibMatrixBotConfiguration botConfig,
+    CommandListenerConfiguration config,
+    Func<CommandResult, Task>? commandResultHandler = null
+)
+    : IHostedService {
+    private FrozenSet<ICommand> _commands = null!;
 
     private Task? _listenerTask;
     private CancellationTokenSource _cts = new();
     private long _startupTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-    public CommandListenerHostedService(AuthenticatedHomeserverGeneric hs, ILogger<CommandListenerHostedService> logger, IServiceProvider services,
-        LibMatrixBotConfiguration config, Func<CommandResult, Task>? commandResultHandler = null) {
-        logger.LogInformation("{} instantiated!", GetType().Name);
-        _hs = hs;
-        _logger = logger;
-        _config = config;
-        _commandResultHandler = commandResultHandler;
-        _logger.LogInformation("Getting commands...");
-        _commands = services.GetServices<ICommand>();
-        _logger.LogInformation("Got {} commands!", _commands.Count());
-    }
-
     /// <summary>Triggered when the application host is ready to start the service.</summary>
     /// <param name="cancellationToken">Indicates that the start process has been aborted.</param>
     public Task StartAsync(CancellationToken cancellationToken) {
         _listenerTask = Run(_cts.Token);
-        _logger.LogInformation("Command listener started (StartAsync)!");
+        logger.LogInformation("Getting commands...");
+        _commands = services.GetServices<ICommand>().ToFrozenSet();
+        logger.LogInformation("Got {} commands!", _commands.Count);
+        logger.LogInformation("Command listener started (StartAsync)!");
         return Task.CompletedTask;
     }
 
     private async Task? Run(CancellationToken cancellationToken) {
-        _logger.LogInformation("Starting command listener!");
-        var filter = await _hs.NamedCaches.FilterCache.GetOrSetValueAsync("gay.rory.libmatrix.utilities.bot.command_listener_syncfilter.dev3" + (_config.SelfCommandsOnly),
+        logger.LogInformation("Starting command listener!");
+        var filter = await hs.NamedCaches.FilterCache.GetOrSetValueAsync("gay.rory.libmatrix.utilities.bot.command_listener_syncfilter.dev3" + (config.SelfCommandsOnly),
             new SyncFilter() {
                 AccountData = new SyncFilter.EventFilter(notTypes: ["*"], limit: 1),
                 Presence = new SyncFilter.EventFilter(notTypes: ["*"]),
@@ -53,54 +50,54 @@ public class CommandListenerHostedService : IHostedService {
                     Ephemeral = new SyncFilter.RoomFilter.StateFilter(notTypes: ["*"]),
                     State = new SyncFilter.RoomFilter.StateFilter(notTypes: ["*"]),
                     Timeline = new SyncFilter.RoomFilter.StateFilter(types: ["m.room.message"],
-                        notSenders: _config.SelfCommandsOnly ? null : [_hs.WhoAmI.UserId],
-                        senders: _config.SelfCommandsOnly ? [_hs.WhoAmI.UserId] : null
+                        notSenders: config.SelfCommandsOnly ? null : [hs.WhoAmI.UserId],
+                        senders: config.SelfCommandsOnly ? [hs.WhoAmI.UserId] : null
                     ),
                 }
             });
 
-        var syncHelper = new SyncHelper(_hs, _logger) {
-            Timeout = 30_000,
-            FilterId = filter
+        var syncHelper = new SyncHelper(hs, logger) {
+            FilterId = filter,
+            Timeout = config.SyncConfiguration.Timeout ?? 30_000,
+            MinimumDelay = config.SyncConfiguration.MinimumSyncTime ?? TimeSpan.Zero,
+            SetPresence = config.SyncConfiguration.Presence ?? botConfig.Presence,
+            
         };
 
         syncHelper.SyncReceivedHandlers.Add(async sync => {
-            _logger.LogInformation("Sync received!");
+            logger.LogInformation("Sync received!");
             foreach (var roomResp in sync.Rooms?.Join ?? []) {
-                // if (roomResp.Value.Timeline?.Events is null or { Count: > 5 }) continue;
                 if (roomResp.Value.Timeline?.Events is null) continue;
                 foreach (var @event in roomResp.Value.Timeline.Events) {
                     @event.RoomId = roomResp.Key;
-                    if (_config.SelfCommandsOnly && @event.Sender != _hs.WhoAmI.UserId) continue;
+                    if (config.SelfCommandsOnly && @event.Sender != hs.WhoAmI.UserId) continue;
                     if (@event.OriginServerTs < _startupTime) continue; // ignore events older than startup time
-                    
+
                     try {
-                        // var room = _hs.GetRoom(@event.RoomId);
-                        // _logger.LogInformation(eventResponse.ToJson(indent: false));
                         if (@event is { Type: "m.room.message", TypedContent: RoomMessageEventContent message })
                             if (message is { MessageType: "m.text" }) {
                                 var usedPrefix = await GetUsedPrefix(@event);
                                 if (usedPrefix is null) return;
                                 var res = await InvokeCommand(@event, usedPrefix);
-                                await (_commandResultHandler?.Invoke(res) ?? HandleResult(res));
+                                await (commandResultHandler?.Invoke(res) ?? HandleResult(res));
                             }
                     }
                     catch (Exception e) {
-                        _logger.LogError(e, "Error in command listener!");
+                        logger.LogError(e, "Error in command listener!");
                         Console.WriteLine(@event.ToJson(ignoreNull: false, indent: true));
                         var fakeResult = new CommandResult() {
                             Result = CommandResult.CommandResultType.Failure_Exception,
                             Exception = e,
                             Success = false,
                             Context = new() {
-                                Homeserver = _hs,
+                                Homeserver = hs,
                                 CommandName = "[CommandListener.SyncHandler]",
-                                Room = _hs.GetRoom(roomResp.Key),
+                                Room = hs.GetRoom(roomResp.Key),
                                 Args = [],
                                 MessageEvent = @event
                             }
                         };
-                        await (_commandResultHandler?.Invoke(fakeResult) ?? HandleResult(fakeResult));
+                        await (commandResultHandler?.Invoke(fakeResult) ?? HandleResult(fakeResult));
                     }
                 }
             }
@@ -112,9 +109,9 @@ public class CommandListenerHostedService : IHostedService {
     /// <summary>Triggered when the application host is performing a graceful shutdown.</summary>
     /// <param name="cancellationToken">Indicates that the shutdown process should no longer be graceful.</param>
     public async Task StopAsync(CancellationToken cancellationToken) {
-        _logger.LogInformation("Shutting down command listener!");
+        logger.LogInformation("Shutting down command listener!");
         if (_listenerTask is null) {
-            _logger.LogError("Could not shut down command listener task because it was null!");
+            logger.LogError("Could not shut down command listener task because it was null!");
             return;
         }
 
@@ -124,12 +121,12 @@ public class CommandListenerHostedService : IHostedService {
     private async Task<string?> GetUsedPrefix(StateEventResponse evt) {
         var messageContent = evt.TypedContent as RoomMessageEventContent;
         var message = messageContent!.BodyWithoutReplyFallback;
-        var prefix = _config.Prefixes.OrderByDescending(x => x.Length).FirstOrDefault(message.StartsWith);
-        if (prefix is null && _config.MentionPrefix) {
-            var profile = await _hs.GetProfileAsync(_hs.WhoAmI.UserId);
-            var roomProfile = await _hs.GetRoom(evt.RoomId!).GetStateAsync<RoomMemberEventContent>(RoomMemberEventContent.EventId, _hs.WhoAmI.UserId);
-            if (message.StartsWith(_hs.WhoAmI.UserId + ": ")) prefix = profile.DisplayName + ": ";    // `@bot:server.xyz: `
-            else if (message.StartsWith(_hs.WhoAmI.UserId + " ")) prefix = profile.DisplayName + " "; // `@bot:server.xyz `
+        var prefix = config.Prefixes.OrderByDescending(x => x.Length).FirstOrDefault(message.StartsWith);
+        if (prefix is null && config.MentionPrefix) {
+            var profile = await hs.GetProfileAsync(hs.WhoAmI.UserId);
+            var roomProfile = await hs.GetRoom(evt.RoomId!).GetStateAsync<RoomMemberEventContent>(RoomMemberEventContent.EventId, hs.WhoAmI.UserId);
+            if (message.StartsWith(hs.WhoAmI.UserId + ": ")) prefix = profile.DisplayName + ": ";    // `@bot:server.xyz: `
+            else if (message.StartsWith(hs.WhoAmI.UserId + " ")) prefix = profile.DisplayName + " "; // `@bot:server.xyz `
             else if (!string.IsNullOrWhiteSpace(roomProfile?.DisplayName) && message.StartsWith(roomProfile.DisplayName + ": "))
                 prefix = roomProfile.DisplayName + ": "; // `local bot: `
             else if (!string.IsNullOrWhiteSpace(roomProfile?.DisplayName) && message.StartsWith(roomProfile.DisplayName + " "))
@@ -143,7 +140,7 @@ public class CommandListenerHostedService : IHostedService {
 
     private async Task<CommandResult> InvokeCommand(StateEventResponse evt, string usedPrefix) {
         var message = evt.TypedContent as RoomMessageEventContent;
-        var room = _hs.GetRoom(evt.RoomId!);
+        var room = hs.GetRoom(evt.RoomId!);
 
         var commandWithoutPrefix = message.BodyWithoutReplyFallback[usedPrefix.Length..].Trim();
         var usedCommand = _commands
@@ -153,11 +150,11 @@ public class CommandListenerHostedService : IHostedService {
         var args =
             usedCommand == null || commandWithoutPrefix.Length <= usedCommand.Length
                 ? []
-                : commandWithoutPrefix[(usedCommand.Length + 1)..].Split(' ').SelectMany(x=>x.Split('\n')).ToArray();
+                : commandWithoutPrefix[(usedCommand.Length + 1)..].Split(' ').SelectMany(x => x.Split('\n')).ToArray();
         var ctx = new CommandContext {
             Room = room,
             MessageEvent = evt,
-            Homeserver = _hs,
+            Homeserver = hs,
             Args = args,
             CommandName = usedCommand ?? commandWithoutPrefix.Split(' ')[0]
         };

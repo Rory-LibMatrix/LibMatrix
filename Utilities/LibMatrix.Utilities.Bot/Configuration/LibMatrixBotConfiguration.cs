@@ -1,3 +1,4 @@
+using LibMatrix.Utilities.Bot.Configuration;
 using Microsoft.Extensions.Configuration;
 
 namespace LibMatrix.Utilities.Bot;
@@ -7,8 +8,10 @@ public class LibMatrixBotConfiguration {
     public string Homeserver { get; set; }
     public string? AccessToken { get; set; }
     public string? AccessTokenPath { get; set; }
-    public List<string> Prefixes { get; set; }
-    public bool MentionPrefix { get; set; }
     public string? LogRoom { get; set; }
-    public bool SelfCommandsOnly { get; set; } = true;
+
+    public string? Presence { get; set; }
+    
+    public InviteListenerConfiguration? InviteListener { get; set; }
+    public CommandListenerConfiguration? CommandListener { get; set; }
 }

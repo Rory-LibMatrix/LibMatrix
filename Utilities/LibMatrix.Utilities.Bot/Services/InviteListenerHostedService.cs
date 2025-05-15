@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using LibMatrix.Filters;
 using LibMatrix.Helpers;
 using LibMatrix.Homeservers;
+using LibMatrix.Utilities.Bot.Configuration;
 using LibMatrix.Utilities.Bot.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -12,16 +13,17 @@ namespace LibMatrix.Utilities.Bot.Services;
 public class InviteHandlerHostedService(
     ILogger<InviteHandlerHostedService> logger,
     AuthenticatedHomeserverGeneric hs,
-    InviteHandlerHostedService.InviteListenerSyncConfiguration listenerSyncConfiguration,
+    LibMatrixBotConfiguration botConfig,
+    InviteListenerConfiguration config,
     Func<RoomInviteContext, Task> inviteHandler
 ) : IHostedService {
     private Task? _listenerTask;
     private CancellationTokenSource _cts = new();
 
     private readonly SyncHelper _syncHelper = new(hs, logger) {
-        Timeout = listenerSyncConfiguration.Timeout ?? 30_000,
-        MinimumDelay = listenerSyncConfiguration.MinimumSyncTime ?? new(0),
-        SetPresence = listenerSyncConfiguration.Presence ?? "online"
+        Timeout = config.SyncConfiguration.Timeout ?? 30_000,
+        MinimumDelay = config.SyncConfiguration.MinimumSyncTime ?? TimeSpan.Zero,
+        SetPresence = config.SyncConfiguration.Presence ?? botConfig.Presence
     };
 
     /// <summary>Triggered when the application host is ready to start the service.</summary>
@@ -34,8 +36,8 @@ public class InviteHandlerHostedService(
     private async Task? Run(CancellationToken cancellationToken) {
         logger.LogInformation("Starting invite listener!");
         var nextBatchFile = $"inviteHandler.{hs.WhoAmI.UserId}.{hs.WhoAmI.DeviceId}.nextBatch";
-        if (listenerSyncConfiguration.Filter is not null) {
-            _syncHelper.Filter = listenerSyncConfiguration.Filter;
+        if (config.SyncConfiguration.Filter is not null) {
+            _syncHelper.Filter = config.SyncConfiguration.Filter;
         }
         else {
             _syncHelper.FilterId = await hs.NamedCaches.FilterCache.GetOrSetValueAsync("gay.rory.libmatrix.utilities.bot.invite_listener_syncfilter.dev0", new SyncFilter() {
@@ -51,7 +53,7 @@ public class InviteHandlerHostedService(
             });
         }
 
-        if (File.Exists(nextBatchFile) && !listenerSyncConfiguration.InitialSyncOnStartup) {
+        if (File.Exists(nextBatchFile) && !config.SyncConfiguration.InitialSyncOnStartup) {
             _syncHelper.Since = await File.ReadAllTextAsync(nextBatchFile, cancellationToken);
         }
 
@@ -70,7 +72,7 @@ public class InviteHandlerHostedService(
             await inviteHandler(inviteEventArgs);
         });
 
-        if (!listenerSyncConfiguration.InitialSyncOnStartup)
+        if (!config.SyncConfiguration.InitialSyncOnStartup)
             _syncHelper.SyncReceivedHandlers.Add(sync => File.WriteAllTextAsync(nextBatchFile, sync.NextBatch, cancellationToken));
         await _syncHelper.RunSyncLoopAsync(cancellationToken: _cts.Token);
     }
@@ -85,18 +87,5 @@ public class InviteHandlerHostedService(
         }
 
         await _cts.CancelAsync();
-    }
-
-
-
-    [SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Global", Justification = "Configuration")]
-    [SuppressMessage("ReSharper", "ClassNeverInstantiated.Global", Justification = "Configuration")]
-    public class InviteListenerSyncConfiguration {
-        public InviteListenerSyncConfiguration(IConfiguration config) => config.GetSection("LibMatrixBot:InviteHandler:SyncConfiguration").Bind(this);
-        public SyncFilter? Filter { get; set; }
-        public TimeSpan? MinimumSyncTime { get; set; }
-        public int? Timeout { get; set; }
-        public string? Presence { get; set; }
-        public bool InitialSyncOnStartup { get; set; }
     }
 }
