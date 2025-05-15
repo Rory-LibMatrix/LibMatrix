@@ -209,6 +209,7 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
             Console.WriteLine(e);
             logger?.LogError(e, "Failed to sync!\n{}", e.ToString());
             await Task.WhenAll(ExceptionHandlers.Select(x => x.Invoke(e)).ToList());
+            if (e is MatrixException { ErrorCode: MatrixException.ErrorCodes.M_UNKNOWN_TOKEN }) throw;
         }
 
         return null;
