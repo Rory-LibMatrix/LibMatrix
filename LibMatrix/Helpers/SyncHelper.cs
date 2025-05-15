@@ -24,7 +24,7 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
 
     public string? Since { get; set; }
     public int Timeout { get; set; } = 30000;
-    public string? SetPresence { get; set; } = "online";
+    public string? SetPresence { get; set; }
     
     /// <summary>
     /// Disabling this uses a technically slower code path, useful for checking whether delay comes from waiting for server or deserialising responses
@@ -168,9 +168,11 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
         var sw = Stopwatch.StartNew();
         if (_filterIsDirty) await UpdateFilterAsync();
 
-        var url = $"/_matrix/client/v3/sync?timeout={Timeout}&set_presence={SetPresence}&full_state={(FullState ? "true" : "false")}";
+        var url = $"/_matrix/client/v3/sync?timeout={Timeout}";
+        if (!string.IsNullOrWhiteSpace(SetPresence)) url += $"&set_presence={SetPresence}";
         if (!string.IsNullOrWhiteSpace(Since)) url += $"&since={Since}";
         if (_filterId is not null) url += $"&filter={_filterId}";
+        if (FullState) url += "&full_state=true";
         if (UseMsc4222StateAfter) url += "&org.matrix.msc4222.use_state_after=true&use_state_after=true"; // We use both unstable and stable names for compatibility
 
         // logger?.LogInformation("SyncHelper: Calling: {}", url);
