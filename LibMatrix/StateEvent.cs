@@ -121,7 +121,7 @@ public class StateEvent {
     public string InternalContentTypeName => TypedContent?.GetType().Name ?? "null";
 
     public static bool TypeKeyPairMatches(StateEventResponse x, StateEventResponse y) => x.Type == y.Type && x.StateKey == y.StateKey;
-    public static bool Equals(StateEventResponse x, StateEventResponse y) => x.Type == y.Type && x.StateKey == y.StateKey && x.RawContent.Equals(y.RawContent);
+    public static bool Equals(StateEventResponse x, StateEventResponse y) => x.Type == y.Type && x.StateKey == y.StateKey && JsonNode.DeepEquals(x.RawContent, y.RawContent);
 }
 
 public class StateEventResponse : StateEvent {

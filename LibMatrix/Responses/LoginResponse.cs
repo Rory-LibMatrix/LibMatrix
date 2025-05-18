@@ -19,11 +19,6 @@ public class LoginResponse {
 
     [JsonPropertyName("user_id")]
     public string UserId { get; set; }
-
-    // public async Task<AuthenticatedHomeserverGeneric> GetAuthenticatedHomeserver(string? proxy = null) {
-    // var urls = await new HomeserverResolverService().ResolveHomeserverFromWellKnown(Homeserver);
-    // await AuthenticatedHomeserverGeneric.Create<AuthenticatedHomeserverGeneric>(Homeserver, AccessToken, proxy);
-    // }
 }
 
 public class LoginRequest {

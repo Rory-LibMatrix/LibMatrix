@@ -94,6 +94,16 @@ public class MessageBuilder(string msgType = "m.text", string format = "org.matr
     public MessageBuilder WithMention(string id, string? displayName = null) {
         Content.Body += $"@{displayName ?? id}";
         Content.FormattedBody += $"<a href=\"https://matrix.to/#/{id}\">{displayName ?? id}</a>";
+        if(id == "@room") {
+            Content.Mentions ??= new();
+            Content.Mentions.Room = true;
+        }
+        else if (id.StartsWith('@')) {
+            Content.Mentions ??= new();
+            Content.Mentions.Users ??= new();
+            Content.Mentions.Users.Add(id);
+        }
+
         return this;
     }
 

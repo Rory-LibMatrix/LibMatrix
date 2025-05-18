@@ -34,9 +34,29 @@ public class RoomMessageEventContent : TimelineEventContent {
 
     [JsonPropertyName("info")]
     public FileInfoStruct? FileInfo { get; set; }
-    
+
     [JsonIgnore]
-    public string BodyWithoutReplyFallback => Body.Split('\n').SkipWhile(x => x.StartsWith(">")).SkipWhile(x=>x.Trim().Length == 0).Aggregate((x, y) => $"{x}\n{y}");
+    public string BodyWithoutReplyFallback {
+        get {
+            var parts = Body
+                .Split('\n')
+                .SkipWhile(x => x.StartsWith(">"))
+                .SkipWhile(x => x.Trim().Length == 0)
+                .ToList();
+            return parts.Count > 0 ? parts.Aggregate((x, y) => $"{x}\n{y}") : Body;
+        }
+    }
+
+    [JsonPropertyName("m.mentions")]
+    public MentionsStruct? Mentions { get; set; }
+
+    public class MentionsStruct {
+        [JsonPropertyName("user_ids")]
+        public List<string>? Users { get; set; }
+        
+        [JsonPropertyName("room")]
+        public bool? Room { get; set; }
+    }
 
     public class FileInfoStruct {
         [JsonPropertyName("mimetype")]
@@ -47,10 +67,10 @@ public class RoomMessageEventContent : TimelineEventContent {
 
         [JsonPropertyName("thumbnail_url")]
         public string? ThumbnailUrl { get; set; }
-        
+
         [JsonPropertyName("w")]
         public int? Width { get; set; }
-        
+
         [JsonPropertyName("h")]
         public int? Height { get; set; }
     }

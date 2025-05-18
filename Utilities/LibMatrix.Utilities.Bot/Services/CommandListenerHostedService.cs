@@ -25,7 +25,7 @@ public class CommandListenerHostedService(
     private FrozenSet<ICommand> _commands = null!;
 
     private Task? _listenerTask;
-    private CancellationTokenSource _cts = new();
+    private readonly CancellationTokenSource _cts = new();
     private long _startupTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
     /// <summary>Triggered when the application host is ready to start the service.</summary>
@@ -61,7 +61,6 @@ public class CommandListenerHostedService(
             Timeout = config.SyncConfiguration.Timeout ?? 30_000,
             MinimumDelay = config.SyncConfiguration.MinimumSyncTime ?? TimeSpan.Zero,
             SetPresence = config.SyncConfiguration.Presence ?? botConfig.Presence,
-            
         };
 
         syncHelper.SyncReceivedHandlers.Add(async sync => {
