@@ -35,7 +35,6 @@ public class RoomPolicyRuleEventContent : PolicyRuleEventContent {
 [DebuggerDisplay("""{GetType().Name.Replace("PolicyRuleEventContent", ""),nq} policy matching {Entity}, Reason: {Reason}""")]
 public abstract class PolicyRuleEventContent : EventContent {
     // public PolicyRuleEventContent() => Console.WriteLine($"init policy {GetType().Name}");
-    private string? _reason;
 
     /// <summary>
     ///     Entity this ban applies to, can use * and ? as globs.
@@ -52,17 +51,7 @@ public abstract class PolicyRuleEventContent : EventContent {
     /// </summary>
     [JsonPropertyName("reason")]
     [FriendlyName(Name = "Reason")]
-    public virtual string? Reason {
-        get =>
-            // Console.WriteLine($"Read policy reason: {_reason}");
-            _reason;
-        set =>
-            // Console.WriteLine($"Set policy reason: {value}");
-            // if(init)
-            // Console.WriteLine(string.Join('\n', Environment.StackTrace.Split('\n')[..5]));
-            // init = true;
-            _reason = value;
-    }
+    public string? Reason { get; set; }
 
     /// <summary>
     ///     Suggested action to take
