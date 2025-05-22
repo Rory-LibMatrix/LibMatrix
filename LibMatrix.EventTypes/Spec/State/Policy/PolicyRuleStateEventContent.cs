@@ -98,18 +98,16 @@ public abstract class PolicyRuleEventContent : EventContent {
     public Regex? GetEntityRegex() => Entity is null ? null : new(Entity.Replace(".", "\\.").Replace("*", ".*").Replace("?", "."));
 
     public bool IsGlobRule() =>
-        Entity != null
+        !string.IsNullOrWhiteSpace(Entity)
         && (Entity.Contains('*') || Entity.Contains('?'));
 
     public bool EntityMatches(string entity) =>
-        Entity != null
+        !string.IsNullOrWhiteSpace(entity)
+        && !string.IsNullOrWhiteSpace(Entity)
         && (
+            // Check if entity is equal regardless of glob check
             Entity == entity
-            || (
-                IsGlobRule()
-                    ? GetEntityRegex()!.IsMatch(entity)
-                    : entity == Entity
-            )
+            || (IsGlobRule() && GetEntityRegex()!.IsMatch(entity))
         );
 
     public string? GetNormalizedRecommendation() {

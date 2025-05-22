@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging;
 namespace LibMatrix.Helpers;
 
 public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logger = null, IStorageProvider? storageProvider = null) {
-    private readonly Func<SyncResponse?, Task<SyncResponse?>> _msc4222EmulationSyncProcessor = new Msc4222EmulationSyncProcessor(homeserver).EmulateMsc4222;
+    private readonly Func<SyncResponse?, Task<SyncResponse?>> _msc4222EmulationSyncProcessor = new Msc4222EmulationSyncProcessor(homeserver, logger).EmulateMsc4222;
 
     private SyncFilter? _filter;
     private string? _namedFilterName;
@@ -25,7 +25,7 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
     public string? Since { get; set; }
     public int Timeout { get; set; } = 30000;
     public string? SetPresence { get; set; }
-    
+
     /// <summary>
     /// Disabling this uses a technically slower code path, useful for checking whether delay comes from waiting for server or deserialising responses
     /// </summary>
@@ -37,11 +37,11 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
             field = value;
             if (value) {
                 AsyncSyncPreprocessors.Add(_msc4222EmulationSyncProcessor);
-                Console.WriteLine($"Added MSC4222 emulation sync processor");
+                logger?.LogInformation($"Added MSC4222 emulation sync processor");
             }
             else {
                 AsyncSyncPreprocessors.Remove(_msc4222EmulationSyncProcessor);
-                Console.WriteLine($"Removed MSC4222 emulation sync processor");
+                logger?.LogInformation($"Removed MSC4222 emulation sync processor");
             }
         }
     } = false;
@@ -121,7 +121,7 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
         }
 
         if (storageProvider is null) {
-            var res =  await SyncAsyncInternal(cancellationToken, noDelay);
+            var res = await SyncAsyncInternal(cancellationToken, noDelay);
             if (res is null) return null;
             if (UseMsc4222StateAfter) res.Msc4222Method = SyncResponse.Msc4222SyncType.Server;
 
@@ -186,13 +186,12 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
             else {
                 var httpResp = await homeserver.ClientHttpClient.GetAsync(url, cancellationToken ?? CancellationToken.None);
                 if (httpResp is null) throw new NullReferenceException("Failed to send HTTP request");
-                logger?.LogInformation("Got sync response: {} bytes, {} elapsed", httpResp.GetContentLength(), sw.Elapsed);
+                var receivedTime = sw.Elapsed;
                 var deserializeSw = Stopwatch.StartNew();
-                // var jsonResp = await httpResp.Content.ReadFromJsonAsync<JsonObject>(cancellationToken: cancellationToken ?? CancellationToken.None);
-                // var resp = jsonResp.Deserialize<SyncResponse>();
                 resp = await httpResp.Content.ReadFromJsonAsync(cancellationToken: cancellationToken ?? CancellationToken.None,
                     jsonTypeInfo: SyncResponseSerializerContext.Default.SyncResponse);
-                logger?.LogInformation("Deserialized sync response: {} bytes, {} elapsed, {} total", httpResp.GetContentLength(), deserializeSw.Elapsed, sw.Elapsed);
+                logger?.LogInformation("Deserialized sync response: {} bytes, {} response time, {} deserialize time, {} total", httpResp.GetContentLength(), receivedTime,
+                    deserializeSw.Elapsed, sw.Elapsed);
             }
 
             var timeToWait = MinimumDelay.Subtract(sw.Elapsed);
