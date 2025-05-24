@@ -37,6 +37,10 @@ public class MessageBuilder(string msgType = "m.text", string format = "org.matr
         return this;
     }
 
+    public static string GetColoredBody(string color, string body) {
+        return $"<font color=\"{color}\">{body}</font>";
+    }
+
     public MessageBuilder WithColoredBody(string color, string body) {
         Content.Body += body;
         Content.FormattedBody += $"<font color=\"{color}\">{body}</font>";
@@ -94,7 +98,7 @@ public class MessageBuilder(string msgType = "m.text", string format = "org.matr
     public MessageBuilder WithMention(string id, string? displayName = null) {
         Content.Body += $"@{displayName ?? id}";
         Content.FormattedBody += $"<a href=\"https://matrix.to/#/{id}\">{displayName ?? id}</a>";
-        if(id == "@room") {
+        if (id == "@room") {
             Content.Mentions ??= new();
             Content.Mentions.Room = true;
         }
