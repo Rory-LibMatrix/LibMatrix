@@ -82,6 +82,10 @@ public abstract class PolicyRuleEventContent : EventContent {
         }
     }
 
+    [JsonPropertyName("org.matrix.msc4205.hashes")]
+    [TableHide]
+    public PolicyHash? Hashes { get; set; }
+
     public string GetDraupnir2StateKey() => Convert.ToBase64String(SHA256.HashData($"{Entity}{Recommendation}".AsBytes().ToArray()));
 
     public Regex? GetEntityRegex() => Entity is null ? null : new(Entity.Replace(".", "\\.").Replace("*", ".*").Replace("?", "."));
@@ -90,18 +94,33 @@ public abstract class PolicyRuleEventContent : EventContent {
         !string.IsNullOrWhiteSpace(Entity)
         && (Entity.Contains('*') || Entity.Contains('?'));
 
-    public bool EntityMatches(string entity) =>
-        !string.IsNullOrWhiteSpace(entity)
-        && !string.IsNullOrWhiteSpace(Entity)
-        && (
+    public bool EntityMatches(string entity) {
+        if (string.IsNullOrWhiteSpace(entity)) return false;
+
+        if (!string.IsNullOrWhiteSpace(Entity)) {
             // Check if entity is equal regardless of glob check
-            Entity == entity
-            || (IsGlobRule() && GetEntityRegex()!.IsMatch(entity))
-        );
+            var match = Entity == entity
+                        || (IsGlobRule() && GetEntityRegex()!.IsMatch(entity));
+            if (match) return match;
+        }
+
+        if (Hashes is not null) {
+            if (!string.IsNullOrWhiteSpace(Hashes.Sha256)) {
+                var hash = SHA256.HashData(entity.AsBytes().ToArray());
+                var match = Convert.ToBase64String(hash) == Hashes.Sha256;
+                if (match) return match;
+            }
+        }
+
+        return false;
+    }
 
     public string? GetNormalizedRecommendation() {
         if (Recommendation is "m.ban" or "org.matrix.mjolnir.ban")
             return PolicyRecommendationTypes.Ban;
+
+        if (Recommendation is "m.takedown" or "org.matrix.msc4204.takedown")
+            return "m.takedown";
 
         return Recommendation;
     }
@@ -117,6 +136,13 @@ public static class PolicyRecommendationTypes {
     ///     Mute this user
     /// </summary>
     public static string Mute = "support.feline.policy.recommendation_mute"; //stable prefix: m.mute, msc pending
+
+    public static string Takedown = "m.takedown"; //unstable prefix: org.matrix.msc4204.takedown
+}
+
+public class PolicyHash {
+    [JsonPropertyName("sha256")]
+    public string? Sha256 { get; set; }
 }
 
 // public class PolicySchemaDefinition {
