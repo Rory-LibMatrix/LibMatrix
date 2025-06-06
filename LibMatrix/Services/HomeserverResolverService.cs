@@ -44,7 +44,17 @@ public class HomeserverResolverService {
             return res;
         });
     }
-
+    
+    private async Task<T?> GetFromJsonAsync<T>(string url) {
+        try {
+            return await _httpClient.GetFromJsonAsync<T>(url);
+        }
+        catch (Exception e) {
+            _logger.LogWarning(e, "Failed to get JSON from {url}", url);
+            return default;
+        }
+    }
+    
     private async Task<string?> _tryResolveClientEndpoint(string homeserver) {
         ArgumentNullException.ThrowIfNull(homeserver);
         _logger.LogTrace("Resolving client well-known: {homeserver}", homeserver);
@@ -52,14 +62,20 @@ public class HomeserverResolverService {
         homeserver = homeserver.TrimEnd('/');
         // check if homeserver has a client well-known
         if (homeserver.StartsWith("https://")) {
-            clientWellKnown = await _httpClient.TryGetFromJsonAsync<ClientWellKnown>($"{homeserver}/.well-known/matrix/client");
+            clientWellKnown = await GetFromJsonAsync<ClientWellKnown>($"{homeserver}/.well-known/matrix/client");
+
+            if (clientWellKnown is null && await MatrixHttpClient.CheckSuccessStatus($"{homeserver}/_matrix/client/versions"))
+                return homeserver;
         }
         else if (homeserver.StartsWith("http://")) {
-            clientWellKnown = await _httpClient.TryGetFromJsonAsync<ClientWellKnown>($"{homeserver}/.well-known/matrix/client");
+            clientWellKnown = await GetFromJsonAsync<ClientWellKnown>($"{homeserver}/.well-known/matrix/client");
+            
+            if (clientWellKnown is null && await MatrixHttpClient.CheckSuccessStatus($"{homeserver}/_matrix/client/versions"))
+                return homeserver;
         }
         else {
-            clientWellKnown ??= await _httpClient.TryGetFromJsonAsync<ClientWellKnown>($"https://{homeserver}/.well-known/matrix/client");
-            clientWellKnown ??= await _httpClient.TryGetFromJsonAsync<ClientWellKnown>($"http://{homeserver}/.well-known/matrix/client");
+            clientWellKnown ??= await GetFromJsonAsync<ClientWellKnown>($"https://{homeserver}/.well-known/matrix/client");
+            clientWellKnown ??= await GetFromJsonAsync<ClientWellKnown>($"http://{homeserver}/.well-known/matrix/client");
 
             if (clientWellKnown is null) {
                 if (await MatrixHttpClient.CheckSuccessStatus($"https://{homeserver}/_matrix/client/versions"))
@@ -84,14 +100,14 @@ public class HomeserverResolverService {
         homeserver = homeserver.TrimEnd('/');
         // check if homeserver has a server well-known
         if (homeserver.StartsWith("https://")) {
-            serverWellKnown = await _httpClient.TryGetFromJsonAsync<ServerWellKnown>($"{homeserver}/.well-known/matrix/server");
+            serverWellKnown = await GetFromJsonAsync<ServerWellKnown>($"{homeserver}/.well-known/matrix/server");
         }
         else if (homeserver.StartsWith("http://")) {
-            serverWellKnown = await _httpClient.TryGetFromJsonAsync<ServerWellKnown>($"{homeserver}/.well-known/matrix/server");
+            serverWellKnown = await GetFromJsonAsync<ServerWellKnown>($"{homeserver}/.well-known/matrix/server");
         }
         else {
-            serverWellKnown ??= await _httpClient.TryGetFromJsonAsync<ServerWellKnown>($"https://{homeserver}/.well-known/matrix/server");
-            serverWellKnown ??= await _httpClient.TryGetFromJsonAsync<ServerWellKnown>($"http://{homeserver}/.well-known/matrix/server");
+            serverWellKnown ??= await GetFromJsonAsync<ServerWellKnown>($"https://{homeserver}/.well-known/matrix/server");
+            serverWellKnown ??= await GetFromJsonAsync<ServerWellKnown>($"http://{homeserver}/.well-known/matrix/server");
         }
 
         _logger.LogInformation("Server well-known for {hs}: {json}", homeserver, serverWellKnown?.ToJson() ?? "null");

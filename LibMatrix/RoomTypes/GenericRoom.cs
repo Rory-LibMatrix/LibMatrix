@@ -461,8 +461,8 @@ public class GenericRoom {
         }
     }
 
-    public Task<StateEventResponse> GetEventAsync(string eventId) =>
-        Homeserver.ClientHttpClient.GetFromJsonAsync<StateEventResponse>($"/_matrix/client/v3/rooms/{RoomId}/event/{eventId}");
+    public Task<StateEventResponse> GetEventAsync(string eventId, bool includeUnredactedContent = false) =>
+        Homeserver.ClientHttpClient.GetFromJsonAsync<StateEventResponse>($"/_matrix/client/v3/rooms/{RoomId}/event/{eventId}?fi.mau.msc2815.include_unredacted_content={includeUnredactedContent}");
 
     public async Task<EventIdResponse> RedactEventAsync(string eventToRedact, string? reason = null) {
         var data = new { reason };

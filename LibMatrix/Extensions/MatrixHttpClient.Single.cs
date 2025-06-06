@@ -101,22 +101,22 @@ public class MatrixHttpClient {
             responseMessage = await Client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         }
         catch (Exception e) {
-            if (attempt >= 5) {
-                Console.WriteLine(
-                    $"Failed to send request {request.Method} {BaseAddress}{request.RequestUri} ({Util.BytesToString(request.Content?.Headers.ContentLength ?? 0)}):\n{e}");
-                throw;
-            }
-
-            if (e is TaskCanceledException or TimeoutException or HttpRequestException) {
-                if (request.Method == HttpMethod.Get && !cancellationToken.IsCancellationRequested) {
-                    await Task.Delay(Random.Shared.Next(500, 2500), cancellationToken);
-                    request.ResetSendStatus();
-                    return await SendUnhandledAsync(request, cancellationToken, attempt + 1);
-                }
-            }
-            else if (!e.ToString().StartsWith("TypeError: NetworkError"))
-                Console.WriteLine(
-                    $"Failed to send request {request.Method} {BaseAddress}{request.RequestUri} ({Util.BytesToString(request.Content?.Headers.ContentLength ?? 0)}):\n{e}");
+            // if (attempt >= 5) {
+            //     Console.WriteLine(
+            //         $"Failed to send request {request.Method} {BaseAddress}{request.RequestUri} ({Util.BytesToString(request.Content?.Headers.ContentLength ?? 0)}):\n{e}");
+            //     throw;
+            // }
+            //
+            // if (e is TaskCanceledException or TimeoutException or HttpRequestException) {
+            //     if (request.Method == HttpMethod.Get && !cancellationToken.IsCancellationRequested) {
+            //         await Task.Delay(Random.Shared.Next(100, 1000), cancellationToken);
+            //         request.ResetSendStatus();
+            //         return await SendUnhandledAsync(request, cancellationToken, attempt + 1);
+            //     }
+            // }
+            // else if (!e.ToString().StartsWith("TypeError: NetworkError"))
+            //     Console.WriteLine(
+            //         $"Failed to send request {request.Method} {BaseAddress}{request.RequestUri} ({Util.BytesToString(request.Content?.Headers.ContentLength ?? 0)}):\n{e}");
 
             throw;
         }

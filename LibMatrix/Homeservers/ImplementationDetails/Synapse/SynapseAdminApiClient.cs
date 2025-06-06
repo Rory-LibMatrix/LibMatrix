@@ -183,6 +183,7 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
 #region Users
 
     public async IAsyncEnumerable<SynapseAdminUserListResult.SynapseAdminUserListResultUser> SearchUsersAsync(int limit = int.MaxValue, int chunkLimit = 250,
+        string orderBy = "name", string dir = "f",
         SynapseAdminLocalUserQueryFilter? localFilter = null) {
         // TODO: implement filters
         string? from = null;
@@ -190,6 +191,9 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
             var url = new Uri("/_synapse/admin/v3/users", UriKind.Relative);
             url = url.AddQuery("limit", Math.Min(limit, chunkLimit).ToString());
             if (!string.IsNullOrWhiteSpace(from)) url = url.AddQuery("from", from);
+            if (!string.IsNullOrWhiteSpace(orderBy)) url = url.AddQuery("order_by", orderBy);
+            if (!string.IsNullOrWhiteSpace(dir)) url = url.AddQuery("dir", dir);
+            
             Console.WriteLine($"--- ADMIN Querying User List with URL: {url} ---");
             // TODO: implement URI methods in http client
             var res = await authenticatedHomeserver.ClientHttpClient.GetFromJsonAsync<SynapseAdminUserListResult>(url.ToString());
