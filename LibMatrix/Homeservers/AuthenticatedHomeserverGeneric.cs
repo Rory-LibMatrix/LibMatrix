@@ -578,4 +578,41 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
         [JsonPropertyName("capabilities")]
         public Dictionary<string, object>? Capabilities { get; set; }
     }
+
+#region Room Directory/aliases
+
+    public async Task SetRoomAliasAsync(string roomAlias, string roomId) {
+        var resp = await ClientHttpClient.PutAsJsonAsync($"/_matrix/client/v3/directory/room/{HttpUtility.UrlEncode(roomAlias)}", new RoomIdResponse() {
+            RoomId = roomId
+        });
+        if (!resp.IsSuccessStatusCode) {
+            Console.WriteLine($"Failed to set room alias: {await resp.Content.ReadAsStringAsync()}");
+            throw new InvalidDataException($"Failed to set room alias: {await resp.Content.ReadAsStringAsync()}");
+        }
+    }
+
+    public async Task DeleteRoomAliasAsync(string roomAlias) {
+        var resp = await ClientHttpClient.DeleteAsync("/_matrix/client/v3/directory/room/" + HttpUtility.UrlEncode(roomAlias));
+        if (!resp.IsSuccessStatusCode) {
+            Console.WriteLine($"Failed to set room alias: {await resp.Content.ReadAsStringAsync()}");
+            throw new InvalidDataException($"Failed to set room alias: {await resp.Content.ReadAsStringAsync()}");
+        }
+    }
+
+    public async Task<RoomAliasesResponse> GetLocalRoomAliasesAsync(string roomId) {
+        var resp = await ClientHttpClient.GetAsync($"/_matrix/client/v3/rooms/{HttpUtility.UrlEncode(roomId)}/aliases");
+        if (!resp.IsSuccessStatusCode) {
+            Console.WriteLine($"Failed to get room aliases: {await resp.Content.ReadAsStringAsync()}");
+            throw new InvalidDataException($"Failed to get room aliases: {await resp.Content.ReadAsStringAsync()}");
+        }
+
+        return await resp.Content.ReadFromJsonAsync<RoomAliasesResponse>() ?? throw new Exception("Failed to get room aliases?");
+    }
+
+    public class RoomAliasesResponse {
+        [JsonPropertyName("aliases")]
+        public required List<string> Aliases { get; set; }
+    }
+
+#endregion
 }

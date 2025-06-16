@@ -121,7 +121,16 @@ public class StateEvent {
     public string InternalContentTypeName => TypedContent?.GetType().Name ?? "null";
 
     public static bool TypeKeyPairMatches(StateEventResponse x, StateEventResponse y) => x.Type == y.Type && x.StateKey == y.StateKey;
-    public static bool Equals(StateEventResponse x, StateEventResponse y) => x.Type == y.Type && x.StateKey == y.StateKey && JsonNode.DeepEquals(x.RawContent, y.RawContent);
+    public static bool Equals(StateEventResponse x, StateEventResponse y) => x.Type == y.Type && x.StateKey == y.StateKey && x.EventId == y.EventId;
+    
+    /// <summary>
+    ///     Compares two state events for deep equality, including type, state key, and raw content.
+    ///     If you trust the server, use Equals instead, as that compares by event ID instead of raw content.
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <returns></returns>
+    public static bool DeepEquals(StateEventResponse x, StateEventResponse y) => x.Type == y.Type && x.StateKey == y.StateKey && JsonNode.DeepEquals(x.RawContent, y.RawContent);
 }
 
 public class StateEventResponse : StateEvent {

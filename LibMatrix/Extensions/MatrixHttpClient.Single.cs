@@ -286,9 +286,9 @@ public class MatrixHttpClient {
         return await SendAsync(request, cancellationToken);
     }
 
-    public async Task DeleteAsync(string url) {
+    public async Task<HttpResponseMessage> DeleteAsync(string url) {
         var request = new HttpRequestMessage(HttpMethod.Delete, url);
-        await SendAsync(request);
+        return await SendAsync(request);
     }
 
     public async Task<HttpResponseMessage> DeleteAsJsonAsync<T>(string url, T payload) {

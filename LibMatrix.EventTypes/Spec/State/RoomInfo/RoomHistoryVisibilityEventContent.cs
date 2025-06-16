@@ -8,4 +8,10 @@ public class RoomHistoryVisibilityEventContent : EventContent {
 
     [JsonPropertyName("history_visibility")]
     public required string HistoryVisibility { get; set; }
+    
+    public static class HistoryVisibilityTypes {
+        public const string WorldReadable = "world_readable";
+        public const string Invited = "invited";
+        public const string Shared = "shared";
+    }
 }
