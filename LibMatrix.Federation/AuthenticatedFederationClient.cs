@@ -3,6 +3,7 @@
 namespace LibMatrix.Federation;
 
 public class AuthenticatedFederationClient : FederationClient {
+    
     public class AuthenticatedFederationConfiguration {
         
     }
@@ -10,5 +11,10 @@ public class AuthenticatedFederationClient : FederationClient {
     {
         
     }
+    
+    // public async Task<UserDeviceListResponse> GetUserDevicesAsync(string userId) {
+    //     var response = await GetAsync<UserDeviceListResponse>($"/_matrix/federation/v1/user/devices/{userId}", accessToken);
+    //     return response;
+    // }
     
 }
