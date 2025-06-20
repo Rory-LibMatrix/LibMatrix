@@ -12,7 +12,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\LibMatrix\LibMatrix.Federation\LibMatrix.Federation.csproj" />
+      <ProjectReference Include="..\..\LibMatrix.Federation\LibMatrix.Federation.csproj" />
     </ItemGroup>
 
 </Project>
