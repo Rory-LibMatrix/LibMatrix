@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace LibMatrix;
+namespace LibMatrix.Responses;
 
 internal class UserIdAndReason(string userId = null!, string reason = null!) {
     [JsonPropertyName("user_id")]

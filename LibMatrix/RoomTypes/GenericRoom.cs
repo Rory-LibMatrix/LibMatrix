@@ -1,6 +1,5 @@
 using System.Collections.Frozen;
 using System.Net.Http.Json;
-using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -12,6 +11,7 @@ using LibMatrix.EventTypes.Spec.State.RoomInfo;
 using LibMatrix.Filters;
 using LibMatrix.Helpers;
 using LibMatrix.Homeservers;
+using LibMatrix.Responses;
 
 namespace LibMatrix.RoomTypes;
 

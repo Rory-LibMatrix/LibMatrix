@@ -1,5 +1,6 @@
 using LibMatrix.EventTypes.Spec;
 using LibMatrix.Homeservers;
+using LibMatrix.Responses;
 using LibMatrix.RoomTypes;
 
 namespace LibMatrix.Utilities.Bot.Interfaces;

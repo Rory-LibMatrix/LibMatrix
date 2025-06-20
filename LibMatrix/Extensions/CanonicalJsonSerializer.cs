@@ -1,6 +1,7 @@
 using System.Collections.Frozen;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization.Metadata;
 using ArcaneLibs.Extensions;
 
@@ -57,6 +58,14 @@ public static class CanonicalJsonSerializer {
     // public static String Serialize<TValue>(TValue value, JsonTypeInfo<TValue> jsonTypeInfo) => JsonSerializer.Serialize(value, jsonTypeInfo, _options);
     // public static String Serialize(Object value, JsonTypeInfo jsonTypeInfo) 
 
+    public static byte[] SerializeToUtf8Bytes<T>(T value, JsonSerializerOptions? options = null) {
+        var newOptions = MergeOptions(null);
+        return JsonSerializer.SerializeToNode(value, options) // We want to allow passing custom converters for eg. double/float -> string here...
+            .SortProperties()!
+            .CanonicalizeNumbers()!
+            .ToJsonString(newOptions).AsBytes().ToArray();
+    }
+    
 #endregion
 
     // ReSharper disable once UnusedType.Local

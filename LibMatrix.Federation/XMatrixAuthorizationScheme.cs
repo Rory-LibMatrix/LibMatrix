@@ -40,8 +40,15 @@ public class XMatrixAuthorizationScheme {
             {
                 Console.WriteLine(headerValues.ToJson());
             }
+
+            return new() {
+                Destination = "",
+                Key = "",
+                Origin = "",
+                Signature = ""
+            };
         }
 
-        public string ToHeaderValue() { }
+        public string ToHeaderValue() => $"{Scheme} origin=\"{Origin}\", destination=\"{Destination}\", key=\"{Key}\", sig=\"{Signature}\"";
     }
 }

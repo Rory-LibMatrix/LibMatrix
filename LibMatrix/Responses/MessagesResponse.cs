@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace LibMatrix;
+namespace LibMatrix.Responses;
 
 public class MessagesResponse {
     [JsonPropertyName("start")]

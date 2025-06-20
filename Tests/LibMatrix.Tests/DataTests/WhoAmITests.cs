@@ -1,3 +1,5 @@
+using LibMatrix.Responses;
+
 namespace LibMatrix.Tests.DataTests;
 
 public static class WhoAmITests {

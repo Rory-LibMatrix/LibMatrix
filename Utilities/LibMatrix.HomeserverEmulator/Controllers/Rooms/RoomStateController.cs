@@ -2,6 +2,7 @@ using System.Collections.Frozen;
 using System.Text.Json.Nodes;
 using LibMatrix.HomeserverEmulator.Extensions;
 using LibMatrix.HomeserverEmulator.Services;
+using LibMatrix.Responses;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LibMatrix.HomeserverEmulator.Controllers.Rooms;
