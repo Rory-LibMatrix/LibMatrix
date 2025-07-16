@@ -1,3 +1,5 @@
+using System.Text.Json;
+using LibMatrix.Abstractions;
 using LibMatrix.FederationTest.Utilities;
 using Org.BouncyCastle.Crypto.Parameters;
 
@@ -9,7 +11,28 @@ public class FederationKeyStore(FederationTestConfiguration config) {
     }
 
     private static (Ed25519PrivateKeyParameters privateKey, Ed25519PublicKeyParameters publicKey) currentKeyPair = default;
-    public (Ed25519PrivateKeyParameters privateKey, Ed25519PublicKeyParameters publicKey) GetCurrentSigningKey() {
+    
+    public class PrivateKeyCollection {
+        
+        public required VersionedHomeserverPrivateKey CurrentSigningKey { get; set; }
+    }
+    
+    public PrivateKeyCollection GetCurrentSigningKey() {
+        if(!Directory.Exists(config.KeyStorePath)) Directory.CreateDirectory(config.KeyStorePath);
+        var privateKeyPath = Path.Combine(config.KeyStorePath, "private-keys.json");
+
+        if (!File.Exists(privateKeyPath)) {
+            var keyPair = InternalGetSigningKey();
+            var privateKey = new VersionedHomeserverPrivateKey {
+                PrivateKey = keyPair.privateKey.GetEncoded().ToUnpaddedBase64(),
+            };
+            File.WriteAllText(privateKeyPath, privateKey.ToJson());
+        }
+        
+        return JsonSerializer.Deserialize<PrivateKeyCollection>()
+    }
+
+    private (Ed25519PrivateKeyParameters privateKey, Ed25519PublicKeyParameters publicKey) InternalGetSigningKey() {
         if (currentKeyPair != default) {
             return currentKeyPair;
         }

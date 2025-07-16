@@ -18,7 +18,7 @@ public class Ed25519Utils {
     }
     
     public static Ed25519PublicKeyParameters LoadPublicKeyFromEncoded(string key) {
-        var keyBytes = Convert.FromBase64String(key);
+        var keyBytes = UnpaddedBase64.Decode(key);
         return new Ed25519PublicKeyParameters(keyBytes, 0);
     }
     

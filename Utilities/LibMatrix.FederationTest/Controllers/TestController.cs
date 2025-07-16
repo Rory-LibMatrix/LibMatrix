@@ -1,8 +1,8 @@
 using System.Text.Json.Nodes;
-using ArcaneLibs.Extensions;
+using LibMatrix.Abstractions;
 using LibMatrix.Extensions;
 using LibMatrix.Federation;
-using LibMatrix.Federation.Utilities;
+using LibMatrix.Federation.Extensions;
 using LibMatrix.FederationTest.Services;
 using LibMatrix.Homeservers;
 using Microsoft.AspNetCore.Mvc;
@@ -21,7 +21,7 @@ public class TestController(FederationTestConfiguration config, FederationKeySto
             BaseAddress = new Uri("https://matrix.rory.gay")
         };
 
-        var keyId = new ServerKeysResponse.VersionedKeyId() {
+        var keyId = new VersionedKeyId() {
             Algorithm = "ed25519",
             KeyId = "0"
         };

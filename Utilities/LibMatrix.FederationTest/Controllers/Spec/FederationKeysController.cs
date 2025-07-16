@@ -1,10 +1,11 @@
+using LibMatrix.Abstractions;
 using LibMatrix.Federation.Extensions;
-using LibMatrix.Federation.Utilities;
 using LibMatrix.FederationTest.Services;
 using LibMatrix.Homeservers;
+using LibMatrix.Responses.Federation;
 using Microsoft.AspNetCore.Mvc;
 
-namespace LibMatrix.FederationTest.Controllers;
+namespace LibMatrix.FederationTest.Controllers.Spec;
 
 [ApiController]
 [Route("_matrix/key/v2/")]
@@ -32,7 +33,7 @@ public class FederationKeysController(FederationTestConfiguration config, Federa
                         }
                     }
                 }
-            }.Sign(config.ServerName, new ServerKeysResponse.VersionedKeyId() { Algorithm = "ed25519", KeyId = "0" }, keys.privateKey);
+            }.Sign(config.ServerName, new VersionedKeyId() { Algorithm = "ed25519", KeyId = "0" }, keys.privateKey);
         }
         _serverKeyCacheLock.Release();
 

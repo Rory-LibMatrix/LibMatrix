@@ -1,10 +1,17 @@
+using System.Text.Json.Serialization;
 using LibMatrix.FederationTest.Services;
+using LibMatrix.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options => {
+        options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        options.JsonSerializerOptions.WriteIndented = true;
+        // options.JsonSerializerOptions.DefaultBufferSize = ;
+    }).AddMvcOptions(o => { o.SuppressOutputFormatterBuffering = true; });
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddHttpLogging(options => {
@@ -14,9 +21,9 @@ builder.Services.AddHttpLogging(options => {
     options.RequestHeaders.Add("X-Forwarded-Port");
 });
 
+builder.Services.AddRoryLibMatrixServices();
 builder.Services.AddSingleton<FederationTestConfiguration>();
 builder.Services.AddSingleton<FederationKeyStore>();
-
 
 var app = builder.Build();
 
@@ -25,10 +32,9 @@ if (true || app.Environment.IsDevelopment()) {
     app.MapOpenApi();
 }
 
-app.UseAuthorization();
+// app.UseAuthorization();
 
 app.MapControllers();
 // app.UseHttpLogging();
-
 
 app.Run();

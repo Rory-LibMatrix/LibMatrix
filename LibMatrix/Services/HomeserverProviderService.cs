@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using ArcaneLibs.Collections;
 using LibMatrix.Homeservers;
 using LibMatrix.Responses;
+using LibMatrix.Responses.Federation;
 using Microsoft.Extensions.Logging;
 
 namespace LibMatrix.Services;

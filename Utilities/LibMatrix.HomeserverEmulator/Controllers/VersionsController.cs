@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using LibMatrix.Homeservers;
 using LibMatrix.Responses;
+using LibMatrix.Responses.Federation;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LibMatrix.HomeserverEmulator.Controllers;

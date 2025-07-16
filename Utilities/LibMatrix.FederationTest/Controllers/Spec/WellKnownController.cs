@@ -1,7 +1,7 @@
 using LibMatrix.Services.WellKnownResolver.WellKnownResolvers;
 using Microsoft.AspNetCore.Mvc;
 
-namespace LibMatrix.FederationTest.Controllers;
+namespace LibMatrix.FederationTest.Controllers.Spec;
 
 [ApiController]
 [Route(".well-known/")]

@@ -1,7 +1,8 @@
 using LibMatrix.Homeservers;
+using LibMatrix.Responses.Federation;
 using Microsoft.AspNetCore.Mvc;
 
-namespace LibMatrix.FederationTest.Controllers;
+namespace LibMatrix.FederationTest.Controllers.Spec;
 
 [ApiController]
 [Route("_matrix/federation/v1/")]

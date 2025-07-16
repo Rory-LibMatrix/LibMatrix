@@ -1,17 +1,11 @@
-using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using ArcaneLibs.Extensions;
-using LibMatrix.Extensions;
-using LibMatrix.FederationTest.Utilities;
+using LibMatrix.Abstractions;
 using LibMatrix.Homeservers;
-using Org.BouncyCastle.Crypto.Parameters;
-using Org.BouncyCastle.Math.EC.Rfc8032;
 
-namespace LibMatrix.Federation.Utilities;
-
-public static class JsonSigning { }
+namespace LibMatrix.Responses.Federation;
 
 [JsonConverter(typeof(SignedObjectConverterFactory))]
 public class SignedObject<T> {
@@ -19,8 +13,8 @@ public class SignedObject<T> {
     public Dictionary<string, Dictionary<string, string>> Signatures { get; set; } = new();
 
     [JsonIgnore]
-    public Dictionary<string, Dictionary<ServerKeysResponse.VersionedKeyId, string>> VerifyKeysById {
-        get => Signatures.ToDictionary(server => server.Key, server => server.Value.ToDictionary(key => (ServerKeysResponse.VersionedKeyId)key.Key, key => key.Value));
+    public Dictionary<string, Dictionary<VersionedKeyId, string>> SignaturesById {
+        get => Signatures.ToDictionary(server => server.Key, server => server.Value.ToDictionary(key => (VersionedKeyId)key.Key, key => key.Value));
         set => Signatures = value.ToDictionary(server => server.Key, server => server.Value.ToDictionary(key => (string)key.Key, key => key.Value));
     }
 
@@ -34,7 +28,6 @@ public class SignedObject<T> {
     }
 }
 
-// Content needs to be merged at toplevel
 public class SignedObjectConverter<T> : JsonConverter<SignedObject<T>> {
     public override SignedObject<T> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
         var jsonObject = JsonSerializer.Deserialize<JsonObject>(ref reader, options);
@@ -71,38 +64,5 @@ internal class SignedObjectConverterFactory : JsonConverterFactory {
         var wrappedType = typeToConvert.GetGenericArguments()[0];
         var converter = (JsonConverter)Activator.CreateInstance(typeof(SignedObjectConverter<>).MakeGenericType(wrappedType))!;
         return converter;
-    }
-}
-
-public static class ObjectExtensions {
-    public static SignedObject<T> Sign<T>(this SignedObject<T> content, string serverName, string keyName, Ed25519PrivateKeyParameters key) {
-        var signResult = Sign(content.Content, serverName, keyName, key);
-        var signedObject = new SignedObject<T> {
-            Signatures = content.Signatures,
-            Content = signResult.Content
-        };
-        
-        if (!signedObject.Signatures.ContainsKey(serverName))
-            signedObject.Signatures[serverName] = new Dictionary<string, string>();
-        
-        signedObject.Signatures[serverName][keyName] = signResult.Signatures[serverName][keyName];
-        return signedObject;
-    }
-
-    public static SignedObject<T> Sign<T>(this T content, string serverName, string keyName, Ed25519PrivateKeyParameters key) {
-        SignedObject<T> signedObject = new() {
-            Signatures = [],
-            Content = JsonSerializer.Deserialize<JsonObject>(JsonSerializer.Serialize(content)) ?? new JsonObject(),
-        };
-
-        var contentBytes = CanonicalJsonSerializer.SerializeToUtf8Bytes(signedObject.Content);
-        var signature = new byte[Ed25519.SignatureSize];
-        key.Sign(Ed25519.Algorithm.Ed25519, null, contentBytes, 0, contentBytes.Length, signature, 0);
-
-        if (!signedObject.Signatures.ContainsKey(serverName))
-            signedObject.Signatures[serverName] = new Dictionary<string, string>();
-
-        signedObject.Signatures[serverName][keyName] = UnpaddedBase64.Encode(signature);
-        return signedObject;
     }
 }
