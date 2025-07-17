@@ -295,7 +295,19 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
     public async Task<RoomIdResponse> JoinRoomAsync(string roomId, List<string> homeservers = null, string? reason = null) {
         var joinUrl = $"/_matrix/client/v3/join/{HttpUtility.UrlEncode(roomId)}";
         Console.WriteLine($"Calling {joinUrl} with {homeservers?.Count ?? 0} via's...");
-        if (homeservers == null || homeservers.Count == 0) homeservers = new List<string> { roomId.Split(':')[1] };
+        if (homeservers is not { Count: > 0 }) {
+            // Legacy room IDs: !abc:server.xyz
+            if (roomId.Contains(':'))
+                homeservers = [ServerName, roomId.Split(':')[1]];
+            // v12+ room IDs: !<hash>
+            else {
+                homeservers = [ServerName];
+                foreach (var room in await GetJoinedRooms()) {
+                        homeservers.Add(await room.GetOriginHomeserverAsync());
+                }
+            }
+        }
+
         var fullJoinUrl = $"{joinUrl}?server_name=" + string.Join("&server_name=", homeservers);
         var res = await ClientHttpClient.PostAsJsonAsync(fullJoinUrl, new {
             reason

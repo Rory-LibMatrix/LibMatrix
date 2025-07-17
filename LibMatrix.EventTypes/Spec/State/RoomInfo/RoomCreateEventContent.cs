@@ -12,8 +12,13 @@ public class RoomCreateEventContent : EventContent {
     [JsonPropertyName("room_version")]
     public string? RoomVersion { get; set; }
 
+    // missing in room version 11+
     [JsonPropertyName("creator")]
     public string? Creator { get; set; }
+
+    // v12+
+    [JsonPropertyName("additional_creators")]
+    public List<string>? AdditionalCreators { get; set; }
 
     [JsonPropertyName("m.federate")]
     public bool? Federate { get; set; }

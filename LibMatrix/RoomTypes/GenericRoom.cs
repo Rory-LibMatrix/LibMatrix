@@ -70,7 +70,7 @@ public class GenericRoom {
         url += "?format=event";
         try {
             var resp = await Homeserver.ClientHttpClient.GetFromJsonAsync<JsonObject>(url);
-            if (resp["type"]?.GetValue<string>() != type)
+            if (resp["type"]?.GetValue<string>() != type || resp["state_key"]?.GetValue<string>() != stateKey)
                 throw new LibMatrixException() {
                     Error = "Homeserver returned event type does not match requested type, or server does not support passing `format`.",
                     ErrorCode = LibMatrixException.ErrorCodes.M_UNSUPPORTED
@@ -220,7 +220,16 @@ public class GenericRoom {
         var joinUrl = $"/_matrix/client/v3/join/{HttpUtility.UrlEncode(RoomId)}";
 
         var materialisedHomeservers = homeservers as string[] ?? homeservers?.ToArray() ?? [];
-        if (!materialisedHomeservers.Any()) materialisedHomeservers = [RoomId.Split(':', 2)[1]];
+        if (!materialisedHomeservers.Any())
+            if (RoomId.Contains(':'))
+                materialisedHomeservers = [Homeserver.ServerName, RoomId.Split(':')[1]];
+            // v12+ room IDs: !<hash>
+            else {
+                materialisedHomeservers = [Homeserver.ServerName];
+                foreach (var room in await Homeserver.GetJoinedRooms()) {
+                    materialisedHomeservers.Add(await room.GetOriginHomeserverAsync());
+                }
+            }
 
         Console.WriteLine($"Calling {joinUrl} with {materialisedHomeservers.Length} via(s)...");
 
@@ -275,7 +284,7 @@ public class GenericRoom {
         await foreach (var evt in GetMembersEnumerableAsync(membership))
             yield return evt.StateKey!;
     }
-    
+
     public async Task<FrozenSet<string>> GetMemberIdsListAsync(string? membership = null) {
         var members = await GetMembersListAsync(membership);
         return members.Select(x => x.StateKey!).ToFrozenSet();
@@ -462,7 +471,9 @@ public class GenericRoom {
     }
 
     public Task<StateEventResponse> GetEventAsync(string eventId, bool includeUnredactedContent = false) =>
-        Homeserver.ClientHttpClient.GetFromJsonAsync<StateEventResponse>($"/_matrix/client/v3/rooms/{RoomId}/event/{eventId}?fi.mau.msc2815.include_unredacted_content={includeUnredactedContent}");
+        Homeserver.ClientHttpClient.GetFromJsonAsync<StateEventResponse>(
+            // .ToLower() on boolean here because this query param specifically on synapse is checked as a string rather than a boolean
+            $"/_matrix/client/v3/rooms/{RoomId}/event/{eventId}?fi.mau.msc2815.include_unredacted_content={includeUnredactedContent.ToString().ToLower()}");
 
     public async Task<EventIdResponse> RedactEventAsync(string eventToRedact, string? reason = null) {
         var data = new { reason };
@@ -606,6 +617,46 @@ public class GenericRoom {
 
     public SpaceRoom AsSpace() => new SpaceRoom(Homeserver, RoomId);
     public PolicyRoom AsPolicyRoom() => new PolicyRoom(Homeserver, RoomId);
+
+    private bool IsV12PlusRoomId => !RoomId.Contains(':');
+
+    /// <summary>
+    ///     Gets the list of room creators for this room.
+    /// </summary>
+    /// <returns>A list of size 1 for v11 rooms and older, all creators for v12+</returns>
+    public async Task<List<string>> GetRoomCreatorsAsync() {
+        StateEventResponse createEvent;
+        if (IsV12PlusRoomId) {
+            createEvent = await GetEventAsync('$' + RoomId[1..]);
+        }
+        else {
+            createEvent = await GetStateEventAsync("m.room.create");
+        }
+
+        List<string> creators = [createEvent.Sender ?? throw new InvalidDataException("Create event has no sender")];
+
+        if (IsV12PlusRoomId && createEvent.TypedContent is RoomCreateEventContent { AdditionalCreators: { Count: > 0 } additionalCreators }) {
+            creators.AddRange(additionalCreators);
+        }
+
+        return creators;
+    }
+
+    public async Task<string> GetOriginHomeserverAsync() {
+        // pre-v12 room ID
+        if (RoomId.Contains(':')) {
+            var parts = RoomId.Split(':', 2);
+            if (parts.Length == 2) return parts[1];
+        }
+
+        // v12 room ID/fallback
+        var creators = await GetRoomCreatorsAsync();
+        if (creators.Count == 0) {
+            throw new InvalidDataException("Room has no creators, cannot determine origin homeserver");
+        }
+
+        return creators[0].Split(':', 2)[1];
+    }
 }
 
 public class RoomIdResponse {
