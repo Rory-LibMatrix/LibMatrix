@@ -30,8 +30,11 @@ public static class MessageFormatter {
 
     public static string HtmlFormatMention(string id, string? displayName = null) => $"<a href=\"https://matrix.to/#/{id}\">{displayName ?? id}</a>";
 
-    public static string HtmlFormatMessageLink(string roomId, string eventId, string[]? servers = null, string? displayName = null) {
-        if (servers is not { Length: > 0 }) servers = new[] { roomId.Split(':', 2)[1] };
+    public static string HtmlFormatMessageLink(string roomId, string eventId, string[] servers, string? displayName = null) {
+        if (servers is not { Length: > 0 })
+            servers = roomId.Contains(':')
+                ? [roomId.Split(':', 2)[1]]
+                : throw new ArgumentException("Message links must contain a list of via's for v12+ rooms!", nameof(servers));
         return $"<a href=\"https://matrix.to/#/{roomId}/{eventId}?via={string.Join("&via=", servers)}\">{displayName ?? eventId}</a>";
     }
 
