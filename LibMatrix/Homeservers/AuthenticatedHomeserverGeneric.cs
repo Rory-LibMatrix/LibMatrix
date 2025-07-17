@@ -303,7 +303,7 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
             else {
                 homeservers = [ServerName];
                 foreach (var room in await GetJoinedRooms()) {
-                        homeservers.Add(await room.GetOriginHomeserverAsync());
+                    homeservers.Add(await room.GetOriginHomeserverAsync());
                 }
             }
         }
@@ -409,14 +409,14 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
     private Dictionary<string, string>? _namedFilterCache;
     private Dictionary<string, SyncFilter> _filterCache = new();
 
-    public async Task<JsonObject?> GetCapabilitiesAsync() {
+    public async Task<CapabilitiesResponse> GetCapabilitiesAsync() {
         var res = await ClientHttpClient.GetAsync("/_matrix/client/v3/capabilities");
         if (!res.IsSuccessStatusCode) {
             Console.WriteLine($"Failed to get capabilities: {await res.Content.ReadAsStringAsync()}");
             throw new InvalidDataException($"Failed to get capabilities: {await res.Content.ReadAsStringAsync()}");
         }
 
-        return await res.Content.ReadFromJsonAsync<JsonObject>();
+        return await res.Content.ReadFromJsonAsync<CapabilitiesResponse>();
     }
 
     public class HsNamedCaches {
@@ -586,9 +586,45 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
         await SetAccountDataAsync(IgnoredUserListEventContent.EventId, ignoredUserList);
     }
 
-    private class CapabilitiesResponse {
+    public class CapabilitiesResponse {
         [JsonPropertyName("capabilities")]
-        public Dictionary<string, object>? Capabilities { get; set; }
+        public CapabilitiesContents Capabilities { get; set; }
+
+        public class CapabilitiesContents {
+            [JsonPropertyName("m.3pid_changes")]
+            public BooleanCapability? ThreePidChanges { get; set; }
+
+            [JsonPropertyName("m.change_password")]
+            public BooleanCapability? ChangePassword { get; set; }
+
+            [JsonPropertyName("m.get_login_token")]
+            public BooleanCapability? GetLoginToken { get; set; }
+
+            [JsonPropertyName("m.room_versions")]
+            public RoomVersionsCapability? RoomVersions { get; set; }
+
+            [JsonPropertyName("m.set_avatar_url")]
+            public BooleanCapability? SetAvatarUrl { get; set; }
+
+            [JsonPropertyName("m.set_displayname")]
+            public BooleanCapability? SetDisplayName { get; set; }
+
+            [JsonExtensionData]
+            public Dictionary<string, object>? AdditionalCapabilities { get; set; }
+        }
+
+        public class BooleanCapability {
+            [JsonPropertyName("enabled")]
+            public bool Enabled { get; set; }
+        }
+
+        public class RoomVersionsCapability {
+            [JsonPropertyName("default")]
+            public string? Default { get; set; }
+
+            [JsonPropertyName("available")]
+            public Dictionary<string, string>? Available { get; set; }
+        }
     }
 
 #region Room Directory/aliases
