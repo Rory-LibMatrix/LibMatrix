@@ -18,14 +18,14 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="ArcaneLibs.StringNormalisation" Version="1.0.0-preview.20250419-174711" Condition="'$(Configuration)' == 'Release'" />
+        <PackageReference Include="ArcaneLibs.StringNormalisation" Version="1.0.0-preview.20250630-114950" Condition="'$(Configuration)' == 'Release'" />
         <ProjectReference Include="..\..\ArcaneLibs\ArcaneLibs.StringNormalisation\ArcaneLibs.StringNormalisation.csproj" Condition="'$(Configuration)' == 'Debug'"/>
         <ProjectReference Include="..\..\LibMatrix\LibMatrix.csproj"/>
         <ProjectReference Include="..\LibMatrix.Utilities.Bot\LibMatrix.Utilities.Bot.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.1"/>
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.7" />
     </ItemGroup>
     
     <ItemGroup>

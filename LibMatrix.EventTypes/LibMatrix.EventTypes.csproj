@@ -7,7 +7,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="ArcaneLibs" Version="1.0.0-preview.20250419-174711" Condition="'$(Configuration)' == 'Release'" />
+        <PackageReference Include="ArcaneLibs" Version="1.0.0-preview.20250630-114950" Condition="'$(Configuration)' == 'Release'" />
         <ProjectReference Include="..\ArcaneLibs\ArcaneLibs\ArcaneLibs.csproj" Condition="'$(Configuration)' == 'Debug'"/>
     </ItemGroup>
 
