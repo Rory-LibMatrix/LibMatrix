@@ -42,7 +42,7 @@ public class CreateRoomRequest {
     public RoomPowerLevelEventContent? PowerLevelContentOverride { get; set; }
 
     [JsonPropertyName("creation_content")]
-    public JsonObject CreationContent { get; set; } = new();
+    public Dictionary<string, object> CreationContent { get; set; } = new();
 
     [JsonPropertyName("invite")]
     public List<string>? Invite { get; set; }
@@ -91,7 +91,7 @@ public class CreateRoomRequest {
         var request = new CreateRoomRequest {
             Name = name ?? "New public Room",
             Visibility = "public",
-            CreationContent = new JsonObject(),
+            CreationContent = new(),
             PowerLevelContentOverride = new RoomPowerLevelEventContent {
                 EventsDefault = 0,
                 UsersDefault = 0,
@@ -131,7 +131,7 @@ public class CreateRoomRequest {
         var request = new CreateRoomRequest {
             Name = name ?? "New private Room",
             Visibility = "private",
-            CreationContent = new JsonObject(),
+            CreationContent = new(),
             PowerLevelContentOverride = new RoomPowerLevelEventContent {
                 EventsDefault = 0,
                 UsersDefault = 0,

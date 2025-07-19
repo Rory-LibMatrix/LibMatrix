@@ -7,6 +7,7 @@ using LibMatrix.RoomTypes;
 namespace LibMatrix.Helpers;
 
 public class RoomBuilder {
+    private static readonly string[] V12PlusRoomVersions = ["org.matrix.hydra.11", "12"];
     public string? Type { get; set; }
     public string Version { get; set; } = "11";
     public RoomNameEventContent Name { get; set; } = new();
@@ -23,6 +24,14 @@ public class RoomBuilder {
 
     public RoomHistoryVisibilityEventContent HistoryVisibility { get; set; } = new() {
         HistoryVisibility = RoomHistoryVisibilityEventContent.HistoryVisibilityTypes.Shared
+    };
+
+    public RoomGuestAccessEventContent GuestAccess { get; set; } = new() {
+        GuestAccess = "forbidden"
+    };
+
+    public RoomServerAclEventContent ServerAcls { get; set; } = new() {
+        AllowIpLiterals = false
     };
 
     /// <summary>
@@ -57,13 +66,17 @@ public class RoomBuilder {
             { RoomCanonicalAliasEventContent.EventId, 50 },
             { RoomEncryptionEventContent.EventId, 100 },
             { RoomHistoryVisibilityEventContent.EventId, 100 },
+            { RoomGuestAccessEventContent.EventId, 100 },
             { RoomNameEventContent.EventId, 50 },
             { RoomPowerLevelEventContent.EventId, 100 },
             { RoomServerAclEventContent.EventId, 100 },
-            { RoomTombstoneEventContent.EventId, 100 },
+            { RoomTombstoneEventContent.EventId, 150 },
             { RoomPolicyServerEventContent.EventId, 100 }
         }
     };
+
+    public Dictionary<string, object> AdditionalCreationContent { get; set; } = new();
+    public List<string> AdditionalCreators { get; set; } = new();
 
     public async Task<GenericRoom> Create(AuthenticatedHomeserverGeneric homeserver) {
         var crq = new CreateRoomRequest() {
@@ -78,20 +91,23 @@ public class RoomBuilder {
                 NotificationsPl = new() {
                     Room = 1000000
                 },
-                Users = new Dictionary<string, long>() {
-                    { homeserver.WhoAmI.UserId, MatrixConstants.MaxSafeJsonInteger }
-                },
+                Users = V12PlusRoomVersions.Contains(Version)
+                    ? []
+                    : new() {
+                        { homeserver.WhoAmI.UserId, MatrixConstants.MaxSafeJsonInteger }
+                    },
                 Events = new Dictionary<string, long> {
                     { RoomAvatarEventContent.EventId, 1000000 },
                     { RoomCanonicalAliasEventContent.EventId, 1000000 },
                     { RoomEncryptionEventContent.EventId, 1000000 },
                     { RoomHistoryVisibilityEventContent.EventId, 1000000 },
+                    { RoomGuestAccessEventContent.EventId, 1000000 },
                     { RoomNameEventContent.EventId, 1000000 },
                     { RoomPowerLevelEventContent.EventId, 1000000 },
                     { RoomServerAclEventContent.EventId, 1000000 },
                     { RoomTombstoneEventContent.EventId, 1000000 },
                     { RoomPolicyServerEventContent.EventId, 1000000 }
-                }
+                },
             },
             Visibility = "private",
             RoomVersion = Version
@@ -102,6 +118,14 @@ public class RoomBuilder {
 
         if (!IsFederatable)
             crq.CreationContent.Add("m.federate", false);
+
+        if (V12PlusRoomVersions.Contains(Version) && AdditionalCreators is { Count: > 0 }) {
+            crq.CreationContent.Add("additional_creators", AdditionalCreators);
+        }
+
+        foreach (var kvp in AdditionalCreationContent) {
+            crq.CreationContent.Add(kvp.Key, kvp.Value);
+        }
 
         var room = await homeserver.CreateRoom(crq);
 

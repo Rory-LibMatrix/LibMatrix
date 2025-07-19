@@ -393,7 +393,7 @@ public class GenericRoom {
             new UserIdAndReason { UserId = userId, Reason = reason });
 
     public async Task InviteUserAsync(string userId, string? reason = null, bool skipExisting = true) {
-        if (skipExisting && await GetStateOrNullAsync<RoomMemberEventContent>("m.room.member", userId) is not null)
+        if (skipExisting && await GetStateOrNullAsync<RoomMemberEventContent>("m.room.member", userId) is not { Membership: "leave" or "ban" or "join" })
             return;
         await Homeserver.ClientHttpClient.PostAsJsonAsync($"/_matrix/client/v3/rooms/{RoomId}/invite", new UserIdAndReason(userId, reason));
     }
@@ -403,7 +403,7 @@ public class GenericRoom {
 #region Events
 
     public async Task<EventIdResponse?> SendStateEventAsync(string eventType, object content) =>
-        await (await Homeserver.ClientHttpClient.PutAsJsonAsync($"/_matrix/client/v3/rooms/{RoomId}/state/{eventType}", content))
+        await (await Homeserver.ClientHttpClient.PutAsJsonAsync($"/_matrix/client/v3/rooms/{RoomId}/state/{eventType.UrlEncode()}", content))
             .Content.ReadFromJsonAsync<EventIdResponse>();
 
     public async Task<EventIdResponse> SendStateEventAsync(string eventType, string stateKey, object content) =>

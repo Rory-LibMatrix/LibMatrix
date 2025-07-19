@@ -11,14 +11,14 @@ public class AuthenticatedFederationClient(string federationEndpoint, Authentica
         public required string OriginServerName { get; set; }
     }
     
-    public async Task<UserDeviceListResponse> GetUserDevicesAsync(string userId) {
-        var response = await HttpClient.SendAsync(new XMatrixAuthorizationScheme.XMatrixRequestSignature() {
-            OriginServerName = config.OriginServerName,
-            DestinationServerName = userId.Split(':', 2)[1],
-            Method = "GET",
-            Uri = $"/_matrix/federation/v1/user/devices/{userId}",
-        }.ToSignedHttpRequestMessage(config.PrivateKey));
-        return response;
-    }
+    // public async Task<UserDeviceListResponse> GetUserDevicesAsync(string userId) {
+    //     var response = await HttpClient.SendAsync(new XMatrixAuthorizationScheme.XMatrixRequestSignature() {
+    //         OriginServerName = config.OriginServerName,
+    //         DestinationServerName = userId.Split(':', 2)[1],
+    //         Method = "GET",
+    //         Uri = $"/_matrix/federation/v1/user/devices/{userId}",
+    //     }.ToSignedHttpRequestMessage(config.PrivateKey));
+    //     return response;
+    // }
     
 }
