@@ -163,9 +163,9 @@ public class SyncResponse {
             AccountData?.Events?.Max(x => x.OriginServerTs) ?? 0,
             Presence?.Events?.Max(x => x.OriginServerTs) ?? 0,
             ToDevice?.Events?.Max(x => x.OriginServerTs) ?? 0,
-            Rooms?.Join?.Values?.Max(x => x.Timeline?.Events?.Max(y => y.OriginServerTs)) ?? 0,
-            Rooms?.Invite?.Values?.Max(x => x.InviteState?.Events?.Max(y => y.OriginServerTs)) ?? 0,
-            Rooms?.Leave?.Values?.Max(x => x.Timeline?.Events?.Max(y => y.OriginServerTs)) ?? 0
+            Rooms?.Join?.Values.Max(x => x.Timeline?.Events?.Max(y => y.OriginServerTs)) ?? 0,
+            Rooms?.Invite?.Values.Max(x => x.InviteState?.Events?.Max(y => y.OriginServerTs)) ?? 0,
+            Rooms?.Leave?.Values.Max(x => x.Timeline?.Events?.Max(y => y.OriginServerTs)) ?? 0
         ]).Max();
     }
 

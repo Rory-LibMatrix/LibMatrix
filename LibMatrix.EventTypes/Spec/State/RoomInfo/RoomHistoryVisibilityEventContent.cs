@@ -13,5 +13,6 @@ public class RoomHistoryVisibilityEventContent : EventContent {
         public const string WorldReadable = "world_readable";
         public const string Invited = "invited";
         public const string Shared = "shared";
+        public const string Joined = "joined";
     }
 }
