@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace LibMatrix.EventTypes.Spec.State.RoomInfo;
 
@@ -14,4 +15,10 @@ public class RoomServerAclEventContent : EventContent {
 
     [JsonPropertyName("allow_ip_literals")]
     public bool AllowIpLiterals { get; set; } // = false;
+
+    [JsonIgnore]
+    public List<Regex>? AllowRegexes => Allow?.ConvertAll(pattern => new Regex(pattern.Replace(".", "\\.").Replace("*", ".*").Replace("?", "."), RegexOptions.Compiled)) ?? [];
+
+    [JsonIgnore]
+    public List<Regex>? DenyRegexes => Deny?.ConvertAll(pattern => new Regex(pattern.Replace(".", "\\.").Replace("*", ".*").Replace("?", "."), RegexOptions.Compiled)) ?? [];
 }
