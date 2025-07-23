@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json.Serialization;
 using LibMatrix.EventTypes.Spec.State.RoomInfo;
 
@@ -138,6 +139,7 @@ public class SyncResponse {
                 public int HighlightCount { get; set; }
             }
 
+            [DebuggerDisplay("{JoinedMemberCount} joined, {InvitedMemberCount} invited, Heroes: {string.Join(\", \", Heroes ?? [])}")]
             public class SummaryDataStructure {
                 [JsonPropertyName("m.heroes")]
                 public List<string>? Heroes { get; set; }

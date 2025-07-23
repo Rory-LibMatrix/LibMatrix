@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Text.Json;
@@ -174,6 +175,7 @@ public class StateEventResponse : StateEvent {
 [JsonSerializable(typeof(ChunkedStateEventResponse))]
 internal partial class ChunkedStateEventResponseSerializerContext : JsonSerializerContext;
 
+[DebuggerDisplay("{Events.Count} events")]
 public class EventList {
     public EventList() { }
 

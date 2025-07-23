@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -5,6 +6,7 @@ using System.Text.Json.Serialization;
 
 namespace LibMatrix.EventTypes;
 
+[SuppressMessage("ReSharper", "ClassNeverInstantiated.Global", Justification = "These get instantiated via reflection")]
 public abstract class EventContent {
     [JsonExtensionData]
     public Dictionary<string, object>? AdditionalData { get; set; } = [];
