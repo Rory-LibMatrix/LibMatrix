@@ -40,7 +40,7 @@ public class RoomBuilder {
     /// </summary>
     public Dictionary<string, string?> Invites { get; set; } = new();
 
-    public RoomPowerLevelEventContent PowerLevels { get; init; } = new() {
+    public RoomPowerLevelEventContent PowerLevels { get; set; } = new() {
         EventsDefault = 0,
         UsersDefault = 0,
         Kick = 50,
