@@ -41,7 +41,7 @@ public class CommandListenerHostedService(
 
     private async Task? Run(CancellationToken cancellationToken) {
         logger.LogInformation("Starting command listener!");
-        var filter = await hs.NamedCaches.FilterCache.GetOrSetValueAsync("gay.rory.libmatrix.utilities.bot.command_listener_syncfilter.dev3" + (config.SelfCommandsOnly),
+        var filter = await hs.NamedCaches.FilterCache.GetOrSetValueAsync("gay.rory.libmatrix.utilities.bot.command_listener_syncfilter.dev4" + (config.SelfCommandsOnly),
             new SyncFilter() {
                 AccountData = new SyncFilter.EventFilter(notTypes: ["*"], limit: 1),
                 Presence = new SyncFilter.EventFilter(notTypes: ["*"]),
@@ -49,9 +49,11 @@ public class CommandListenerHostedService(
                     AccountData = new SyncFilter.RoomFilter.StateFilter(notTypes: ["*"]),
                     Ephemeral = new SyncFilter.RoomFilter.StateFilter(notTypes: ["*"]),
                     State = new SyncFilter.RoomFilter.StateFilter(notTypes: ["*"]),
-                    Timeline = new SyncFilter.RoomFilter.StateFilter(types: ["m.room.message"],
+                    Timeline = new SyncFilter.RoomFilter.StateFilter(
+                        types: ["m.room.message"],
                         notSenders: config.SelfCommandsOnly ? null : [hs.WhoAmI.UserId],
-                        senders: config.SelfCommandsOnly ? [hs.WhoAmI.UserId] : null
+                        senders: config.SelfCommandsOnly ? [hs.WhoAmI.UserId] : null,
+                        limit: config.SelfCommandsOnly ? 1 : null
                     ),
                 }
             });
