@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Web;
+using ArcaneLibs.Collections;
 using ArcaneLibs.Extensions;
 using LibMatrix.EventTypes.Spec;
 using LibMatrix.EventTypes.Spec.State.RoomInfo;
@@ -409,15 +410,12 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
     private Dictionary<string, string>? _namedFilterCache;
     private Dictionary<string, SyncFilter> _filterCache = new();
 
-    public async Task<CapabilitiesResponse> GetCapabilitiesAsync() {
-        var res = await ClientHttpClient.GetAsync("/_matrix/client/v3/capabilities");
-        if (!res.IsSuccessStatusCode) {
-            Console.WriteLine($"Failed to get capabilities: {await res.Content.ReadAsStringAsync()}");
-            throw new InvalidDataException($"Failed to get capabilities: {await res.Content.ReadAsStringAsync()}");
-        }
+    private static readonly SemaphoreCache<CapabilitiesResponse> CapabilitiesCache = new();
 
-        return await res.Content.ReadFromJsonAsync<CapabilitiesResponse>();
-    }
+    public async Task<CapabilitiesResponse> GetCapabilitiesAsync() =>
+        await CapabilitiesCache.GetOrAdd(ServerName, async () =>
+            await ClientHttpClient.GetFromJsonAsync<CapabilitiesResponse>("/_matrix/client/v3/capabilities")
+        );
 
     public class HsNamedCaches {
         internal HsNamedCaches(AuthenticatedHomeserverGeneric hs) {
@@ -608,6 +606,9 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
 
             [JsonPropertyName("m.set_displayname")]
             public BooleanCapability? SetDisplayName { get; set; }
+
+            [JsonPropertyName("gay.rory.bulk_send_events")]
+            public BooleanCapability? BulkSendEvents { get; set; }
 
             [JsonExtensionData]
             public Dictionary<string, object>? AdditionalCapabilities { get; set; }

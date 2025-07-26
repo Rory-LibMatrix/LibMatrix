@@ -406,11 +406,19 @@ public class GenericRoom {
         await (await Homeserver.ClientHttpClient.PutAsJsonAsync($"/_matrix/client/v3/rooms/{RoomId}/state/{eventType}", content))
             .Content.ReadFromJsonAsync<EventIdResponse>();
 
-    public async Task<EventIdResponse?> SendStateEventAsync(string eventType, string stateKey, object content) =>
-        await (await Homeserver.ClientHttpClient.PutAsJsonAsync($"/_matrix/client/v3/rooms/{RoomId}/state/{eventType.UrlEncode()}/{stateKey.UrlEncode()}", content))
-            .Content.ReadFromJsonAsync<EventIdResponse>();
+    public async Task<EventIdResponse> SendStateEventAsync(string eventType, string stateKey, object content) =>
+        (await (await Homeserver.ClientHttpClient.PutAsJsonAsync($"/_matrix/client/v3/rooms/{RoomId}/state/{eventType.UrlEncode()}/{stateKey.UrlEncode()}", content))
+            .Content.ReadFromJsonAsync<EventIdResponse>())!;
 
     public async Task<EventIdResponse> SendTimelineEventAsync(string eventType, TimelineEventContent content) {
+        var res = await Homeserver.ClientHttpClient.PutAsJsonAsync(
+            $"/_matrix/client/v3/rooms/{RoomId}/send/{eventType}/" + Guid.NewGuid(), content, new JsonSerializerOptions {
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            });
+        return await res.Content.ReadFromJsonAsync<EventIdResponse>() ?? throw new Exception("Failed to send event");
+    }
+
+    public async Task<EventIdResponse> SendRawTimelineEventAsync(string eventType, JsonObject content) {
         var res = await Homeserver.ClientHttpClient.PutAsJsonAsync(
             $"/_matrix/client/v3/rooms/{RoomId}/send/{eventType}/" + Guid.NewGuid(), content, new JsonSerializerOptions {
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
@@ -612,6 +620,36 @@ public class GenericRoom {
 
             if (result.NextBatch is null) break;
             result = await Homeserver.ClientHttpClient.GetFromJsonAsync<RecursedBatchedChunkedStateEventResponse>(uri.AddQuery("from", result.NextBatch).ToString());
+        }
+    }
+
+    public async Task BulkSendEventsAsync(IEnumerable<StateEventResponse> events) {
+        if ((await Homeserver.GetCapabilitiesAsync()).Capabilities.BulkSendEvents?.Enabled == true)
+            await Homeserver.ClientHttpClient.PostAsJsonAsync(
+                $"/_matrix/client/unstable/gay.rory.bulk_send_events/rooms/{RoomId}/bulk_send_events?_libmatrix_txn_id={Guid.NewGuid()}", events);
+        else {
+            Console.WriteLine("Homeserver does not support bulk sending events, falling back to individual sends.");
+            foreach (var evt in events)
+                await (
+                    evt.StateKey == null
+                        ? SendRawTimelineEventAsync(evt.Type, evt.RawContent!)
+                        : SendStateEventAsync(evt.Type, evt.StateKey, evt.RawContent)
+                );
+        }
+    }
+
+    public async Task BulkSendEventsAsync(IAsyncEnumerable<StateEventResponse> events) {
+        if ((await Homeserver.GetCapabilitiesAsync()).Capabilities.BulkSendEvents?.Enabled == true)
+            await Homeserver.ClientHttpClient.PostAsJsonAsync(
+                $"/_matrix/client/unstable/gay.rory.bulk_send_events/rooms/{RoomId}/bulk_send_events?_libmatrix_txn_id={Guid.NewGuid()}", events);
+        else {
+            Console.WriteLine("Homeserver does not support bulk sending events, falling back to individual sends.");
+            await foreach (var evt in events)
+                await (
+                    evt.StateKey == null
+                        ? SendRawTimelineEventAsync(evt.Type, evt.RawContent!)
+                        : SendStateEventAsync(evt.Type, evt.StateKey, evt.RawContent)
+                );
         }
     }
 
