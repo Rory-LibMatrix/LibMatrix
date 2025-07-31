@@ -182,7 +182,8 @@ public class RoomBuilder {
     }
 
     private async Task SetAccessAsync(GenericRoom room) {
-        PowerLevels.Users![room.Homeserver.WhoAmI.UserId] = OwnPowerLevel;
+        if(!V12PlusRoomVersions.Contains(Version))
+            PowerLevels.Users![room.Homeserver.WhoAmI.UserId] = OwnPowerLevel;
         await room.SendStateEventAsync(RoomPowerLevelEventContent.EventId, PowerLevels);
 
         if (!string.IsNullOrWhiteSpace(HistoryVisibility.HistoryVisibility))
