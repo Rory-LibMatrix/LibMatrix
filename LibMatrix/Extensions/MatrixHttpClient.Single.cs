@@ -184,11 +184,14 @@ public class MatrixHttpClient {
             Debug.Assert(ex != null, nameof(ex) + " != null");
             ex.RawContent = content;
             // Console.WriteLine($"Failed to send request: {ex}");
-            if (ex.RetryAfterMs is null) throw ex!;
-            //we have a ratelimit error
-            await Task.Delay(ex.RetryAfterMs.Value, cancellationToken);
-            request.ResetSendStatus();
-            return await SendAsync(request, cancellationToken);
+            if (ex.ErrorCode == MatrixException.ErrorCodes.M_LIMIT_EXCEEDED) {
+                // if (ex.RetryAfterMs is null) throw ex!;
+                //we have a ratelimit error
+                await Task.Delay(ex.RetryAfterMs ?? responseMessage.Headers.RetryAfter?.Delta?.Milliseconds ?? 500, cancellationToken);
+                request.ResetSendStatus();
+                return await SendAsync(request, cancellationToken);
+            }
+            throw ex;
         }
 
         if (responseMessage.StatusCode == HttpStatusCode.BadGateway) {
