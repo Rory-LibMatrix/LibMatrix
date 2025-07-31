@@ -119,6 +119,7 @@ public class RoomBuilder {
         if (!IsFederatable)
             crq.CreationContent.Add("m.federate", false);
 
+        AdditionalCreators.RemoveAll(string.IsNullOrWhiteSpace);
         if (V12PlusRoomVersions.Contains(Version) && AdditionalCreators is { Count: > 0 }) {
             crq.CreationContent.Add("additional_creators", AdditionalCreators);
         }
