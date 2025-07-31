@@ -439,7 +439,8 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
         try {
             // Console.WriteLine($"Trying authenticated media URL: {uri}");
             var res = await ClientHttpClient.SendAsync(new() {
-                Method = HttpMethod.Head,
+                // Method = HttpMethod.Head, // This apparently doesn't work with Matrix-Media-Repo...
+                Method = HttpMethod.Get,
                 RequestUri = (new Uri(mxcUri.ToDownloadUri(BaseUrl, filename, timeout), string.IsNullOrWhiteSpace(BaseUrl) ? UriKind.Relative : UriKind.Absolute))
             });
             if (res.IsSuccessStatusCode) {
@@ -455,7 +456,8 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
         try {
             // Console.WriteLine($"Trying legacy media URL: {uri}");
             var res = await ClientHttpClient.SendAsync(new() {
-                Method = HttpMethod.Head,
+                // Method = HttpMethod.Head,
+                Method = HttpMethod.Get,
                 RequestUri = new(mxcUri.ToLegacyDownloadUri(BaseUrl, filename, timeout), string.IsNullOrWhiteSpace(BaseUrl) ? UriKind.Relative : UriKind.Absolute)
             });
             if (res.IsSuccessStatusCode) {
