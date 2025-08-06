@@ -695,6 +695,8 @@ public class GenericRoom {
 
         return creators[0].Split(':', 2)[1];
     }
+
+    public async Task<List<string>> GetHomeserversInRoom() => (await GetMemberIdsListAsync("join")).Select(x => x.Split(':', 2)[1]).Distinct().ToList();
 }
 
 public class RoomIdResponse {

@@ -47,6 +47,7 @@ public class CreateRoomRequest {
     [JsonPropertyName("invite")]
     public List<string>? Invite { get; set; }
 
+    [JsonPropertyName("room_version")]
     public string? RoomVersion { get; set; }
 
     /// <summary>

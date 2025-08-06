@@ -95,8 +95,13 @@ public class MessageBuilder(string msgType = "m.text", string format = "org.matr
         return this;
     }
 
-    public MessageBuilder WithMention(string id, string? displayName = null) {
-        Content.Body += $"@{displayName ?? id}";
+    public MessageBuilder WithMention(string id, string? displayName = null, string[]? vias = null, bool useIdInPlainText = false, bool useLinkInPlainText = false) {
+        if (!useLinkInPlainText) Content.Body += $"@{(useIdInPlainText ? id : displayName ?? id)}";
+        else {
+            Content.Body += $"https://matrix.to/#/{id}";
+            if (vias is { Length: > 0 }) Content.Body += $"?via={string.Join("&via=", vias)}";
+        }
+
         Content.FormattedBody += $"<a href=\"https://matrix.to/#/{id}\">{displayName ?? id}</a>";
         if (id == "@room") {
             Content.Mentions ??= new();
@@ -108,6 +113,15 @@ public class MessageBuilder(string msgType = "m.text", string format = "org.matr
             Content.Mentions.Users.Add(id);
         }
 
+        return this;
+    }
+
+    public MessageBuilder WithRoomMention() {
+        // Legacy push rules support
+        Content.Body += "@room";
+        Content.FormattedBody += "@room";
+        Content.Mentions ??= new();
+        Content.Mentions.Room = true;
         return this;
     }
 

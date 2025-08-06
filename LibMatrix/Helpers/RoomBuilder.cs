@@ -1,4 +1,5 @@
 using System.Runtime.Intrinsics.X86;
+using ArcaneLibs.Extensions;
 using LibMatrix.EventTypes.Spec.State.RoomInfo;
 using LibMatrix.Homeservers;
 using LibMatrix.Responses;
@@ -34,6 +35,8 @@ public class RoomBuilder {
         AllowIpLiterals = false
     };
 
+    public RoomEncryptionEventContent? Encryption { get; set; }
+
     /// <summary>
     ///   State events to be sent *before* room access is configured. Keep this small!
     /// </summary>
@@ -47,7 +50,12 @@ public class RoomBuilder {
     /// <summary>
     ///   Users to invite, with optional reason
     /// </summary>
-    public Dictionary<string, string?> Invites { get; set; } = new();
+    public Dictionary<string, string?> Invites { get; set; } = [];
+
+    /// <summary>
+    ///   Users to ban, with optional reason
+    /// </summary>
+    public Dictionary<string, string?> Bans { get; set; } = [];
 
     public RoomPowerLevelEventContent PowerLevels { get; set; } = new() {
         EventsDefault = 0,
@@ -184,6 +192,13 @@ public class RoomBuilder {
     private async Task SetAccessAsync(GenericRoom room) {
         if(!V12PlusRoomVersions.Contains(Version))
             PowerLevels.Users![room.Homeserver.WhoAmI.UserId] = OwnPowerLevel;
+        else {
+            PowerLevels.Users!.Remove(room.Homeserver.WhoAmI.UserId);
+            foreach (var additionalCreator in AdditionalCreators)
+            {
+                PowerLevels.Users!.Remove(additionalCreator);
+            }
+        }
         await room.SendStateEventAsync(RoomPowerLevelEventContent.EventId, PowerLevels);
 
         if (!string.IsNullOrWhiteSpace(HistoryVisibility.HistoryVisibility))
