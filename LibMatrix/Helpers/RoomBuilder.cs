@@ -86,7 +86,7 @@ public class RoomBuilder {
     public Dictionary<string, object> AdditionalCreationContent { get; set; } = new();
     public List<string> AdditionalCreators { get; set; } = new();
 
-    public async Task<GenericRoom> Create(AuthenticatedHomeserverGeneric homeserver) {
+    public virtual async Task<GenericRoom> Create(AuthenticatedHomeserverGeneric homeserver) {
         var crq = new CreateRoomRequest() {
             PowerLevelContentOverride = new() {
                 EventsDefault = 1000000,

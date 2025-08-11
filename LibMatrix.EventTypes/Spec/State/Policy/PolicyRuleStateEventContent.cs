@@ -124,6 +124,19 @@ public abstract class PolicyRuleEventContent : EventContent {
 
         return Recommendation;
     }
+    
+    public string? GetSpecRecommendation() {
+        if (Recommendation is "m.ban" or "org.matrix.mjolnir.ban")
+            return PolicyRecommendationTypes.Ban;
+
+        if (Recommendation is "m.mute" or "support.feline.policy.recommendation_mute")
+            return PolicyRecommendationTypes.Mute;
+
+        if (Recommendation is "m.takedown" or "org.matrix.msc4204.takedown")
+            return PolicyRecommendationTypes.Takedown;
+
+        return Recommendation;
+    }
 }
 
 public static class PolicyRecommendationTypes {
@@ -137,7 +150,10 @@ public static class PolicyRecommendationTypes {
     /// </summary>
     public static string Mute = "support.feline.policy.recommendation_mute"; //stable prefix: m.mute, msc pending
 
-    public static string Takedown = "m.takedown"; //unstable prefix: org.matrix.msc4204.takedown
+    /// <summary>
+    ///     Take down the user with all means available
+    /// </summary>
+    public static string Takedown = "org.matrix.msc4204.takedown"; //stable prefix: m.takedown, msc pending
 }
 
 public class PolicyHash {

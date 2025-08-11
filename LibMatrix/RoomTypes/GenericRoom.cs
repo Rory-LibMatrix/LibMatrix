@@ -656,7 +656,10 @@ public class GenericRoom {
     public SpaceRoom AsSpace() => new SpaceRoom(Homeserver, RoomId);
     public PolicyRoom AsPolicyRoom() => new PolicyRoom(Homeserver, RoomId);
 
-    private bool IsV12PlusRoomId => !RoomId.Contains(':');
+    /// <summary>
+    ///     Unsafe: does not actually check if the room is v12, it just checks the room ID format as an estimation.
+    /// </summary>
+    public bool IsV12PlusRoomId => !RoomId.Contains(':');
 
     /// <summary>
     ///     Gets the list of room creators for this room.
