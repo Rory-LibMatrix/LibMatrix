@@ -35,7 +35,7 @@ public class RoomBuilder {
         AllowIpLiterals = false
     };
 
-    public RoomEncryptionEventContent? Encryption { get; set; }
+    public RoomEncryptionEventContent Encryption { get; set; } = new() { };
 
     /// <summary>
     ///   State events to be sent *before* room access is configured. Keep this small!
@@ -187,18 +187,21 @@ public class RoomBuilder {
             await room.Homeserver.SetRoomAliasAsync(CanonicalAlias.Alias!, room.RoomId);
             await room.SendStateEventAsync(RoomCanonicalAliasEventContent.EventId, CanonicalAlias);
         }
+
+        if (!string.IsNullOrWhiteSpace(Encryption.Algorithm))
+            await room.SendStateEventAsync(RoomEncryptionEventContent.EventId, Encryption);
     }
 
     private async Task SetAccessAsync(GenericRoom room) {
-        if(!V12PlusRoomVersions.Contains(Version))
+        if (!V12PlusRoomVersions.Contains(Version))
             PowerLevels.Users![room.Homeserver.WhoAmI.UserId] = OwnPowerLevel;
         else {
             PowerLevels.Users!.Remove(room.Homeserver.WhoAmI.UserId);
-            foreach (var additionalCreator in AdditionalCreators)
-            {
+            foreach (var additionalCreator in AdditionalCreators) {
                 PowerLevels.Users!.Remove(additionalCreator);
             }
         }
+
         await room.SendStateEventAsync(RoomPowerLevelEventContent.EventId, PowerLevels);
 
         if (!string.IsNullOrWhiteSpace(HistoryVisibility.HistoryVisibility))

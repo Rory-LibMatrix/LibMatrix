@@ -100,7 +100,6 @@ public class RoomUpgradeBuilder : RoomBuilder {
     }
 
     private StateEventResponse UpgradeUnstableValues(StateEventResponse evt) {
-        
         return evt;
     }
 
@@ -113,6 +112,7 @@ public class RoomUpgradeBuilder : RoomBuilder {
             evt.RawContent["org.matrix.msc4321.original_timestamp"] = evt.OriginServerTs;
             evt.RawContent["org.matrix.msc4321.original_event_id"] = evt.EventId;
         }
+
         InitialState.Add(new() {
             Type = evt.Type,
             StateKey = evt.StateKey,
@@ -121,11 +121,24 @@ public class RoomUpgradeBuilder : RoomBuilder {
     }
 
     public override async Task<GenericRoom> Create(AuthenticatedHomeserverGeneric homeserver) {
+        var oldRoom = homeserver.GetRoom(OldRoomId);
+        // prepare old room first...
+        if (!string.IsNullOrWhiteSpace(AliasLocalPart)) {
+            var aliasResult = await homeserver.ResolveRoomAliasAsync($"#{AliasLocalPart}:{homeserver.ServerName}");
+            if (aliasResult?.RoomId == OldRoomId)
+                await homeserver.DeleteRoomAliasAsync($"#{AliasLocalPart}:{homeserver.ServerName}");
+            else
+                throw new LibMatrixException() {
+                    ErrorCode = LibMatrixException.ErrorCodes.M_UNSUPPORTED,
+                    Error = $"Cannot upgrade room {OldRoomId} as it has an alias that is not the same as the one tracked by the server! Server says: {aliasResult.RoomId}"
+                };
+        }
+
         var room = await base.Create(homeserver);
         if (CanUpgrade || UpgradeOptions.ForceUpgrade) {
             if (UpgradeOptions.RoomUpgradeNotice != null) {
                 var noticeContent = await UpgradeOptions.RoomUpgradeNotice(room);
-                await room.SendMessageEventAsync(noticeContent);
+                await oldRoom.SendMessageEventAsync(noticeContent);
             }
 
             var tombstoneContent = new RoomTombstoneEventContent {
@@ -137,8 +150,9 @@ public class RoomUpgradeBuilder : RoomBuilder {
             foreach (var (key, value) in AdditionalTombstoneContent)
                 tombstoneContent.AdditionalData[key] = value;
 
-            await room.SendStateEventAsync(RoomTombstoneEventContent.EventId, tombstoneContent);
+            await oldRoom.SendStateEventAsync(RoomTombstoneEventContent.EventId, tombstoneContent);
         }
+
         return room;
     }
 
@@ -152,13 +166,13 @@ public class RoomUpgradeBuilder : RoomBuilder {
         public Msc4321PolicyListUpgradeOptions Msc4321PolicyListUpgradeOptions { get; set; } = new();
 
         [JsonIgnore]
-        public Func<GenericRoom, Task<RoomMessageEventContent>> RoomUpgradeNotice { get; set; } = async newRoom => new MessageBuilder()
+        public Func<GenericRoom, Task<RoomMessageEventContent>>? RoomUpgradeNotice { get; set; } = async newRoom => new MessageBuilder()
             .WithRoomMention()
+            .WithNewline()
             .WithBody("This room has been upgraded to a new version. This version of the room will be kept as an archive.")
             .WithNewline()
             .WithBody("You can join the new room by clicking the link below:")
             .WithNewline()
-            .WithRoomMention()
             .WithMention(newRoom.RoomId, await newRoom.GetNameOrFallbackAsync(), vias: (await newRoom.GetHomeserversInRoom()).ToArray(), useLinkInPlainText: true)
             .Build();
     }
