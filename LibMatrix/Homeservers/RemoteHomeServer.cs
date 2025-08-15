@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Web;
+using ArcaneLibs.Collections;
 using ArcaneLibs.Extensions;
 using LibMatrix.Extensions;
 using LibMatrix.Responses;
@@ -28,7 +29,8 @@ public class RemoteHomeserver {
         Auth = new(this);
     }
 
-    private Dictionary<string, object> _profileCache { get; set; } = new();
+    // private Dictionary<string, object> _profileCache { get; set; } = new();
+    private SemaphoreCache<UserProfileResponse> _profileCache { get; set; } = new();
     public string ServerNameOrUrl { get; }
     public string? Proxy { get; }
 
@@ -40,27 +42,12 @@ public class RemoteHomeserver {
 
     public HomeserverResolverService.WellKnownUris WellKnownUris { get; set; }
 
-    public async Task<UserProfileResponse> GetProfileAsync(string mxid, bool useCache = false) {
-        if (mxid is null) throw new ArgumentNullException(nameof(mxid));
-        if (useCache && _profileCache.TryGetValue(mxid, out var value)) {
-            if (value is SemaphoreSlim s) await s.WaitAsync();
-            if (value is UserProfileResponse p) return p;
-        }
-
-        _profileCache[mxid] = new SemaphoreSlim(1);
-
-        var resp = await ClientHttpClient.GetAsync($"/_matrix/client/v3/profile/{HttpUtility.UrlEncode(mxid)}");
-        var data = await resp.Content.ReadFromJsonAsync<UserProfileResponse>();
-        if (!resp.IsSuccessStatusCode) Console.WriteLine("Profile: " + data);
-        _profileCache[mxid] = data ?? throw new InvalidOperationException($"Could not get profile for {mxid}");
-
-        return data;
-    }
-    
     // TODO: Do we need to support retrieving individual profile properties? Is there any use for that besides just getting the full profile?
+    public async Task<UserProfileResponse> GetProfileAsync(string mxid) =>
+        await ClientHttpClient.GetFromJsonAsync<UserProfileResponse>($"/_matrix/client/v3/profile/{HttpUtility.UrlEncode(mxid)}");
 
     public async Task<ClientVersionsResponse> GetClientVersionsAsync() {
-        var resp = await ClientHttpClient.GetAsync($"/_matrix/client/versions");
+        var resp = await ClientHttpClient.GetAsync("/_matrix/client/versions");
         var data = await resp.Content.ReadFromJsonAsync<ClientVersionsResponse>();
         if (!resp.IsSuccessStatusCode) Console.WriteLine("ClientVersions: " + data);
         return data ?? throw new InvalidOperationException("ClientVersionsResponse is null");
@@ -74,13 +61,27 @@ public class RemoteHomeserver {
         return data ?? throw new InvalidOperationException($"Could not resolve alias {alias}");
     }
 
-    public Task<PublicRoomDirectoryResult> GetPublicRoomsAsync(int limit = 100, string? server = null, string? since = null) =>
-        ClientHttpClient.GetFromJsonAsync<PublicRoomDirectoryResult>(buildUriWithParams("/_matrix/client/v3/publicRooms", (nameof(limit), true, limit),
-            (nameof(server), !string.IsNullOrWhiteSpace(server), server), (nameof(since), !string.IsNullOrWhiteSpace(since), since)));
+    public Task<PublicRoomDirectoryResult> GetPublicRoomsAsync(int limit = 100, string? server = null, string? since = null) {
+        var url = $"/_matrix/client/v3/publicRooms?limit={limit}";
+        if (!string.IsNullOrWhiteSpace(server)) {
+            url += $"&server={server}";
+        }
 
-    // TODO: move this somewhere else
-    private string buildUriWithParams(string url, params (string name, bool include, object? value)[] values) {
-        return url + "?" + string.Join("&", values.Where(x => x.include));
+        if (!string.IsNullOrWhiteSpace(since)) {
+            url += $"&since={since}";
+        }
+
+        return ClientHttpClient.GetFromJsonAsync<PublicRoomDirectoryResult>(url);
+    }
+
+    public async IAsyncEnumerable<PublicRoomDirectoryResult> EnumeratePublicRoomsAsync(int limit = int.MaxValue, string? server = null, string? since = null, int chunkSize = 100) {
+        PublicRoomDirectoryResult res;
+        do {
+            res = await GetPublicRoomsAsync(chunkSize, server, since);
+            yield return res;
+            if (res.NextBatch is null || res.NextBatch == since || res.Chunk.Count == 0) break;
+            since = res.NextBatch;
+        } while (limit > 0 && limit-- > 0);
     }
 
 #region Authentication

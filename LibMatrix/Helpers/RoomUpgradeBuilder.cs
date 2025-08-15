@@ -1,11 +1,14 @@
 using System.Diagnostics;
+using System.Reflection;
 using System.Text.Json.Serialization;
 using ArcaneLibs;
+using LibMatrix.EventTypes;
 using LibMatrix.EventTypes.Spec;
 using LibMatrix.EventTypes.Spec.State.Policy;
 using LibMatrix.EventTypes.Spec.State.RoomInfo;
 using LibMatrix.Homeservers;
 using LibMatrix.RoomTypes;
+using LibMatrix.StructuredData;
 
 namespace LibMatrix.Helpers;
 
@@ -15,11 +18,13 @@ public class RoomUpgradeBuilder : RoomBuilder {
     public bool CanUpgrade { get; private set; }
     public Dictionary<string, object> AdditionalTombstoneContent { get; set; } = new();
 
+    private List<Type> basePolicyTypes = [];
+
     public async Task ImportAsync(GenericRoom OldRoom) {
         var sw = Stopwatch.StartNew();
         var total = 0;
 
-        var basePolicyTypes = ClassCollector<PolicyRuleEventContent>.ResolveFromAllAccessibleAssemblies().ToList();
+        basePolicyTypes = ClassCollector<PolicyRuleEventContent>.ResolveFromAllAccessibleAssemblies().ToList();
         Console.WriteLine($"Found {basePolicyTypes.Count} policy types in {sw.ElapsedMilliseconds}ms");
         CanUpgrade = (
                          (await OldRoom.GetPowerLevelsAsync())?.UserHasStatePermission(OldRoom.Homeserver.UserId, RoomTombstoneEventContent.EventId)
@@ -39,7 +44,7 @@ public class RoomUpgradeBuilder : RoomBuilder {
             if (evt.StateKey == "") {
                 if (evt.Type == RoomCreateEventContent.EventId)
                     foreach (var (key, value) in evt.RawContent) {
-                        if (key == "version") continue;
+                        if (key is "room_version" or "creator") continue;
                         if (key == "type")
                             Type = value!.GetValue<string>();
                         else AdditionalCreationContent[key] = value;
@@ -80,8 +85,11 @@ public class RoomUpgradeBuilder : RoomBuilder {
                     });
             }
             else if (evt.Type == RoomMemberEventContent.EventId) {
-                if (UpgradeOptions.InviteMembers && evt.TypedContent is RoomMemberEventContent { Membership: "join" or "invite" } invitedMember) {
-                    Invites.TryAdd(evt.StateKey!, invitedMember.Reason ?? "Room upgrade");
+                if (evt.TypedContent is RoomMemberEventContent { Membership: "join" or "invite" } invitedMember) {
+                    if (UpgradeOptions.InviteMembers)
+                        Invites.TryAdd(evt.StateKey!, invitedMember.Reason ?? "Room upgrade");
+                    else if (UpgradeOptions.InviteLocalMembers && UserId.Parse(evt.StateKey!).ServerName == OldRoom.Homeserver.ServerName)
+                        Invites.TryAdd(evt.StateKey!, invitedMember.Reason ?? "Room upgrade (local user)");
                 }
                 else if (UpgradeOptions.MigrateBans && evt.TypedContent is RoomMemberEventContent { Membership: "ban" } bannedMember)
                     Bans.TryAdd(evt.StateKey!, bannedMember.Reason);
@@ -100,6 +108,19 @@ public class RoomUpgradeBuilder : RoomBuilder {
     }
 
     private StateEventResponse UpgradeUnstableValues(StateEventResponse evt) {
+        if (evt.IsLegacyType) {
+            var oldType = evt.Type;
+            evt.Type = evt.MappedType.GetCustomAttributes<MatrixEventAttribute>().FirstOrDefault(x => !x.Legacy)!.EventName;
+            Console.WriteLine($"Upgraded event type from {oldType} to {evt.Type} for event {evt.EventId}");
+        }
+
+        if (evt.MappedType.IsAssignableTo(typeof(PolicyRuleEventContent))) {
+            if (evt.RawContent["recommendation"]?.GetValue<string>() == "org.matrix.mjolnir.ban") {
+                evt.RawContent["recommendation"] = "m.ban";
+                Console.WriteLine($"Upgraded recommendation from 'org.matrix.mjolnir.ban' to 'm.ban' for event {evt.EventId}");
+            }
+        }
+
         return evt;
     }
 
@@ -158,6 +179,7 @@ public class RoomUpgradeBuilder : RoomBuilder {
 
     public class RoomUpgradeOptions {
         public bool InviteMembers { get; set; }
+        public bool InviteLocalMembers { get; set; }
         public bool InvitePowerlevelUsers { get; set; }
         public bool MigrateBans { get; set; }
         public bool MigrateEmptyStateEvents { get; set; }

@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace LibMatrix;
+namespace LibMatrix.StructuredData;
 
 public class MxcUri {
     public required string ServerName { get; set; }

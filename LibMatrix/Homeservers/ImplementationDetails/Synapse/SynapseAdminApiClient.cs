@@ -16,6 +16,7 @@ using LibMatrix.Filters;
 using LibMatrix.Homeservers.ImplementationDetails.Synapse.Models.Filters;
 using LibMatrix.Homeservers.ImplementationDetails.Synapse.Models.Responses;
 using LibMatrix.Responses;
+using LibMatrix.StructuredData;
 
 namespace LibMatrix.Homeservers.ImplementationDetails.Synapse;
 

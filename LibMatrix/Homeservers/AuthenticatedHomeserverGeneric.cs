@@ -14,6 +14,7 @@ using LibMatrix.Homeservers.Extensions.NamedCaches;
 using LibMatrix.Responses;
 using LibMatrix.RoomTypes;
 using LibMatrix.Services;
+using LibMatrix.StructuredData;
 using LibMatrix.Utilities;
 
 namespace LibMatrix.Homeservers;

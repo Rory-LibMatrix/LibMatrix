@@ -4,11 +4,13 @@ using LibMatrix.EventTypes.Spec.State.RoomInfo;
 using LibMatrix.Homeservers;
 using LibMatrix.Responses;
 using LibMatrix.RoomTypes;
+using LibMatrix.StructuredData;
 
 namespace LibMatrix.Helpers;
 
 public class RoomBuilder {
     private static readonly string[] V12PlusRoomVersions = ["org.matrix.hydra.11", "12"];
+    public bool SynapseAdminAutoAcceptLocalInvites { get; set; }
     public string? Type { get; set; }
     public string Version { get; set; } = "11";
     public RoomNameEventContent Name { get; set; } = new();
@@ -130,6 +132,8 @@ public class RoomBuilder {
         AdditionalCreators.RemoveAll(string.IsNullOrWhiteSpace);
         if (V12PlusRoomVersions.Contains(Version) && AdditionalCreators is { Count: > 0 }) {
             crq.CreationContent.Add("additional_creators", AdditionalCreators);
+            foreach (var user in AdditionalCreators)
+                PowerLevels.Users?.Remove(user);
         }
 
         foreach (var kvp in AdditionalCreationContent) {
@@ -150,6 +154,23 @@ public class RoomBuilder {
     private async Task SendInvites(GenericRoom room) {
         if (Invites.Count == 0) return;
 
+        if (SynapseAdminAutoAcceptLocalInvites && room.Homeserver is AuthenticatedHomeserverSynapse synapse) {
+            var localJoinTasks = Invites.Where(u => UserId.Parse(u.Key).ServerName == synapse.ServerName).Select(async entry => {
+                var user = entry.Key;
+                var reason = entry.Value;
+                try {
+                    var uhs = await synapse.Admin.GetHomeserverForUserAsync(user, TimeSpan.FromHours(1));
+                    var userRoom = uhs.GetRoom(room.RoomId);
+                    await userRoom.JoinAsync([uhs.ServerName], reason);
+                    await uhs.Logout();
+                }
+                catch (MatrixException e) {
+                    Console.WriteLine("Failed to auto-accept invite for {0} in {1}: {2}", user, room.RoomId, e.Message);
+                }
+            }).ToList();
+            await Task.WhenAll(localJoinTasks);
+        }
+
         var inviteTasks = Invites.Select(async kvp => {
             try {
                 await room.InviteUserAsync(kvp.Key, kvp.Value);
@@ -163,11 +184,17 @@ public class RoomBuilder {
     }
 
     private async Task SetStatesAsync(GenericRoom room, List<StateEvent> state) {
-        foreach (var ev in state) {
-            await (string.IsNullOrWhiteSpace(ev.StateKey)
-                ? room.SendStateEventAsync(ev.Type, ev.RawContent)
-                : room.SendStateEventAsync(ev.Type, ev.StateKey, ev.RawContent));
-        }
+        // foreach (var ev in state) {
+        //     await (string.IsNullOrWhiteSpace(ev.StateKey)
+        //         ? room.SendStateEventAsync(ev.Type, ev.RawContent)
+        //         : room.SendStateEventAsync(ev.Type, ev.StateKey, ev.RawContent));
+        // }
+
+        foreach (var group in state.Chunk(100))
+            await room.BulkSendEventsAsync(group);
+
+        // var tasks = state.Chunk(50).Select(room.BulkSendEventsAsync).ToList();
+        // await Task.WhenAll(tasks);
     }
 
     private async Task SetBasicRoomInfoAsync(GenericRoom room) {

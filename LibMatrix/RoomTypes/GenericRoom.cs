@@ -623,7 +623,7 @@ public class GenericRoom {
         }
     }
 
-    public async Task BulkSendEventsAsync(IEnumerable<StateEventResponse> events) {
+    public async Task BulkSendEventsAsync(IEnumerable<StateEvent> events) {
         if ((await Homeserver.GetCapabilitiesAsync()).Capabilities.BulkSendEvents?.Enabled == true)
             await Homeserver.ClientHttpClient.PostAsJsonAsync(
                 $"/_matrix/client/unstable/gay.rory.bulk_send_events/rooms/{RoomId}/bulk_send_events?_libmatrix_txn_id={Guid.NewGuid()}", events);
@@ -638,7 +638,7 @@ public class GenericRoom {
         }
     }
 
-    public async Task BulkSendEventsAsync(IAsyncEnumerable<StateEventResponse> events) {
+    public async Task BulkSendEventsAsync(IAsyncEnumerable<StateEvent> events) {
         if ((await Homeserver.GetCapabilitiesAsync()).Capabilities.BulkSendEvents?.Enabled == true)
             await Homeserver.ClientHttpClient.PostAsJsonAsync(
                 $"/_matrix/client/unstable/gay.rory.bulk_send_events/rooms/{RoomId}/bulk_send_events?_libmatrix_txn_id={Guid.NewGuid()}", events);
