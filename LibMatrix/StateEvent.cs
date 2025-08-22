@@ -123,7 +123,7 @@ public class StateEvent {
 
     public static bool TypeKeyPairMatches(StateEventResponse x, StateEventResponse y) => x.Type == y.Type && x.StateKey == y.StateKey;
     public static bool Equals(StateEventResponse x, StateEventResponse y) => x.Type == y.Type && x.StateKey == y.StateKey && x.EventId == y.EventId;
-    
+
     /// <summary>
     ///     Compares two state events for deep equality, including type, state key, and raw content.
     ///     If you trust the server, use Equals instead, as that compares by event ID instead of raw content.
@@ -137,6 +137,12 @@ public class StateEvent {
 public class StateEventResponse : StateEvent {
     [JsonPropertyName("origin_server_ts")]
     public long? OriginServerTs { get; set; }
+
+    [JsonIgnore]
+    public DateTime? OriginServerTimestamp {
+        get => OriginServerTs.HasValue ? DateTimeOffset.FromUnixTimeMilliseconds(OriginServerTs.Value).UtcDateTime : DateTime.MinValue;
+        set => OriginServerTs = value is null ? null : new DateTimeOffset(value.Value).ToUnixTimeMilliseconds();
+    }
 
     [JsonPropertyName("room_id")]
     public string? RoomId { get; set; }

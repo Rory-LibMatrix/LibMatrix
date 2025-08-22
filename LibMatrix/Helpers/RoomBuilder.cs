@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using System.Runtime.Intrinsics.X86;
+using System.Text.RegularExpressions;
 using ArcaneLibs.Extensions;
 using LibMatrix.EventTypes.Spec.State.RoomInfo;
 using LibMatrix.Homeservers;
@@ -12,7 +14,7 @@ public class RoomBuilder {
     private static readonly string[] V12PlusRoomVersions = ["org.matrix.hydra.11", "12"];
     public bool SynapseAdminAutoAcceptLocalInvites { get; set; }
     public string? Type { get; set; }
-    public string Version { get; set; } = "11";
+    public string Version { get; set; } = "12";
     public RoomNameEventContent Name { get; set; } = new();
     public RoomTopicEventContent Topic { get; set; } = new();
     public RoomAvatarEventContent Avatar { get; set; } = new();
@@ -37,7 +39,7 @@ public class RoomBuilder {
         AllowIpLiterals = false
     };
 
-    public RoomEncryptionEventContent Encryption { get; set; } = new() { };
+    public RoomEncryptionEventContent Encryption { get; set; } = new();
 
     /// <summary>
     ///   State events to be sent *before* room access is configured. Keep this small!
@@ -89,7 +91,7 @@ public class RoomBuilder {
     public List<string> AdditionalCreators { get; set; } = new();
 
     public virtual async Task<GenericRoom> Create(AuthenticatedHomeserverGeneric homeserver) {
-        var crq = new CreateRoomRequest() {
+        var crq = new CreateRoomRequest {
             PowerLevelContentOverride = new() {
                 EventsDefault = 1000000,
                 UsersDefault = 1000000,
@@ -101,11 +103,9 @@ public class RoomBuilder {
                 NotificationsPl = new() {
                     Room = 1000000
                 },
-                Users = V12PlusRoomVersions.Contains(Version)
-                    ? []
-                    : new() {
-                        { homeserver.WhoAmI.UserId, MatrixConstants.MaxSafeJsonInteger }
-                    },
+                Users = new() {
+                    { homeserver.WhoAmI.UserId, MatrixConstants.MaxSafeJsonInteger }
+                },
                 Events = new Dictionary<string, long> {
                     { RoomAvatarEventContent.EventId, 1000000 },
                     { RoomCanonicalAliasEventContent.EventId, 1000000 },
@@ -130,10 +130,14 @@ public class RoomBuilder {
             crq.CreationContent.Add("m.federate", false);
 
         AdditionalCreators.RemoveAll(string.IsNullOrWhiteSpace);
-        if (V12PlusRoomVersions.Contains(Version) && AdditionalCreators is { Count: > 0 }) {
-            crq.CreationContent.Add("additional_creators", AdditionalCreators);
-            foreach (var user in AdditionalCreators)
-                PowerLevels.Users?.Remove(user);
+        if (V12PlusRoomVersions.Contains(Version)) {
+            crq.PowerLevelContentOverride.Users.Remove(homeserver.WhoAmI.UserId);
+            PowerLevels.Users?.Remove(homeserver.WhoAmI.UserId);
+            if (AdditionalCreators is { Count: > 0 }) {
+                crq.CreationContent.Add("additional_creators", AdditionalCreators);
+                foreach (var user in AdditionalCreators)
+                    PowerLevels.Users?.Remove(user);
+            }
         }
 
         foreach (var kvp in AdditionalCreationContent) {
@@ -142,6 +146,8 @@ public class RoomBuilder {
 
         var room = await homeserver.CreateRoom(crq);
 
+        Console.WriteLine("Press any key to continue...");
+        Console.ReadKey(true);
         await SetBasicRoomInfoAsync(room);
         await SetStatesAsync(room, ImportantState);
         await SetAccessAsync(room);
@@ -184,17 +190,38 @@ public class RoomBuilder {
     }
 
     private async Task SetStatesAsync(GenericRoom room, List<StateEvent> state) {
-        // foreach (var ev in state) {
-        //     await (string.IsNullOrWhiteSpace(ev.StateKey)
-        //         ? room.SendStateEventAsync(ev.Type, ev.RawContent)
-        //         : room.SendStateEventAsync(ev.Type, ev.StateKey, ev.RawContent));
+        if (state.Count == 0) return;
+        await room.BulkSendEventsAsync(state);
+        // We chunk this up to try to avoid hitting reverse proxy timeouts
+        // foreach (var group in state.Chunk(chunkSize)) {
+        //     var sw = Stopwatch.StartNew();
+        //     await room.BulkSendEventsAsync(group);
+        //     if (sw.ElapsedMilliseconds > 5000) {
+        //         chunkSize = Math.Max(chunkSize / 2, 1);
+        //         Console.WriteLine($"Warning: Sending {group.Length} state events took {sw.ElapsedMilliseconds}ms, which is quite long. Reducing chunk size to {chunkSize}.");
+        //     }
         // }
-
-        foreach (var group in state.Chunk(100))
-            await room.BulkSendEventsAsync(group);
-
-        // var tasks = state.Chunk(50).Select(room.BulkSendEventsAsync).ToList();
-        // await Task.WhenAll(tasks);
+        // int chunkSize = 50;
+        // for (int i = 0; i < state.Count; i += chunkSize) {
+        //     var chunk = state.Skip(i).Take(chunkSize).ToList();
+        //     if (chunk.Count == 0) continue;
+        //
+        //     var sw = Stopwatch.StartNew();
+        //     await room.BulkSendEventsAsync(chunk, forceSyncInterval: chunk.Count + 1);
+        //     Console.WriteLine($"Sent {chunk.Count} state events in {sw.ElapsedMilliseconds}ms. {state.Count - (i + chunk.Count)} remaining.");
+        //     // if (sw.ElapsedMilliseconds > 45000) {
+        //     //     chunkSize = Math.Max(chunkSize / 3, 1);
+        //     //     Console.WriteLine($"Warning: Sending {chunk.Count} state events took {sw.ElapsedMilliseconds}ms, which is dangerously long. Reducing chunk size to {chunkSize}.");
+        //     // }
+        //     // else if (sw.ElapsedMilliseconds > 30000) {
+        //     //     chunkSize = Math.Max(chunkSize / 2, 1);
+        //     //     Console.WriteLine($"Warning: Sending {chunk.Count} state events took {sw.ElapsedMilliseconds}ms, which is quite long. Reducing chunk size to {chunkSize}.");
+        //     // }
+        //     // else if (sw.ElapsedMilliseconds < 10000) {
+        //     //     chunkSize = Math.Min((int)(chunkSize * 1.2), 1000);
+        //     //     Console.WriteLine($"Info: Sending {chunk.Count} state events took {sw.ElapsedMilliseconds}ms, increasing chunk size to {chunkSize}.");
+        //     // }
+        // }
     }
 
     private async Task SetBasicRoomInfoAsync(GenericRoom room) {

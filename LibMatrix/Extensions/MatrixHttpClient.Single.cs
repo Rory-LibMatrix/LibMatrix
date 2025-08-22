@@ -31,12 +31,13 @@ public class MatrixHttpClient {
             };
         }
         catch (PlatformNotSupportedException e) {
-            Console.WriteLine("Failed to create HttpClient with connection pooling, continuing without connection pool!");
-            Console.WriteLine("Original exception (safe to ignore!):");
-            Console.WriteLine(e);
+            Console.WriteLine("HTTP connection pooling is not supported on this platform, continuing without connection pooling!");
+            // Console.WriteLine("Original exception (safe to ignore!):");
+            // Console.WriteLine(e);
 
             Client = new HttpClient {
-                DefaultRequestVersion = new Version(3, 0)
+                DefaultRequestVersion = new Version(3, 0),
+                Timeout = TimeSpan.FromDays(1)
             };
         }
         catch (Exception e) {

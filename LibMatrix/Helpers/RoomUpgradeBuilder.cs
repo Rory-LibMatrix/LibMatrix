@@ -143,6 +143,18 @@ public class RoomUpgradeBuilder : RoomBuilder {
 
     public override async Task<GenericRoom> Create(AuthenticatedHomeserverGeneric homeserver) {
         var oldRoom = homeserver.GetRoom(OldRoomId);
+        // set the previous room relation
+        AdditionalCreationContent["predecessor"] = new {
+            room_id = OldRoomId,
+            // event_id = (await oldRoom.GetMessagesAsync(limit: 1)).Chunk.Last().EventId
+        };
+
+        if (UpgradeOptions.NoopUpgrade) {
+            AliasLocalPart = null;
+            CanonicalAlias = new();
+            return await base.Create(homeserver);
+        }
+
         // prepare old room first...
         if (!string.IsNullOrWhiteSpace(AliasLocalPart)) {
             var aliasResult = await homeserver.ResolveRoomAliasAsync($"#{AliasLocalPart}:{homeserver.ServerName}");
@@ -185,6 +197,7 @@ public class RoomUpgradeBuilder : RoomBuilder {
         public bool MigrateEmptyStateEvents { get; set; }
         public bool UpgradeUnstableValues { get; set; }
         public bool ForceUpgrade { get; set; }
+        public bool NoopUpgrade { get; set; }
         public Msc4321PolicyListUpgradeOptions Msc4321PolicyListUpgradeOptions { get; set; } = new();
 
         [JsonIgnore]
@@ -211,7 +224,7 @@ public class RoomUpgradeBuilder : RoomBuilder {
             Move,
 
             /// <summary>
-            ///     Don't copy policies
+            ///     Don't copy policies, watch both lists
             /// </summary>
             Transition
         }

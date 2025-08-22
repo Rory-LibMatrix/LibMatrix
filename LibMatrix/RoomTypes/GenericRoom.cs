@@ -623,10 +623,12 @@ public class GenericRoom {
         }
     }
 
-    public async Task BulkSendEventsAsync(IEnumerable<StateEvent> events) {
-        if ((await Homeserver.GetCapabilitiesAsync()).Capabilities.BulkSendEvents?.Enabled == true)
-            await Homeserver.ClientHttpClient.PostAsJsonAsync(
-                $"/_matrix/client/unstable/gay.rory.bulk_send_events/rooms/{RoomId}/bulk_send_events?_libmatrix_txn_id={Guid.NewGuid()}", events);
+    public async Task BulkSendEventsAsync(IEnumerable<StateEvent> events, int? forceSyncInterval = null) {
+        if ((await Homeserver.GetCapabilitiesAsync()).Capabilities.BulkSendEvents?.Enabled == true) {
+            var uri = $"/_matrix/client/unstable/gay.rory.bulk_send_events/rooms/{RoomId}/bulk_send_events?_libmatrix_txn_id={Guid.NewGuid()}";
+            if (forceSyncInterval is not null) uri += $"&force_sync_interval={forceSyncInterval}";
+            await Homeserver.ClientHttpClient.PostAsJsonAsync(uri, events);
+        }
         else {
             Console.WriteLine("Homeserver does not support bulk sending events, falling back to individual sends.");
             foreach (var evt in events)
@@ -638,10 +640,12 @@ public class GenericRoom {
         }
     }
 
-    public async Task BulkSendEventsAsync(IAsyncEnumerable<StateEvent> events) {
-        if ((await Homeserver.GetCapabilitiesAsync()).Capabilities.BulkSendEvents?.Enabled == true)
-            await Homeserver.ClientHttpClient.PostAsJsonAsync(
-                $"/_matrix/client/unstable/gay.rory.bulk_send_events/rooms/{RoomId}/bulk_send_events?_libmatrix_txn_id={Guid.NewGuid()}", events);
+    public async Task BulkSendEventsAsync(IAsyncEnumerable<StateEvent> events, int? forceSyncInterval = null) {
+        if ((await Homeserver.GetCapabilitiesAsync()).Capabilities.BulkSendEvents?.Enabled == true) {
+            var uri = $"/_matrix/client/unstable/gay.rory.bulk_send_events/rooms/{RoomId}/bulk_send_events?_libmatrix_txn_id={Guid.NewGuid()}";
+            if (forceSyncInterval is not null) uri += $"&force_sync_interval={forceSyncInterval}";
+            await Homeserver.ClientHttpClient.PostAsJsonAsync(uri, events);
+        }
         else {
             Console.WriteLine("Homeserver does not support bulk sending events, falling back to individual sends.");
             await foreach (var evt in events)

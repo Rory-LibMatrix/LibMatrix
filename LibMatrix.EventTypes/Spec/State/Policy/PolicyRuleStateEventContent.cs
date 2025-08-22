@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using ArcaneLibs.Attributes;
@@ -87,20 +88,16 @@ public abstract class PolicyRuleEventContent : EventContent {
     public PolicyHash? Hashes { get; set; }
 
     public string GetDraupnir2StateKey() => Convert.ToBase64String(SHA256.HashData($"{Entity}{Recommendation}".AsBytes().ToArray()));
-
-    public Regex? GetEntityRegex() => Entity is null ? null : new(Entity.Replace(".", "\\.").Replace("*", ".*").Replace("?", "."));
-
-    public bool IsGlobRule() =>
-        !string.IsNullOrWhiteSpace(Entity)
-        && (Entity.Contains('*') || Entity.Contains('?'));
+    public Regex? GetEntityRegex() => Entity is null ? null : new(Entity.Replace(".", "\\.").Replace("*", ".*").Replace("?", "."), RegexOptions.Compiled);
+    public bool IsGlobRule() => !string.IsNullOrWhiteSpace(Entity) && (Entity.Contains('*') || Entity.Contains('?'));
+    public bool IsHashedRule() => string.IsNullOrWhiteSpace(Entity) && Hashes is not null;
 
     public bool EntityMatches(string entity) {
         if (string.IsNullOrWhiteSpace(entity)) return false;
 
         if (!string.IsNullOrWhiteSpace(Entity)) {
             // Check if entity is equal regardless of glob check
-            var match = Entity == entity
-                        || (IsGlobRule() && GetEntityRegex()!.IsMatch(entity));
+            var match = Entity == entity || (IsGlobRule() && GetEntityRegex()!.IsMatch(entity));
             if (match) return match;
         }
 
@@ -124,7 +121,7 @@ public abstract class PolicyRuleEventContent : EventContent {
 
         return Recommendation;
     }
-    
+
     public string? GetSpecRecommendation() {
         if (Recommendation is "m.ban" or "org.matrix.mjolnir.ban")
             return PolicyRecommendationTypes.Ban;
@@ -159,6 +156,9 @@ public static class PolicyRecommendationTypes {
 public class PolicyHash {
     [JsonPropertyName("sha256")]
     public string? Sha256 { get; set; }
+    
+    [JsonExtensionData]
+    public Dictionary<string, object>? AdditionalProperties { get; set; }
 }
 
 // public class PolicySchemaDefinition {
