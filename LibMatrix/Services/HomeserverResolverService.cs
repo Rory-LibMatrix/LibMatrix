@@ -9,7 +9,9 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace LibMatrix.Services;
 
 public class HomeserverResolverService {
-    private readonly MatrixHttpClient _httpClient = new();
+    private readonly MatrixHttpClient _httpClient = new() {
+        RetryOnNetworkError = false
+    };
 
     private static readonly SemaphoreCache<WellKnownUris> WellKnownCache = new();
 

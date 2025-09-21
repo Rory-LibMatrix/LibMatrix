@@ -42,7 +42,7 @@ public class ServerRoomSizeCalulator : IHostedService {
             var roomSize = stateList.Count;
             if (roomSize > 10000) await File.AppendAllLinesAsync("large_rooms.txt", new[] { $"{{ \"{room.RoomId}\", {roomSize} }}," }, cancellationToken);
 
-            var roomHs = room.RoomId.Split(":")[1];
+            var roomHs = await room.GetOriginHomeserverAsync();
             if (totalRoomSize.ContainsKey(roomHs))
                 totalRoomSize[roomHs] += roomSize;
             else

@@ -83,7 +83,15 @@ public class RoomBuilder {
             { RoomPowerLevelEventContent.EventId, 100 },
             { RoomServerAclEventContent.EventId, 100 },
             { RoomTombstoneEventContent.EventId, 150 },
-            { RoomPolicyServerEventContent.EventId, 100 }
+            { RoomPolicyServerEventContent.EventId, 100 },
+            { RoomPinnedEventContent.EventId, 50 },
+            // recommended extensions
+            { "im.vector.modular.widgets", 50},
+            // { "m.reaction", 0 }, // we probably don't want these to end up as room state
+            // - prevent calls
+            { "io.element.voice_broadcast_info", 50 },
+            { "org.matrix.msc3401.call", 50 },
+            { "org.matrix.msc3401.call.member", 50 },
         }
     };
 

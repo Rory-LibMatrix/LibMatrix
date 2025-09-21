@@ -17,7 +17,7 @@ public class HomeserverProviderService(ILogger<HomeserverProviderService> logger
         if (!enableClient && !enableServer)
             throw new ArgumentException("At least one of enableClient or enableServer must be true");
 
-        return await AuthenticatedHomeserverCache.GetOrAdd($"{homeserver}{accessToken}{proxy}{impersonatedMxid}", async () => {
+        return await AuthenticatedHomeserverCache.GetOrAdd($"{homeserver}{accessToken}{proxy}{impersonatedMxid}{useGeneric}{enableClient}{enableServer}", async () => {
             var wellKnownUris = await hsResolver.ResolveHomeserverFromWellKnown(homeserver, enableClient, enableServer);
             var rhs = new RemoteHomeserver(homeserver, wellKnownUris, proxy);
 

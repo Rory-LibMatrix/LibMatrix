@@ -704,6 +704,18 @@ public class GenericRoom {
     }
 
     public async Task<List<string>> GetHomeserversInRoom() => (await GetMemberIdsListAsync("join")).Select(x => x.Split(':', 2)[1]).Distinct().ToList();
+
+    public async Task<bool> IsJoinedAsync() {
+        try {
+            var member = await GetStateOrNullAsync<RoomMemberEventContent>(RoomMemberEventContent.EventId, Homeserver.UserId);
+            return member?.Membership == "join";
+        }
+        catch (MatrixException e) {
+            if (e.ErrorCode == "M_NOT_FOUND") return false;
+            if (e.ErrorCode == "M_FORBIDDEN") return false;
+            throw;
+        }
+    }
 }
 
 public class RoomIdResponse {

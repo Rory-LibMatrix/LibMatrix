@@ -55,6 +55,10 @@ public class MatrixHttpClient {
     public Dictionary<string, string> AdditionalQueryParameters { get; set; } = new();
 
     public Uri? BaseAddress { get; set; }
+    public bool RetryOnNetworkError { get; set; } = true;
+    public bool RetryOnMatrixError { get; set; } = true;
+
+    private Dictionary<HttpRequestMessage, int> _retries = [];
 
     // default headers, not bound to client
     public HttpRequestHeaders DefaultRequestHeaders { get; set; } =
@@ -151,8 +155,37 @@ public class MatrixHttpClient {
     }
 
     public async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken = default) {
-        var responseMessage = await SendUnhandledAsync(request, cancellationToken);
-        if (responseMessage.IsSuccessStatusCode) return responseMessage;
+        _retries.TryAdd(request, 10);
+        HttpResponseMessage responseMessage;
+        try {
+            responseMessage = await SendUnhandledAsync(request, cancellationToken);
+        }
+        catch (HttpRequestException ex) {
+            if (RetryOnNetworkError) {
+                if (_retries[request]-- <= 0) throw;
+                if (ex.InnerException?.GetType().FullName == "System.Runtime.InteropServices.JavaScript.JSException")
+                    Console.WriteLine("Got JSException, likely a CORS error due to a reverse proxy misconfiguration and error, retrying...");
+                else
+                    Console.WriteLine(new {
+                        ex.HttpRequestError,
+                        ex.StatusCode,
+                        ex.Data,
+                        ex.Message,
+                        InnerException = ex.InnerException?.ToString(),
+                        InnerExceptionType = ex.InnerException?.GetType().FullName
+                    }.ToJson());
+
+                await Task.Delay(Random.Shared.Next(1000, 2000), cancellationToken);
+                request.ResetSendStatus();
+                return await SendAsync(request, cancellationToken);
+            }
+            throw;
+        }
+
+        if (responseMessage.IsSuccessStatusCode) {
+            _retries.Remove(request);
+            return responseMessage;
+        }
 
         //retry on gateway timeout
         // if (responseMessage.StatusCode == HttpStatusCode.GatewayTimeout) {
@@ -192,14 +225,19 @@ public class MatrixHttpClient {
                 request.ResetSendStatus();
                 return await SendAsync(request, cancellationToken);
             }
+
             throw ex;
         }
 
         if (responseMessage.StatusCode == HttpStatusCode.BadGateway) {
             // spread out retries
-            await Task.Delay(Random.Shared.Next(1000, 2000), cancellationToken);
-            request.ResetSendStatus();
-            return await SendAsync(request, cancellationToken);
+            if (RetryOnNetworkError) {
+                if (_retries[request]-- <= 0) throw new InvalidDataException("Encountered invalid data:\n" + content);
+                Console.WriteLine("Got 502 Bad Gateway, retrying...");
+                await Task.Delay(Random.Shared.Next(1000, 2000), cancellationToken);
+                request.ResetSendStatus();
+                return await SendAsync(request, cancellationToken);
+            }
         }
 
         responseMessage.EnsureSuccessStatusCode();
