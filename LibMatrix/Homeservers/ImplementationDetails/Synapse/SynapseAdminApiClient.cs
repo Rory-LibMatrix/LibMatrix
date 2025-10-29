@@ -1,19 +1,13 @@
 // #define LOG_SKIP
 
+using System.CodeDom.Compiler;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Net.Http.Json;
-using System.Text.Json;
-using System.Text.Json.Nodes;
-using System.Text.Json.Serialization;
 using ArcaneLibs.Extensions;
+using LibMatrix.EventTypes.Spec.State.RoomInfo;
 using LibMatrix.Homeservers.ImplementationDetails.Synapse.Models.Filters;
 using LibMatrix.Homeservers.ImplementationDetails.Synapse.Models.Requests;
-using LibMatrix.Homeservers.ImplementationDetails.Synapse.Models.Responses;
-using LibMatrix.Responses;
-using LibMatrix.Filters;
-using LibMatrix.Homeservers.ImplementationDetails.Synapse.Models.Filters;
 using LibMatrix.Homeservers.ImplementationDetails.Synapse.Models.Responses;
 using LibMatrix.Responses;
 using LibMatrix.StructuredData;
@@ -28,24 +22,41 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
 #region Rooms
 
     public async IAsyncEnumerable<SynapseAdminRoomListResult.SynapseAdminRoomListResultRoom> SearchRoomsAsync(int limit = int.MaxValue, int chunkLimit = 250,
-        string orderBy = "name", string dir = "f", string? searchTerm = null, SynapseAdminLocalRoomQueryFilter? localFilter = null) {
+        string orderBy = "name", string dir = "f", string? searchTerm = null, SynapseAdminLocalRoomQueryFilter? localFilter = null,
+        bool fetchTombstones = false, bool fetchTopics = false, bool fetchCreateEvents = false) {
+        if (localFilter != null) {
+            fetchTombstones |= localFilter.Tombstone.Enabled;
+            fetchTopics |= localFilter.Topic.Enabled;
+            fetchCreateEvents |= localFilter.RoomType.Enabled;
+        }
+
+        var serverCaps = await authenticatedHomeserver.GetCapabilitiesAsync();
+        var serverSupportsQueryEventsV2 = serverCaps.Capabilities.SynapseRoomListQueryEventsV2?.Enabled ?? false;
+
         SynapseAdminRoomListResult? res = null;
         var i = 0;
         int? totalRooms = null;
         do {
             var url = $"/_synapse/admin/v1/rooms?limit={Math.Min(limit, chunkLimit)}&dir={dir}&order_by={orderBy}";
-            if (!string.IsNullOrEmpty(searchTerm)) url += $"&search_term={searchTerm}";
 
+            if (!string.IsNullOrEmpty(searchTerm)) url += $"&search_term={searchTerm}";
             if (res?.NextBatch is not null) url += $"&from={res.NextBatch}";
+
+            // nonstandard stuff
+            if (fetchTombstones) url += "&gay.rory.synapse_admin_extensions.include_tombstone=true&emma_include_tombstone=true";
+            if (fetchTopics) url += "&gay.rory.synapse_admin_extensions.include_topic=true";
+            if (fetchCreateEvents) url += "&gay.rory.synapse_admin_extensions.include_create_event=true";
 
             Console.WriteLine($"--- ADMIN Querying Room List with URL: {url} - Already have {i} items... ---");
 
             res = await authenticatedHomeserver.ClientHttpClient.GetFromJsonAsync<SynapseAdminRoomListResult>(url);
             totalRooms ??= res.TotalRooms;
             // Console.WriteLine(res.ToJson(false));
+
+            List<SynapseAdminRoomListResult.SynapseAdminRoomListResultRoom> keep = [];
             foreach (var room in res.Rooms) {
                 if (localFilter is not null) {
-                    if (!string.IsNullOrWhiteSpace(localFilter.RoomIdContains) && !room.RoomId.Contains(localFilter.RoomIdContains, StringComparison.OrdinalIgnoreCase)) {
+                    if (!localFilter.RoomId.Matches(room.RoomId, StringComparison.OrdinalIgnoreCase)) {
                         totalRooms--;
 #if LOG_SKIP
                         Console.WriteLine($"Skipped room {room.ToJson(indent: false)} on rule roomid.");
@@ -53,7 +64,7 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
                         continue;
                     }
 
-                    if (!string.IsNullOrWhiteSpace(localFilter.NameContains) && room.Name?.Contains(localFilter.NameContains, StringComparison.OrdinalIgnoreCase) != true) {
+                    if (!localFilter.Name.Matches(room.Name ?? "", StringComparison.OrdinalIgnoreCase)) {
                         totalRooms--;
 #if LOG_SKIP
                         Console.WriteLine($"Skipped room {room.ToJson(indent: false)} on rule roomname.");
@@ -61,8 +72,7 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
                         continue;
                     }
 
-                    if (!string.IsNullOrWhiteSpace(localFilter.CanonicalAliasContains) &&
-                        room.CanonicalAlias?.Contains(localFilter.CanonicalAliasContains, StringComparison.OrdinalIgnoreCase) != true) {
+                    if (!localFilter.CanonicalAlias.Matches(room.CanonicalAlias ?? "", StringComparison.OrdinalIgnoreCase)) {
                         totalRooms--;
 #if LOG_SKIP
                         Console.WriteLine($"Skipped room {room.ToJson(indent: false)} on rule alias.");
@@ -70,7 +80,7 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
                         continue;
                     }
 
-                    if (!string.IsNullOrWhiteSpace(localFilter.VersionContains) && !room.Version.Contains(localFilter.VersionContains, StringComparison.OrdinalIgnoreCase)) {
+                    if (!localFilter.Version.Matches(room.Version ?? "")) {
                         totalRooms--;
 #if LOG_SKIP
                         Console.WriteLine($"Skipped room {room.ToJson(indent: false)} on rule version.");
@@ -78,7 +88,7 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
                         continue;
                     }
 
-                    if (!string.IsNullOrWhiteSpace(localFilter.CreatorContains) && !room.Creator.Contains(localFilter.CreatorContains, StringComparison.OrdinalIgnoreCase)) {
+                    if (!localFilter.Creator.Matches(room.Creator ?? "", StringComparison.OrdinalIgnoreCase)) {
                         totalRooms--;
 #if LOG_SKIP
                         Console.WriteLine($"Skipped room {room.ToJson(indent: false)} on rule creator.");
@@ -86,8 +96,7 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
                         continue;
                     }
 
-                    if (!string.IsNullOrWhiteSpace(localFilter.EncryptionContains) &&
-                        room.Encryption?.Contains(localFilter.EncryptionContains, StringComparison.OrdinalIgnoreCase) != true) {
+                    if (!localFilter.Encryption.Matches(room.Encryption ?? "", StringComparison.OrdinalIgnoreCase)) {
                         totalRooms--;
 #if LOG_SKIP
                         Console.WriteLine($"Skipped room {room.ToJson(indent: false)} on rule encryption.");
@@ -95,8 +104,7 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
                         continue;
                     }
 
-                    if (!string.IsNullOrWhiteSpace(localFilter.JoinRulesContains) &&
-                        room.JoinRules?.Contains(localFilter.JoinRulesContains, StringComparison.OrdinalIgnoreCase) != true) {
+                    if (!localFilter.JoinRules.Matches(room.JoinRules ?? "", StringComparison.OrdinalIgnoreCase)) {
                         totalRooms--;
 #if LOG_SKIP
                         Console.WriteLine($"Skipped room {room.ToJson(indent: false)} on rule joinrules.");
@@ -104,8 +112,7 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
                         continue;
                     }
 
-                    if (!string.IsNullOrWhiteSpace(localFilter.GuestAccessContains) &&
-                        room.GuestAccess?.Contains(localFilter.GuestAccessContains, StringComparison.OrdinalIgnoreCase) != true) {
+                    if (!localFilter.GuestAccess.Matches(room.GuestAccess ?? "", StringComparison.OrdinalIgnoreCase)) {
                         totalRooms--;
 #if LOG_SKIP
                         Console.WriteLine($"Skipped room {room.ToJson(indent: false)} on rule guestaccess.");
@@ -113,8 +120,7 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
                         continue;
                     }
 
-                    if (!string.IsNullOrWhiteSpace(localFilter.HistoryVisibilityContains) &&
-                        room.HistoryVisibility?.Contains(localFilter.HistoryVisibilityContains, StringComparison.OrdinalIgnoreCase) != true) {
+                    if (!localFilter.HistoryVisibility.Matches(room.HistoryVisibility ?? "", StringComparison.OrdinalIgnoreCase)) {
                         totalRooms--;
 #if LOG_SKIP
                         Console.WriteLine($"Skipped room {room.ToJson(indent: false)} on rule history visibility.");
@@ -122,7 +128,7 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
                         continue;
                     }
 
-                    if (localFilter.CheckFederation && room.Federatable != localFilter.Federatable) {
+                    if (!localFilter.Federation.Matches(room.Federatable)) {
                         totalRooms--;
 #if LOG_SKIP
                         Console.WriteLine($"Skipped room {room.ToJson(indent: false)} on rule federation.");
@@ -130,7 +136,7 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
                         continue;
                     }
 
-                    if (localFilter.CheckPublic && room.Public != localFilter.Public) {
+                    if (!localFilter.Public.Matches(room.Public)) {
                         totalRooms--;
 #if LOG_SKIP
                         Console.WriteLine($"Skipped room {room.ToJson(indent: false)} on rule public.");
@@ -138,15 +144,15 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
                         continue;
                     }
 
-                    if (room.StateEvents < localFilter.StateEventsGreaterThan || room.StateEvents > localFilter.StateEventsLessThan) {
+                    if (!localFilter.StateEvents.Matches(room.StateEvents)) {
                         totalRooms--;
 #if LOG_SKIP
-                        Console.WriteLine($"Skipped room {room.ToJson(indent: false)} on rule joined local members.");
+                        Console.WriteLine($"Skipped room {room.ToJson(indent: false)} on rule state events.");
 #endif
                         continue;
                     }
 
-                    if (room.JoinedMembers < localFilter.JoinedMembersGreaterThan || room.JoinedMembers > localFilter.JoinedMembersLessThan) {
+                    if (!localFilter.JoinedMembers.Matches(room.JoinedMembers)) {
                         totalRooms--;
 #if LOG_SKIP
                         Console.WriteLine($"Skipped room {room.ToJson(indent: false)} on rule joined members: {localFilter.JoinedMembersGreaterThan} < {room.JoinedLocalMembers} < {localFilter.JoinedMembersLessThan}.");
@@ -154,7 +160,7 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
                         continue;
                     }
 
-                    if (room.JoinedLocalMembers < localFilter.JoinedLocalMembersGreaterThan || room.JoinedLocalMembers > localFilter.JoinedLocalMembersLessThan) {
+                    if (!localFilter.JoinedLocalMembers.Matches(room.JoinedLocalMembers)) {
                         totalRooms--;
 #if LOG_SKIP
                         Console.WriteLine($"Skipped room {room.ToJson(indent: false)} on rule joined local members: {localFilter.JoinedLocalMembersGreaterThan} < {room.JoinedLocalMembers} < {localFilter.JoinedLocalMembersLessThan}.");
@@ -162,21 +168,91 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
                         continue;
                     }
                 }
-                // if (contentSearch is not null && !string.IsNullOrEmpty(contentSearch) &&
-                //     !(
-                //         room.Name?.Contains(contentSearch, StringComparison.InvariantCultureIgnoreCase) == true ||
-                //         room.CanonicalAlias?.Contains(contentSearch, StringComparison.InvariantCultureIgnoreCase) == true ||
-                //         room.Creator?.Contains(contentSearch, StringComparison.InvariantCultureIgnoreCase) == true
-                //     )
-                //    ) {
-                //     totalRooms--;
-                //     continue;
-                // }
 
                 i++;
+                keep.Add(room);
+            }
+
+            var parallelisationLimit = new SemaphoreSlim(32, 32);
+            List<Task<(SynapseAdminRoomListResult.SynapseAdminRoomListResultRoom room, StateEventResponse?[] tasks)>> tasks = [];
+
+            async Task<(SynapseAdminRoomListResult.SynapseAdminRoomListResultRoom room, StateEventResponse?[] tasks)> fillTask(
+                SynapseAdminRoomListResult.SynapseAdminRoomListResultRoom room) {
+                if (serverSupportsQueryEventsV2) return (room, []);
+
+                var fillTasks = await Task.WhenAll(((Task<StateEventResponse?>?[]) [
+                        fetchTombstones && room.TombstoneEvent is null
+                            ? parallelisationLimit.RunWithLockAsync(() => room.GetTombstoneEventAsync(authenticatedHomeserver))
+                            : null!,
+                        fetchTopics && room.TopicEvent is null
+                            ? parallelisationLimit.RunWithLockAsync(() => room.GetTopicEventAsync(authenticatedHomeserver))
+                            : null!,
+                        fetchCreateEvents && room.CreateEvent is null
+                            ? parallelisationLimit.RunWithLockAsync(() => room.GetCreateEventAsync(authenticatedHomeserver))
+                            : null!,
+                    ])
+                    .Where(t => t != null)!
+                );
+                return (
+                    room,
+                    fillTasks
+                );
+            }
+
+            tasks.AddRange(
+                serverSupportsQueryEventsV2
+                    ? keep.Select(x => Task.FromResult((x, (StateEventResponse?[])[])))
+                    : keep.Select(fillTask)
+            );
+
+            // await Task.WhenAll(tasks);
+
+            foreach (var taskRes in tasks) {
+                var (room, _) = await taskRes;
+                if (localFilter is not null) {
+                    if (!localFilter.Tombstone.Matches(room.TombstoneEvent != null)) {
+                        totalRooms--;
+#if LOG_SKIP
+                        Console.WriteLine($"Skipped room {room.ToJson(indent: false)} on rule tombstone.");
+#endif
+                        continue;
+                    }
+
+                    if (!localFilter.RoomType.Matches(room.CreateEvent?.ContentAs<RoomCreateEventContent>()?.Type)) {
+                        totalRooms--;
+#if LOG_SKIP
+                        Console.WriteLine($"Skipped room {room.ToJson(indent: false)} on rule room type.");
+#endif
+                        continue;
+                    }
+
+                    if (!localFilter.Topic.Matches(room.TopicEvent?.ContentAs<RoomTopicEventContent>()?.Topic, StringComparison.OrdinalIgnoreCase)) {
+                        totalRooms--;
+#if LOG_SKIP
+                        Console.WriteLine($"Skipped room {room.ToJson(indent: false)} on rule topic.");
+#endif
+                        continue;
+                    }
+                }
+
                 yield return room;
             }
         } while (i < Math.Min(limit, totalRooms ?? limit));
+    }
+
+    public async Task<bool> CheckRoomKnownAsync(string roomId) {
+        try {
+            var createEvt = await GetRoomStateAsync(roomId, RoomCreateEventContent.EventId);
+            if (createEvt.Events.FirstOrDefault(e => e.StateKey == "") is null)
+                return false;
+            var members = await GetRoomMembersAsync(roomId, localOnly: true);
+            return members.Members.Count > 0;
+        }
+        catch (Exception e) {
+            if (e is HttpRequestException { StatusCode: System.Net.HttpStatusCode.NotFound }) return false;
+            if (e is MatrixException { ErrorCode: MatrixException.ErrorCodes.M_NOT_FOUND }) return false;
+            throw;
+        }
     }
 
 #endregion
@@ -194,7 +270,7 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
             if (!string.IsNullOrWhiteSpace(from)) url = url.AddQuery("from", from);
             if (!string.IsNullOrWhiteSpace(orderBy)) url = url.AddQuery("order_by", orderBy);
             if (!string.IsNullOrWhiteSpace(dir)) url = url.AddQuery("dir", dir);
-            
+
             Console.WriteLine($"--- ADMIN Querying User List with URL: {url} ---");
             // TODO: implement URI methods in http client
             var res = await authenticatedHomeserver.ClientHttpClient.GetFromJsonAsync<SynapseAdminUserListResult>(url.ToString());
@@ -527,8 +603,13 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
             $"/_synapse/admin/v2/rooms/delete_status/{deleteId}");
     }
 
-    public async Task<SynapseAdminRoomMemberListResult> GetRoomMembersAsync(string roomId) {
-        return await authenticatedHomeserver.ClientHttpClient.GetFromJsonAsync<SynapseAdminRoomMemberListResult>($"/_synapse/admin/v1/rooms/{roomId.UrlEncode()}/members");
+    public async Task<SynapseAdminRoomMemberListResult> GetRoomMembersAsync(string roomId, bool localOnly = false) {
+        var res = await authenticatedHomeserver.ClientHttpClient.GetFromJsonAsync<SynapseAdminRoomMemberListResult>($"/_synapse/admin/v1/rooms/{roomId.UrlEncode()}/members");
+        if (localOnly) {
+            res.Members = res.Members.Where(m => m.EndsWith($":{authenticatedHomeserver.ServerName}")).ToList();
+        }
+
+        return res;
     }
 
     public async Task<SynapseAdminRoomStateResult> GetRoomStateAsync(string roomId, string? type = null) {

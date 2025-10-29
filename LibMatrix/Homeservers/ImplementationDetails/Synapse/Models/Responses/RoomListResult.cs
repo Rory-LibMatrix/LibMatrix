@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using LibMatrix.EventTypes.Spec.State.RoomInfo;
 
 namespace LibMatrix.Homeservers.ImplementationDetails.Synapse.Models.Responses;
 
@@ -60,5 +61,56 @@ public class SynapseAdminRoomListResult {
 
         [JsonPropertyName("state_events")]
         public int StateEvents { get; set; }
+
+        [JsonPropertyName("gay.rory.synapse_admin_extensions.tombstone")]
+        public StateEventResponse? TombstoneEvent { get; set; }
+
+        [JsonPropertyName("gay.rory.synapse_admin_extensions.create")]
+        public StateEventResponse? CreateEvent { get; set; }
+
+        [JsonPropertyName("gay.rory.synapse_admin_extensions.topic")]
+        public StateEventResponse? TopicEvent { get; set; }
+
+        public async Task<StateEventResponse?> GetCreateEventAsync(AuthenticatedHomeserverSynapse hs) {
+            if (CreateEvent != null) return CreateEvent;
+
+            try {
+                var events = (await hs.Admin.GetRoomStateAsync(RoomId, RoomCreateEventContent.EventId));
+                CreateEvent = events.Events.SingleOrDefault(x => x.StateKey == "");
+            }
+            catch (Exception e) {
+                Console.WriteLine($"Failed to fetch room create event for {RoomId}: {e}");
+            }
+
+            return null;
+        }
+
+        public async Task<StateEventResponse?> GetTombstoneEventAsync(AuthenticatedHomeserverSynapse hs) {
+            if (TombstoneEvent != null) return TombstoneEvent;
+
+            try {
+                var events = (await hs.Admin.GetRoomStateAsync(RoomId, RoomTombstoneEventContent.EventId));
+                TombstoneEvent = events.Events.SingleOrDefault(x => x.StateKey == "");
+            }
+            catch (Exception e) {
+                Console.WriteLine($"Failed to fetch room tombstone event for {RoomId}: {e}");
+            }
+
+            return null;
+        }
+
+        public async Task<StateEventResponse?> GetTopicEventAsync(AuthenticatedHomeserverSynapse hs) {
+            if (TopicEvent != null) return TopicEvent;
+
+            try {
+                var events = await hs.Admin.GetRoomStateAsync(RoomId, RoomTopicEventContent.EventId);
+                TopicEvent = events.Events.SingleOrDefault(x => x.StateKey == "");
+            }
+            catch (Exception e) {
+                Console.WriteLine($"Failed to fetch room topic event for {RoomId}: {e}");
+            }
+
+            return null;
+        }
     }
 }

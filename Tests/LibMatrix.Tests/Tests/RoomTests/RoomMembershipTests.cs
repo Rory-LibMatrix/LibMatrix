@@ -14,7 +14,7 @@ public class RoomMembershipTests : TestBed<TestFixture> {
     public RoomMembershipTests(ITestOutputHelper testOutputHelper, TestFixture fixture) : base(testOutputHelper, fixture) {
         _hsAbstraction = _fixture.GetService<HomeserverAbstraction>(_testOutputHelper) ?? throw new InvalidOperationException($"Failed to get {nameof(HomeserverAbstraction)}");
     }
-    
+
     [Fact]
     public async Task GetMembersAsync() {
         Assert.True(StateEvent.KnownStateEventTypes is { Count: > 0 }, "StateEvent.KnownStateEventTypes is empty!");
@@ -44,7 +44,7 @@ public class RoomMembershipTests : TestBed<TestFixture> {
         }
 
         Assert.True(hitMembers, "No members were found in the room");
-        
+
         await room.LeaveAsync();
     }
 
@@ -62,7 +62,7 @@ public class RoomMembershipTests : TestBed<TestFixture> {
         Assert.NotNull(id);
         Assert.NotNull(id.RoomId);
         Assert.NotEmpty(id.RoomId);
-        
+
         await room.LeaveAsync();
     }
 
@@ -95,7 +95,7 @@ public class RoomMembershipTests : TestBed<TestFixture> {
         Assert.NotNull(banState);
         Assert.Equal("leave", banState.Membership);
         Assert.Equal("test", banState.Reason);
-        
+
         await room.LeaveAsync();
     }
 
@@ -109,7 +109,7 @@ public class RoomMembershipTests : TestBed<TestFixture> {
         var banState = await room.GetStateAsync<RoomMemberEventContent>("m.room.member", hs2.UserId);
         Assert.NotNull(banState);
         Assert.Equal("ban", banState.Membership);
-        
+
         await room.LeaveAsync();
     }
 
@@ -124,12 +124,12 @@ public class RoomMembershipTests : TestBed<TestFixture> {
         Assert.NotNull(banState);
         Assert.Equal("ban", banState.Membership);
         await room.UnbanAsync(hs2.UserId, "testing");
-        
+
         var unbanState = await room.GetStateAsync<RoomMemberEventContent>("m.room.member", hs2.UserId);
         Assert.NotNull(unbanState);
         Assert.Equal("leave", unbanState.Membership);
         Assert.Equal("testing", unbanState.Reason);
-        
+
         await room.LeaveAsync();
     }
 
@@ -157,17 +157,16 @@ public class RoomMembershipTests : TestBed<TestFixture> {
             tasks.Add(otherUser, room.InviteUserAsync(otherUser.UserId, "Unit test!"));
         }
 
-        await foreach (var otherUser in tasks.ToAsyncEnumerable()) {
+        await foreach (var otherUser in tasks.ToAsyncResultEnumerable()) {
             _testOutputHelper.WriteLine($"Joining {otherUser.UserId} to {room.RoomId}");
             await otherUser.GetRoom(room.RoomId).JoinAsync(reason: "Unit test!");
         }
 
         var states = await room.GetMembersListAsync();
         Assert.Equal(count + 1, states.Count);
-        
+
         await room.LeaveAsync();
-        await foreach (var authenticatedHomeserverGeneric in otherUsers)
-        {
+        await foreach (var authenticatedHomeserverGeneric in otherUsers) {
             await authenticatedHomeserverGeneric.GetRoom(room.RoomId).LeaveAsync();
         }
     }

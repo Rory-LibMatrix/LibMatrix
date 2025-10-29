@@ -45,7 +45,7 @@ public class Msc4222EmulationSyncProcessor(AuthenticatedHomeserverGeneric homese
             tasks.AddRange(resp.Rooms.Leave.Select(ProcessLeftRooms).ToList());
         }
 
-        var tasksEnum = tasks.ToAsyncEnumerable();
+        var tasksEnum = tasks.ToAsyncResultEnumerable();
         await foreach (var wasModified in tasksEnum) {
             if (wasModified) {
                 modified = true;
@@ -129,7 +129,7 @@ public class Msc4222EmulationSyncProcessor(AuthenticatedHomeserverGeneric homese
                 }
             });
 
-        var tasksEnum = tasks.ToAsyncEnumerable();
+        var tasksEnum = tasks.ToAsyncResultEnumerable();
         await foreach (var evt in tasksEnum) {
             data.StateAfter.Events.Add(evt);
         }
@@ -198,7 +198,7 @@ public class Msc4222EmulationSyncProcessor(AuthenticatedHomeserverGeneric homese
                 }
             });
 
-        var tasksEnum = tasks.ToAsyncEnumerable();
+        var tasksEnum = tasks.ToAsyncResultEnumerable();
         await foreach (var evt in tasksEnum) {
             data.StateAfter.Events.Add(evt);
         }

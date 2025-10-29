@@ -52,14 +52,14 @@ public class SpaceTests : TestBed<TestFixture> {
         });
 
         await space.AddChildByIdAsync(child.RoomId);
-        
+
         //validate children
         var children = space.GetChildrenAsync().ToBlockingEnumerable().ToList();
         Assert.NotNull(children);
         Assert.NotEmpty(children);
         Assert.Single(children, x => x.RoomId == child.RoomId);
     }
-    
+
     [Fact]
     public async Task GetChildrenAsync() {
         var hs = await _hsAbstraction.GetConfiguredHomeserver();
@@ -68,8 +68,8 @@ public class SpaceTests : TestBed<TestFixture> {
                 Name = "Test child"
             });
             return room;
-        }).ToAsyncEnumerable().ToBlockingEnumerable().ToList();
-        
+        }).ToAsyncResultEnumerable().ToBlockingEnumerable().ToList();
+
         var crq = new CreateRoomRequest() {
             Name = "Test space",
             InitialState = expectedChildren.Select(c => new StateEvent() {
@@ -89,8 +89,7 @@ public class SpaceTests : TestBed<TestFixture> {
         Assert.NotNull(children);
         Assert.NotEmpty(children);
         Assert.Equal(expectedChildren.Count, children.Count);
-        foreach (var expectedChild in expectedChildren)
-        {
+        foreach (var expectedChild in expectedChildren) {
             Assert.Single(children, x => x.RoomId == expectedChild.RoomId);
         }
     }

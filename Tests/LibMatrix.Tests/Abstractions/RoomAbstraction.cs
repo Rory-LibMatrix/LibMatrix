@@ -69,7 +69,7 @@ public static class RoomAbstraction {
                 Name = $"LibMatrix Test Room {Guid.NewGuid()}",
                 // Visibility = CreateRoomVisibility.Public,
                 RoomAliasName = Guid.NewGuid().ToString()
-            })).ToAsyncEnumerable();
+            })).ToAsyncResultEnumerable();
 
         await foreach (var room in createRoomTasks)
             crq.InitialState.Add(new StateEvent {

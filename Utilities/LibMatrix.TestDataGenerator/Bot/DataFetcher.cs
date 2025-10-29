@@ -34,7 +34,7 @@ public class DataFetcher(AuthenticatedHomeserverGeneric hs, ILogger<DataFetcher>
 
         await _logRoom.SendMessageEventAsync(new RoomMessageEventContent(body: "Fetching room data..."));
 
-        var roomAliasTasks = rooms.Select(room => room.GetCanonicalAliasAsync()).ToAsyncEnumerable();
+        var roomAliasTasks = rooms.Select(room => room.GetCanonicalAliasAsync()).ToAsyncResultEnumerable();
         List<Task<(string, string)>> aliasResolutionTasks = new();
         await foreach (var @event in roomAliasTasks)
             if (@event?.Alias != null) {
@@ -45,7 +45,7 @@ public class DataFetcher(AuthenticatedHomeserverGeneric hs, ILogger<DataFetcher>
                 }, cancellationToken));
             }
 
-        var aliasResolutionTaskEnumerator = aliasResolutionTasks.ToAsyncEnumerable();
+        var aliasResolutionTaskEnumerator = aliasResolutionTasks.ToAsyncResultEnumerable();
         await foreach (var result in aliasResolutionTaskEnumerator)
             await _logRoom.SendMessageEventAsync(new RoomMessageEventContent(body: $"Resolved room alias {result.Item1} to {result.Item2}!"));
     }

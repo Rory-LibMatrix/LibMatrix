@@ -147,7 +147,7 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
                     await Task.Delay(1000);
                 }
             }
-        }).ToAsyncEnumerable();
+        }).ToAsyncResultEnumerable();
 
         await foreach (var result in tasks)
             if (result is not null)
@@ -217,7 +217,7 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
 
         if (preserveCustomRoomProfile) {
             var rooms = await GetJoinedRooms();
-            var roomProfiles = rooms.Select(GetOwnRoomProfileWithIdAsync).ToAsyncEnumerable();
+            var roomProfiles = rooms.Select(GetOwnRoomProfileWithIdAsync).ToAsyncResultEnumerable();
             targetSyncCount = rooms.Count;
             await foreach (var (roomId, currentRoomProfile) in roomProfiles)
                 try {
@@ -290,7 +290,7 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
 
     public async IAsyncEnumerable<KeyValuePair<string, RoomMemberEventContent>> GetRoomProfilesAsync() {
         var rooms = await GetJoinedRooms();
-        var results = rooms.Select(GetOwnRoomProfileWithIdAsync).ToAsyncEnumerable();
+        var results = rooms.Select(GetOwnRoomProfileWithIdAsync).ToAsyncResultEnumerable();
         await foreach (var res in results) yield return res;
     }
 
@@ -612,6 +612,9 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
 
             [JsonPropertyName("gay.rory.bulk_send_events")]
             public BooleanCapability? BulkSendEvents { get; set; }
+
+            [JsonPropertyName("gay.rory.synapse_admin_extensions.room_list.query_events.v2")]
+            public BooleanCapability? SynapseRoomListQueryEventsV2 { get; set; }
 
             [JsonExtensionData]
             public Dictionary<string, object>? AdditionalCapabilities { get; set; }
