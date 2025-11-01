@@ -133,15 +133,6 @@ public class HomeserverResolverService {
         _logger.LogInformation("No server well-known for {server}...", homeserver);
         return null;
     }
-    
-    [Obsolete("Use authenticated media, available on AuthenticatedHomeserverGeneric", true)]
-    public async Task<string?> ResolveMediaUri(string homeserver, string mxc) {
-        if (homeserver is null) throw new ArgumentNullException(nameof(homeserver));
-        if (mxc is null) throw new ArgumentNullException(nameof(mxc));
-        if (!mxc.StartsWith("mxc://")) throw new InvalidDataException("mxc must start with mxc://");
-        homeserver = (await ResolveHomeserverFromWellKnown(homeserver)).Client;
-        return mxc.Replace("mxc://", $"{homeserver}/_matrix/media/v3/download/");
-    }
 
     public class WellKnownUris {
         public string? Client { get; set; }

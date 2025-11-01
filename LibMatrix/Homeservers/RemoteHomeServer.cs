@@ -118,9 +118,6 @@ public class RemoteHomeserver {
 
 #endregion
 
-    [Obsolete("This call uses the deprecated unauthenticated media endpoints, please switch to the relevant AuthenticatedHomeserver methods instead.", true)]
-    public virtual string? ResolveMediaUri(string? mxcUri) => null;
-
     public UserInteractiveAuthClient Auth;
 }
 
