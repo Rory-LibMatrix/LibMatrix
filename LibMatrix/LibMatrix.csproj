@@ -21,6 +21,7 @@
         <!-- <PackageReference Include="ArcaneLibs" Version="1.0.0-preview.20250313-104848" Condition="'$(Configuration)' == 'Release'" />-->
         <!-- <ProjectReference Include="..\ArcaneLibs\ArcaneLibs\ArcaneLibs.csproj" Condition="'$(Configuration)' == 'Debug'"/>-->
         <ProjectReference Include="..\ArcaneLibs\ArcaneLibs\ArcaneLibs.csproj"/>
+        <PackageReference Include="ArcaneLibs" Version="*-*" Condition="'$(ContinuousIntegrationBuild)'=='true'"/>
     </ItemGroup>
 
 </Project>

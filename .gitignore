@@ -12,3 +12,4 @@ appsettings.Local*.json
 appservice.yaml
 appservice.json
 Tests/LibMatrix.Tests/appsettings.json
+result

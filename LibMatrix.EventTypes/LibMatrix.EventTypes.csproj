@@ -9,7 +9,8 @@
     <ItemGroup>
         <!--        <PackageReference Include="ArcaneLibs" Version="1.0.0-preview.20250806-011111" Condition="'$(Configuration)' == 'Release'" />-->
         <!--        <ProjectReference Include="..\ArcaneLibs\ArcaneLibs\ArcaneLibs.csproj" Condition="'$(Configuration)' == 'Debug'"/>-->
-        <ProjectReference Include="..\ArcaneLibs\ArcaneLibs\ArcaneLibs.csproj"/>
+        <ProjectReference Include="..\ArcaneLibs\ArcaneLibs\ArcaneLibs.csproj" Condition="'$(ContinuousIntegrationBuild)'!='true'"/>
+        <PackageReference Include="ArcaneLibs" Version="*-*" Condition="'$(ContinuousIntegrationBuild)'=='true'"/>
     </ItemGroup>
 
 </Project>

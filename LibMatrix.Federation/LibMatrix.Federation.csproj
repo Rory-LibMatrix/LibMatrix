@@ -9,6 +9,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\LibMatrix\LibMatrix.csproj"/>
+        <PackageReference Include="LibMatrix" Version="*-*" Condition="'$(ContinuousIntegrationBuild)'=='true'"/>
     </ItemGroup>
 
     <ItemGroup>
