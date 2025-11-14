@@ -1,6 +1,5 @@
 using System.Text.Json.Serialization;
 using ArcaneLibs.Collections;
-using LibMatrix.Extensions;
 using Microsoft.Extensions.Logging;
 using WellKnownType = LibMatrix.Services.WellKnownResolver.WellKnownResolvers.ServerWellKnown;
 using ResultType =
@@ -14,8 +13,6 @@ public class ServerWellKnownResolver(ILogger<ServerWellKnownResolver> logger, We
         StoreNulls = false
     };
 
-    private static readonly MatrixHttpClient HttpClient = new();
-
     public Task<WellKnownResolverService.WellKnownResolutionResult<ServerWellKnown>> TryResolveWellKnown(string homeserver, WellKnownResolverConfiguration? config = null) {
         config ??= configuration;
         return ClientWellKnownCache.TryGetOrAdd(homeserver, async () => {
@@ -25,12 +22,10 @@ public class ServerWellKnownResolver(ILogger<ServerWellKnownResolver> logger, We
                 await TryGetWellKnownFromUrl($"https://{homeserver}/.well-known/matrix/server", WellKnownResolverService.WellKnownSource.Https);
             if (result.Content != null) return result;
 
-
             return result;
         });
     }
 }
-
 
 public class ServerWellKnown {
     [JsonPropertyName("m.server")]

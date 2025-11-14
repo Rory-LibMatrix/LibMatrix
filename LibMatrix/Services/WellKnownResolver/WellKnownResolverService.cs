@@ -34,17 +34,13 @@ public class WellKnownResolverService {
         WellKnownResolverConfiguration? config = null) {
         WellKnownRecords records = new();
         _logger.LogDebug($"Resolving well-knowns for {homeserver}");
-        if (includeClient && await _clientWellKnownResolver.TryResolveWellKnown(homeserver, config ?? _configuration) is { } clientResult) {
-            records.ClientWellKnown = clientResult;
-        }
-        
-        if (includeServer && await _serverWellKnownResolver.TryResolveWellKnown(homeserver, config ?? _configuration) is { } serverResult) {
-            records.ServerWellKnown = serverResult;
-        }
-        
-        if (includeSupport && await _supportWellKnownResolver.TryResolveWellKnown(homeserver, config ?? _configuration) is { } supportResult) {
-            records.SupportWellKnown = supportResult;
-        }
+        var clientTask = _clientWellKnownResolver.TryResolveWellKnown(homeserver, config ?? _configuration);
+        var serverTask = _serverWellKnownResolver.TryResolveWellKnown(homeserver, config ?? _configuration);
+        var supportTask = _supportWellKnownResolver.TryResolveWellKnown(homeserver, config ?? _configuration);
+
+        if (includeClient && await clientTask is { } clientResult) records.ClientWellKnown = clientResult;
+        if (includeServer && await serverTask is { } serverResult) records.ServerWellKnown = serverResult;
+        if (includeSupport && await supportTask is { } supportResult) records.SupportWellKnown = supportResult;
 
         return records;
     }
@@ -75,8 +71,10 @@ public class WellKnownResolverService {
     public struct WellKnownResolutionWarning {
         public WellKnownResolutionWarningType Type { get; set; }
         public string Message { get; set; }
+
         [JsonIgnore]
         public Exception? Exception { get; set; }
+
         public string? ExceptionMessage => Exception?.Message;
 
         [JsonConverter(typeof(JsonStringEnumConverter))]

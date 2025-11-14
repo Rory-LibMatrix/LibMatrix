@@ -14,8 +14,6 @@ public class ClientWellKnownResolver(ILogger<ClientWellKnownResolver> logger, We
         StoreNulls = false
     };
 
-    private static readonly MatrixHttpClient HttpClient = new();
-
     public Task<WellKnownResolverService.WellKnownResolutionResult<ClientWellKnown>> TryResolveWellKnown(string homeserver, WellKnownResolverConfiguration? config = null) {
         config ??= configuration;
         return ClientWellKnownCache.TryGetOrAdd(homeserver, async () => {

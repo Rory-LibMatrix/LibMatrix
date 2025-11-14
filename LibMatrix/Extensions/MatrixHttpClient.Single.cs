@@ -5,7 +5,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Net.Sockets;
 using System.Reflection;
+using System.Security.Authentication;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -55,8 +57,18 @@ public class MatrixHttpClient {
     public Dictionary<string, string> AdditionalQueryParameters { get; set; } = new();
 
     public Uri? BaseAddress { get; set; }
-    public bool RetryOnNetworkError { get; set; } = true;
-    public bool RetryOnMatrixError { get; set; } = true;
+    public static bool DefaultRetryOnNetworkError { get; set; } = true;
+    public static bool DefaultRetryOnMatrixError { get; set; } = true;
+    public bool RetryOnNetworkError { get; set; } = DefaultRetryOnNetworkError;
+    public bool RetryOnMatrixError { get; set; } = DefaultRetryOnMatrixError;
+
+    public static int DefaultMinRetryIntervalMs { get; set; } = 1000;
+    public static int DefaultMaxRetryIntervalMs { get; set; } = 2000;
+    public static int DefaultMaxRetries { get; set; } = 20;
+
+    public int MinRetryIntervalMs { get; set; } = DefaultMinRetryIntervalMs;
+    public int MaxRetryIntervalMs { get; set; } = DefaultMaxRetryIntervalMs;
+    public int MaxRetries { get; set; } = DefaultMaxRetries;
 
     private Dictionary<HttpRequestMessage, int> _retries = [];
 
@@ -148,14 +160,23 @@ public class MatrixHttpClient {
                 "X-Content-Security-Policy",
                 "Referrer-Policy",
                 "X-Robots-Tag",
-                "Content-Security-Policy"
+                "Content-Security-Policy",
+                "Alt-Svc",
+                // evil
+                "CF-Cache-Status",
+                "CF-Ray",
+                "x-amz-request-id",
+                "x-do-app-origin",
+                "x-do-orig-status",
+                "x-rgw-object-type",
+                "Report-To"
             ]));
 
         return responseMessage;
     }
 
     public async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken = default) {
-        _retries.TryAdd(request, 10);
+        _retries.TryAdd(request, MaxRetries);
         HttpResponseMessage responseMessage;
         try {
             responseMessage = await SendUnhandledAsync(request, cancellationToken);
@@ -163,8 +184,27 @@ public class MatrixHttpClient {
         catch (HttpRequestException ex) {
             if (RetryOnNetworkError) {
                 if (_retries[request]-- <= 0) throw;
+                // browser exceptions
                 if (ex.InnerException?.GetType().FullName == "System.Runtime.InteropServices.JavaScript.JSException")
-                    Console.WriteLine("Got JSException, likely a CORS error due to a reverse proxy misconfiguration and error, retrying...");
+                    Console.WriteLine($"Got JSException, likely a CORS error due to a reverse proxy misconfiguration and error, retrying ({_retries[request]} left)...");
+                // native exceptions
+                else if (ex.InnerException is SocketException sockEx)
+                    if (sockEx.SocketErrorCode == SocketError.HostNotFound) {
+                        throw new LibMatrixNetworkException(ex) {
+                            Error = $"Host {request.RequestUri?.Host ?? "(null)"} not found",
+                            ErrorCode = LibMatrixNetworkException.ErrorCodes.RLM_NET_UNKNOWN_HOST
+                        };
+                    }
+                    else { } // empty
+                else if (ex.InnerException is AuthenticationException authEx)
+                    if (authEx.Message.Contains("The remote certificate is invalid")) {
+                        throw new LibMatrixNetworkException(ex) {
+                            Error = ex.Message,
+                            ErrorCode = LibMatrixNetworkException.ErrorCodes.RLM_NET_INVALID_REMOTE_CERTIFICATE
+                        };
+                    }
+                    else { } // empty
+
                 else
                     Console.WriteLine(new {
                         ex.HttpRequestError,
@@ -175,10 +215,11 @@ public class MatrixHttpClient {
                         InnerExceptionType = ex.InnerException?.GetType().FullName
                     }.ToJson());
 
-                await Task.Delay(Random.Shared.Next(1000, 2000), cancellationToken);
+                await Task.Delay(Random.Shared.Next(MinRetryIntervalMs, MaxRetryIntervalMs), cancellationToken);
                 request.ResetSendStatus();
                 return await SendAsync(request, cancellationToken);
             }
+
             throw;
         }
 
@@ -221,7 +262,7 @@ public class MatrixHttpClient {
             if (ex.ErrorCode == MatrixException.ErrorCodes.M_LIMIT_EXCEEDED) {
                 // if (ex.RetryAfterMs is null) throw ex!;
                 //we have a ratelimit error
-                await Task.Delay(ex.RetryAfterMs ?? responseMessage.Headers.RetryAfter?.Delta?.Milliseconds ?? 500, cancellationToken);
+                await Task.Delay(ex.RetryAfterMs ?? responseMessage.Headers.RetryAfter?.Delta?.Milliseconds ?? MinRetryIntervalMs, cancellationToken);
                 request.ResetSendStatus();
                 return await SendAsync(request, cancellationToken);
             }
@@ -233,8 +274,8 @@ public class MatrixHttpClient {
             // spread out retries
             if (RetryOnNetworkError) {
                 if (_retries[request]-- <= 0) throw new InvalidDataException("Encountered invalid data:\n" + content);
-                Console.WriteLine("Got 502 Bad Gateway, retrying...");
-                await Task.Delay(Random.Shared.Next(1000, 2000), cancellationToken);
+                Console.WriteLine($"Got 502 Bad Gateway, retrying ({_retries[request]} left)...");
+                await Task.Delay(Random.Shared.Next(MinRetryIntervalMs, MaxRetryIntervalMs), cancellationToken);
                 request.ResetSendStatus();
                 return await SendAsync(request, cancellationToken);
             }
