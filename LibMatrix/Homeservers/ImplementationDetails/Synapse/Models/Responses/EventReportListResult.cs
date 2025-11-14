@@ -97,10 +97,10 @@ public class SynapseAdminEventReportListResult : SynapseNextTokenTotalCollection
             [JsonPropertyName("unsigned")]
             public JsonObject? Unsigned { get; set; }
 
-            // Extra... copied from StateEventResponse
+            // Extra... copied from MatrixEventResponse
 
             [JsonIgnore]
-            public Type MappedType => StateEvent.GetStateEventType(Type);
+            public Type MappedType => MatrixEvent.GetEventType(Type);
 
             [JsonIgnore]
             public bool IsLegacyType => MappedType.GetCustomAttributes<MatrixEventAttribute>().FirstOrDefault(x => x.EventName == Type)?.Legacy ?? false;
@@ -128,7 +128,7 @@ public class SynapseAdminEventReportListResult : SynapseNextTokenTotalCollection
                     // return null;
                     // }
                     try {
-                        var mappedType = StateEvent.GetStateEventType(Type);
+                        var mappedType = MatrixEvent.GetEventType(Type);
                         if (mappedType == typeof(UnknownEventContent))
                             Console.WriteLine($"Warning: unknown event type '{Type}'");
                         var deserialisedContent = (EventContent)RawContent.Deserialize(mappedType, TypedContentSerializerOptions)!;

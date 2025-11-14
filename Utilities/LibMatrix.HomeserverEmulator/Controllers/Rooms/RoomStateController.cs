@@ -11,7 +11,7 @@ namespace LibMatrix.HomeserverEmulator.Controllers.Rooms;
 [Route("/_matrix/client/{version}/rooms/{roomId}/state")]
 public class RoomStateController(ILogger<RoomStateController> logger, TokenService tokenService, UserStore userStore, RoomStore roomStore) : ControllerBase {
     [HttpGet("")]
-    public async Task<FrozenSet<StateEventResponse>> GetState(string roomId) {
+    public async Task<FrozenSet<MatrixEventResponse>> GetState(string roomId) {
         var token = tokenService.GetAccessTokenOrNull(HttpContext);
         if (token == null)
             throw new MatrixException() {
@@ -104,7 +104,7 @@ public class RoomStateController(ILogger<RoomStateController> logger, TokenServi
                 ErrorCode = "M_NOT_FOUND",
                 Error = "Room not found"
             };
-        var evt = room.SetStateInternal(new StateEvent() { Type = eventType, StateKey = stateKey, RawContent = request }.ToStateEvent(user, room));
+        var evt = room.SetStateInternal(new MatrixEvent() { Type = eventType, StateKey = stateKey, RawContent = request }.ToStateEvent(user, room));
         evt.Type = eventType;
         evt.StateKey = stateKey;
         return new EventIdResponse() {

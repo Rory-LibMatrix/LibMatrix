@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 namespace LibMatrix.Extensions;
 
 public static class EnumerableExtensions {
-    public static void MergeStateEventLists(this IList<StateEvent> oldState, IList<StateEvent> newState) {
+    public static void MergeStateEventLists(this IList<MatrixEvent> oldState, IList<MatrixEvent> newState) {
         // foreach (var stateEvent in newState) {
         //     var old = oldState.FirstOrDefault(x => x.Type == stateEvent.Type && x.StateKey == stateEvent.StateKey);
         //     if (old is null) {
@@ -27,7 +27,7 @@ public static class EnumerableExtensions {
             }
         }
 
-        int FindIndex(StateEvent needle) {
+        int FindIndex(MatrixEvent needle) {
             for (int i = 0; i < oldState.Count; i++) {
                 var old = oldState[i];
                 if (old.Type == needle.Type && old.StateKey == needle.StateKey)
@@ -38,7 +38,7 @@ public static class EnumerableExtensions {
         }
     }
 
-    public static void MergeStateEventLists(this IList<StateEventResponse> oldState, IList<StateEventResponse> newState) {
+    public static void MergeStateEventLists(this IList<MatrixEventResponse> oldState, IList<MatrixEventResponse> newState) {
         foreach (var e in newState) {
             switch (FindIndex(e)) {
                 case -1:
@@ -50,7 +50,7 @@ public static class EnumerableExtensions {
             }
         }
 
-        int FindIndex(StateEventResponse needle) {
+        int FindIndex(MatrixEventResponse needle) {
             for (int i = 0; i < oldState.Count; i++) {
                 var old = oldState[i];
                 if (old.Type == needle.Type && old.StateKey == needle.StateKey)
@@ -61,7 +61,7 @@ public static class EnumerableExtensions {
         }
     }
 
-    public static void MergeStateEventLists(this List<StateEventResponse> oldState, List<StateEventResponse> newState) {
+    public static void MergeStateEventLists(this List<MatrixEventResponse> oldState, List<MatrixEventResponse> newState) {
         foreach (var e in newState) {
             switch (FindIndex(e)) {
                 case -1:
@@ -73,7 +73,7 @@ public static class EnumerableExtensions {
             }
         }
 
-        int FindIndex(StateEventResponse needle) {
+        int FindIndex(MatrixEventResponse needle) {
             for (int i = 0; i < oldState.Count; i++) {
                 var old = oldState[i];
                 if (old.Type == needle.Type && old.StateKey == needle.StateKey)

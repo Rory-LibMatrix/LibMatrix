@@ -63,15 +63,15 @@ public class SynapseAdminRoomListResult {
         public int StateEvents { get; set; }
 
         [JsonPropertyName("gay.rory.synapse_admin_extensions.tombstone")]
-        public StateEventResponse? TombstoneEvent { get; set; }
+        public MatrixEventResponse? TombstoneEvent { get; set; }
 
         [JsonPropertyName("gay.rory.synapse_admin_extensions.create")]
-        public StateEventResponse? CreateEvent { get; set; }
+        public MatrixEventResponse? CreateEvent { get; set; }
 
         [JsonPropertyName("gay.rory.synapse_admin_extensions.topic")]
-        public StateEventResponse? TopicEvent { get; set; }
+        public MatrixEventResponse? TopicEvent { get; set; }
 
-        public async Task<StateEventResponse?> GetCreateEventAsync(AuthenticatedHomeserverSynapse hs) {
+        public async Task<MatrixEventResponse?> GetCreateEventAsync(AuthenticatedHomeserverSynapse hs) {
             if (CreateEvent != null) return CreateEvent;
 
             try {
@@ -85,7 +85,7 @@ public class SynapseAdminRoomListResult {
             return null;
         }
 
-        public async Task<StateEventResponse?> GetTombstoneEventAsync(AuthenticatedHomeserverSynapse hs) {
+        public async Task<MatrixEventResponse?> GetTombstoneEventAsync(AuthenticatedHomeserverSynapse hs) {
             if (TombstoneEvent != null) return TombstoneEvent;
 
             try {
@@ -99,7 +99,7 @@ public class SynapseAdminRoomListResult {
             return null;
         }
 
-        public async Task<StateEventResponse?> GetTopicEventAsync(AuthenticatedHomeserverSynapse hs) {
+        public async Task<MatrixEventResponse?> GetTopicEventAsync(AuthenticatedHomeserverSynapse hs) {
             if (TopicEvent != null) return TopicEvent;
 
             try {

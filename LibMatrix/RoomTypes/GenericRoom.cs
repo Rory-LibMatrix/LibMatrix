@@ -27,13 +27,13 @@ public class GenericRoom {
 
     public string RoomId { get; set; }
 
-    public async IAsyncEnumerable<StateEventResponse?> GetFullStateAsync() {
-        var result = Homeserver.ClientHttpClient.GetAsyncEnumerableFromJsonAsync<StateEventResponse>($"/_matrix/client/v3/rooms/{RoomId}/state");
+    public async IAsyncEnumerable<MatrixEventResponse?> GetFullStateAsync() {
+        var result = Homeserver.ClientHttpClient.GetAsyncEnumerableFromJsonAsync<MatrixEventResponse>($"/_matrix/client/v3/rooms/{RoomId}/state");
         await foreach (var resp in result) yield return resp;
     }
 
-    public Task<List<StateEventResponse>> GetFullStateAsListAsync() =>
-        Homeserver.ClientHttpClient.GetFromJsonAsync<List<StateEventResponse>>($"/_matrix/client/v3/rooms/{RoomId}/state");
+    public Task<List<MatrixEventResponse>> GetFullStateAsListAsync() =>
+        Homeserver.ClientHttpClient.GetFromJsonAsync<List<MatrixEventResponse>>($"/_matrix/client/v3/rooms/{RoomId}/state");
 
     public async Task<T?> GetStateAsync<T>(string type, string stateKey = "") {
         if (string.IsNullOrEmpty(type)) throw new ArgumentNullException(nameof(type), "Event type must be specified");
@@ -63,7 +63,7 @@ public class GenericRoom {
         }
     }
 
-    public async Task<StateEventResponse> GetStateEventAsync(string type, string stateKey = "") {
+    public async Task<MatrixEventResponse> GetStateEventAsync(string type, string stateKey = "") {
         if (string.IsNullOrEmpty(type)) throw new ArgumentNullException(nameof(type), "Event type must be specified");
         var url = $"/_matrix/client/v3/rooms/{RoomId}/state/{type}";
         if (!string.IsNullOrEmpty(stateKey)) url += $"/{stateKey}";
@@ -76,7 +76,7 @@ public class GenericRoom {
                     ErrorCode = LibMatrixException.ErrorCodes.M_UNSUPPORTED
                 };
             // throw new InvalidDataException("Returned event type does not match requested type, or server does not support passing `format`.");
-            return resp.Deserialize<StateEventResponse>();
+            return resp.Deserialize<MatrixEventResponse>();
         }
         catch (MatrixException e) {
             // if (e is not { ErrorCodode: "M_NOT_FOUND" }) {
@@ -128,7 +128,7 @@ public class GenericRoom {
         }
     }
 
-    public async Task<StateEventResponse?> GetStateEventOrNullAsync(string type, string stateKey = "") {
+    public async Task<MatrixEventResponse?> GetStateEventOrNullAsync(string type, string stateKey = "") {
         try {
             return await GetStateEventAsync(type, stateKey);
         }
@@ -241,13 +241,13 @@ public class GenericRoom {
         return await res.Content.ReadFromJsonAsync<RoomIdResponse>() ?? throw new Exception("Failed to join room?");
     }
 
-    public async IAsyncEnumerable<StateEventResponse> GetMembersEnumerableAsync(string? membership = null) {
+    public async IAsyncEnumerable<MatrixEventResponse> GetMembersEnumerableAsync(string? membership = null) {
         var url = $"/_matrix/client/v3/rooms/{RoomId}/members";
         var isMembershipSet = !string.IsNullOrWhiteSpace(membership);
         if (isMembershipSet) url += $"?membership={membership}";
         var res = await Homeserver.ClientHttpClient.GetAsync(url);
-        var result = await JsonSerializer.DeserializeAsync<ChunkedStateEventResponse>(await res.Content.ReadAsStreamAsync(), new JsonSerializerOptions() {
-            TypeInfoResolver = ChunkedStateEventResponseSerializerContext.Default
+        var result = await JsonSerializer.DeserializeAsync<ChunkedMatrixEventResponse>(await res.Content.ReadAsStreamAsync(), new JsonSerializerOptions() {
+            TypeInfoResolver = ChunkedMatrixEventResponseSerializerContext.Default
         });
 
         if (result is null) throw new Exception("Failed to deserialise members response");
@@ -259,18 +259,18 @@ public class GenericRoom {
         }
     }
 
-    public async Task<FrozenSet<StateEventResponse>> GetMembersListAsync(string? membership = null) {
+    public async Task<FrozenSet<MatrixEventResponse>> GetMembersListAsync(string? membership = null) {
         var url = $"/_matrix/client/v3/rooms/{RoomId}/members";
         var isMembershipSet = !string.IsNullOrWhiteSpace(membership);
         if (isMembershipSet) url += $"?membership={membership}";
         var res = await Homeserver.ClientHttpClient.GetAsync(url);
-        var result = await JsonSerializer.DeserializeAsync<ChunkedStateEventResponse>(await res.Content.ReadAsStreamAsync(), new JsonSerializerOptions() {
-            TypeInfoResolver = ChunkedStateEventResponseSerializerContext.Default
+        var result = await JsonSerializer.DeserializeAsync<ChunkedMatrixEventResponse>(await res.Content.ReadAsStreamAsync(), new JsonSerializerOptions() {
+            TypeInfoResolver = ChunkedMatrixEventResponseSerializerContext.Default
         });
 
         if (result is null) throw new Exception("Failed to deserialise members response");
 
-        var members = new List<StateEventResponse>();
+        var members = new List<MatrixEventResponse>();
         foreach (var resp in result.Chunk ?? []) {
             if (resp.Type != "m.room.member") continue;
             if (isMembershipSet && resp.RawContent?["membership"]?.GetValue<string>() != membership) continue;
@@ -478,8 +478,8 @@ public class GenericRoom {
         }
     }
 
-    public Task<StateEventResponse> GetEventAsync(string eventId, bool includeUnredactedContent = false) =>
-        Homeserver.ClientHttpClient.GetFromJsonAsync<StateEventResponse>(
+    public Task<MatrixEventResponse> GetEventAsync(string eventId, bool includeUnredactedContent = false) =>
+        Homeserver.ClientHttpClient.GetFromJsonAsync<MatrixEventResponse>(
             // .ToLower() on boolean here because this query param specifically on synapse is checked as a string rather than a boolean
             $"/_matrix/client/v3/rooms/{RoomId}/event/{eventId}?fi.mau.msc2815.include_unredacted_content={includeUnredactedContent.ToString().ToLower()}");
 
@@ -597,7 +597,7 @@ public class GenericRoom {
 
 #endregion
 
-    public async IAsyncEnumerable<StateEventResponse> GetRelatedEventsAsync(string eventId, string? relationType = null, string? eventType = null, string? dir = "f",
+    public async IAsyncEnumerable<MatrixEventResponse> GetRelatedEventsAsync(string eventId, string? relationType = null, string? eventType = null, string? dir = "f",
         string? from = null, int? chunkLimit = 100, bool? recurse = null, string? to = null) {
         var path = $"/_matrix/client/v1/rooms/{RoomId}/relations/{HttpUtility.UrlEncode(eventId)}";
         if (!string.IsNullOrEmpty(relationType)) path += $"/{relationType}";
@@ -612,18 +612,18 @@ public class GenericRoom {
         if (!string.IsNullOrEmpty(to)) uri = uri.AddQuery("to", to);
 
         // Console.WriteLine($"Getting related events from {uri}");
-        var result = await Homeserver.ClientHttpClient.GetFromJsonAsync<RecursedBatchedChunkedStateEventResponse>(uri.ToString());
+        var result = await Homeserver.ClientHttpClient.GetFromJsonAsync<RecursedBatchedChunkedMatrixEventResponse>(uri.ToString());
         while (result!.Chunk.Count > 0) {
             foreach (var resp in result.Chunk) {
                 yield return resp;
             }
 
             if (result.NextBatch is null) break;
-            result = await Homeserver.ClientHttpClient.GetFromJsonAsync<RecursedBatchedChunkedStateEventResponse>(uri.AddQuery("from", result.NextBatch).ToString());
+            result = await Homeserver.ClientHttpClient.GetFromJsonAsync<RecursedBatchedChunkedMatrixEventResponse>(uri.AddQuery("from", result.NextBatch).ToString());
         }
     }
 
-    public async Task BulkSendEventsAsync(IEnumerable<StateEvent> events, int? forceSyncInterval = null) {
+    public async Task BulkSendEventsAsync(IEnumerable<MatrixEvent> events, int? forceSyncInterval = null) {
         if ((await Homeserver.GetCapabilitiesAsync()).Capabilities.BulkSendEvents?.Enabled == true) {
             var uri = $"/_matrix/client/unstable/gay.rory.bulk_send_events/rooms/{RoomId}/bulk_send_events?_libmatrix_txn_id={Guid.NewGuid()}";
             if (forceSyncInterval is not null) uri += $"&force_sync_interval={forceSyncInterval}";
@@ -640,7 +640,7 @@ public class GenericRoom {
         }
     }
 
-    public async Task BulkSendEventsAsync(IAsyncEnumerable<StateEvent> events, int? forceSyncInterval = null) {
+    public async Task BulkSendEventsAsync(IAsyncEnumerable<MatrixEvent> events, int? forceSyncInterval = null) {
         if ((await Homeserver.GetCapabilitiesAsync()).Capabilities.BulkSendEvents?.Enabled == true) {
             var uri = $"/_matrix/client/unstable/gay.rory.bulk_send_events/rooms/{RoomId}/bulk_send_events?_libmatrix_txn_id={Guid.NewGuid()}";
             if (forceSyncInterval is not null) uri += $"&force_sync_interval={forceSyncInterval}";
@@ -670,7 +670,7 @@ public class GenericRoom {
     /// </summary>
     /// <returns>A list of size 1 for v11 rooms and older, all creators for v12+</returns>
     public async Task<List<string>> GetRoomCreatorsAsync() {
-        StateEventResponse createEvent;
+        MatrixEventResponse createEvent;
         if (IsV12PlusRoomId) {
             createEvent = await GetEventAsync('$' + RoomId[1..]);
         }

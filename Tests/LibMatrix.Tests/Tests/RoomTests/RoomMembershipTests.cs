@@ -17,8 +17,8 @@ public class RoomMembershipTests : TestBed<TestFixture> {
 
     [Fact]
     public async Task GetMembersAsync() {
-        Assert.True(StateEvent.KnownStateEventTypes is { Count: > 0 }, "StateEvent.KnownStateEventTypes is empty!");
-        Assert.True(StateEvent.KnownStateEventTypesByName is { Count: > 0 }, "StateEvent.KnownStateEventTypesByName is empty!");
+        Assert.True(MatrixEvent.KnownEventTypes is { Count: > 0 }, "MatrixEvent.KnownEventTypes is empty!");
+        Assert.True(MatrixEvent.KnownEventTypesByName is { Count: > 0 }, "MatrixEvent.KnownEventTypesByName is empty!");
 
         var hs = await _hsAbstraction.GetConfiguredHomeserver();
         var room = await RoomAbstraction.GetTestRoom(hs);

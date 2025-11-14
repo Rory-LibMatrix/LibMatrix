@@ -107,7 +107,7 @@ public class RoomUpgradeBuilder : RoomBuilder {
         Console.WriteLine($"Imported {total} state events from old room {OldRoom.RoomId} in {sw.ElapsedMilliseconds}ms");
     }
 
-    private StateEventResponse UpgradeUnstableValues(StateEventResponse evt) {
+    private MatrixEventResponse UpgradeUnstableValues(MatrixEventResponse evt) {
         if (evt.IsLegacyType) {
             var oldType = evt.Type;
             evt.Type = evt.MappedType.GetCustomAttributes<MatrixEventAttribute>().FirstOrDefault(x => !x.Legacy)!.EventName;
@@ -124,7 +124,7 @@ public class RoomUpgradeBuilder : RoomBuilder {
         return evt;
     }
 
-    private void ImportPolicyEventAsync(StateEventResponse evt) {
+    private void ImportPolicyEventAsync(MatrixEventResponse evt) {
         var msc4321Options = UpgradeOptions.Msc4321PolicyListUpgradeOptions;
         if (msc4321Options is { Enable: true, UpgradeType: Msc4321PolicyListUpgradeOptions.Msc4321PolicyListUpgradeType.Transition })
             return; // this upgrade type doesnt copy policies

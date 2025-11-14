@@ -35,7 +35,7 @@ public class RoomTimelineController(
                 Error = "Room not found"
             };
 
-        var evt = new StateEvent() {
+        var evt = new MatrixEvent() {
             RawContent = content,
             Type = eventType
         }.ToStateEvent(user, room);
@@ -100,7 +100,7 @@ public class RoomTimelineController(
     }
 
     [HttpGet("event/{eventId}")]
-    public async Task<StateEventResponse> GetEvent(string roomId, string eventId) {
+    public async Task<MatrixEventResponse> GetEvent(string roomId, string eventId) {
         var token = tokenService.GetAccessToken(HttpContext);
         var user = await userStore.GetUserByToken(token);
 
@@ -128,7 +128,7 @@ public class RoomTimelineController(
     }
 
     [HttpGet("relations/{eventId}")]
-    public async Task<RecursedBatchedChunkedStateEventResponse> GetRelations(string roomId, string eventId, [FromQuery] string? dir = "b", [FromQuery] string? from = null,
+    public async Task<RecursedBatchedChunkedMatrixEventResponse> GetRelations(string roomId, string eventId, [FromQuery] string? dir = "b", [FromQuery] string? from = null,
         [FromQuery] int? limit = 100, [FromQuery] bool? recurse = false, [FromQuery] string? to = null) {
         var token = tokenService.GetAccessToken(HttpContext);
         var user = await userStore.GetUserByToken(token);
@@ -161,7 +161,7 @@ public class RoomTimelineController(
     }
 
     [HttpGet("relations/{eventId}/{relationType}")]
-    public async Task<RecursedBatchedChunkedStateEventResponse> GetRelations(string roomId, string eventId, string relationType, [FromQuery] string? dir = "b",
+    public async Task<RecursedBatchedChunkedMatrixEventResponse> GetRelations(string roomId, string eventId, string relationType, [FromQuery] string? dir = "b",
         [FromQuery] string? from = null, [FromQuery] int? limit = 100, [FromQuery] bool? recurse = false, [FromQuery] string? to = null) {
         var token = tokenService.GetAccessToken(HttpContext);
         var user = await userStore.GetUserByToken(token);
@@ -194,7 +194,7 @@ public class RoomTimelineController(
     }
 
     [HttpGet("relations/{eventId}/{relationType}/{eventType}")]
-    public async Task<RecursedBatchedChunkedStateEventResponse> GetRelations(string roomId, string eventId, string relationType, string eventType, [FromQuery] string? dir = "b",
+    public async Task<RecursedBatchedChunkedMatrixEventResponse> GetRelations(string roomId, string eventId, string relationType, string eventType, [FromQuery] string? dir = "b",
         [FromQuery] string? from = null, [FromQuery] int? limit = 100, [FromQuery] bool? recurse = false, [FromQuery] string? to = null) {
         var token = tokenService.GetAccessToken(HttpContext);
         var user = await userStore.GetUserByToken(token);
@@ -226,7 +226,7 @@ public class RoomTimelineController(
         };
     }
 
-    private async Task<IEnumerable<StateEventResponse>> GetRelationsInternal(string roomId, string eventId, string dir, string? from, int? limit, bool? recurse, string? to) {
+    private async Task<IEnumerable<MatrixEventResponse>> GetRelationsInternal(string roomId, string eventId, string dir, string? from, int? limit, bool? recurse, string? to) {
         var room = roomStore.GetRoomById(roomId);
         var evt = room.Timeline.SingleOrDefault(x => x.EventId == eventId);
         if (evt == null)
@@ -254,7 +254,7 @@ public class RoomTimelineController(
 
     private void InternalSendMessage(RoomStore.Room room, RoomMessageEventContent content) {
         logger.LogInformation("Sending internal message: {content}", content.Body);
-        room.Timeline.Add(new StateEventResponse() {
+        room.Timeline.Add(new MatrixEventResponse() {
             Type = RoomMessageEventContent.EventId,
             TypedContent = content,
             // Sender = $"@hse:{tokenService.GenerateServerName(HttpContext)}",
@@ -265,7 +265,7 @@ public class RoomTimelineController(
         });
     }
 
-    private async Task HandleHseCommand(StateEventResponse evt, RoomStore.Room room, UserStore.User user) {
+    private async Task HandleHseCommand(MatrixEventResponse evt, RoomStore.Room room, UserStore.User user) {
         logger.LogWarning("Handling HSE command for {0}: {1}", user.UserId, evt.RawContent.ToJson(false, true));
         try {
             var msgContent = evt.TypedContent as RoomMessageEventContent;
@@ -332,7 +332,7 @@ public class RoomTimelineController(
                         if (Random.Shared.Next(100) > 75) {
                             crq.CreationContent["type"] = "m.space";
                             foreach (var item in Random.Shared.GetItems(roomStore._rooms.ToArray(), 50)) {
-                                crq.InitialState!.Add(new StateEvent() {
+                                crq.InitialState!.Add(new MatrixEvent() {
                                     Type = "m.space.child",
                                     StateKey = item.RoomId,
                                     TypedContent = new SpaceChildEventContent() {
@@ -384,7 +384,7 @@ public class RoomTimelineController(
         }
     }
 
-    private async Task HandleImportNhekoProfilesCommand(string[] args, StateEventResponse evt, RoomStore.Room room, UserStore.User user) {
+    private async Task HandleImportNhekoProfilesCommand(string[] args, MatrixEventResponse evt, RoomStore.Room room, UserStore.User user) {
         var msgContent = evt.TypedContent as RoomMessageEventContent;
         var parts = msgContent.Body.Split('\n');
 
@@ -422,7 +422,7 @@ public class RoomTimelineController(
         }
     }
 
-    private async Task HandleImportCommand(string[] args, StateEventResponse evt, RoomStore.Room room, UserStore.User user) {
+    private async Task HandleImportCommand(string[] args, MatrixEventResponse evt, RoomStore.Room room, UserStore.User user) {
         var roomId = args[0];
         var profile = args[1];
 

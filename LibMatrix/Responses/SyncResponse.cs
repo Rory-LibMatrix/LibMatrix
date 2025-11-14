@@ -44,7 +44,7 @@ public class SyncResponse {
     // supporting classes
     public class PresenceDataStructure {
         [JsonPropertyName("events")]
-        public List<StateEventResponse>? Events { get; set; }
+        public List<MatrixEventResponse>? Events { get; set; }
     }
 
     public class RoomsDataStructure {
@@ -116,13 +116,13 @@ public class SyncResponse {
             public class TimelineDataStructure : EventList {
                 public TimelineDataStructure() { }
 
-                public TimelineDataStructure(List<StateEventResponse>? events, bool? limited) {
+                public TimelineDataStructure(List<MatrixEventResponse>? events, bool? limited) {
                     Events = events;
                     Limited = limited;
                 }
 
                 // [JsonPropertyName("events")]
-                // public List<StateEventResponse>? Events { get; set; }
+                // public List<MatrixEventResponse>? Events { get; set; }
 
                 [JsonPropertyName("prev_batch")]
                 public string? PrevBatch { get; set; }

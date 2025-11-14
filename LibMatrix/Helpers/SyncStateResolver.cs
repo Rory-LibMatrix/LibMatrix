@@ -625,7 +625,7 @@ public class SyncStateResolver(AuthenticatedHomeserverGeneric homeserver, ILogge
         return oldState;
     }
 
-    private static EventList? MergeEventListBy(EventList? oldState, EventList? newState, Func<StateEventResponse, StateEventResponse, bool> comparer) {
+    private static EventList? MergeEventListBy(EventList? oldState, EventList? newState, Func<MatrixEventResponse, MatrixEventResponse, bool> comparer) {
         if (newState is null) return oldState;
         if (oldState is null) {
             return newState;

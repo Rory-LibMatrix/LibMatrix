@@ -7,7 +7,7 @@ namespace LibMatrix.Utilities.Bot.Interfaces;
 
 public class CommandContext {
     public required GenericRoom Room { get; set; }
-    public required StateEventResponse MessageEvent { get; set; }
+    public required MatrixEventResponse MessageEvent { get; set; }
 
     public string MessageContentWithoutReply =>
         (MessageEvent.TypedContent as RoomMessageEventContent)!

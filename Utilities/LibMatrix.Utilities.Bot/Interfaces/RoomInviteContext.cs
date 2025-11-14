@@ -7,7 +7,7 @@ namespace LibMatrix.Utilities.Bot.Interfaces;
 public class RoomInviteContext {
     public required string RoomId { get; init; }
     public required AuthenticatedHomeserverGeneric Homeserver { get; init; }
-    public required StateEventResponse MemberEvent { get; init; }
+    public required MatrixEventResponse MemberEvent { get; init; }
     public required SyncResponse.RoomsDataStructure.InvitedRoomDataStructure InviteData { get; init; }
 
     public async Task<string> TryGetInviterNameAsync() {

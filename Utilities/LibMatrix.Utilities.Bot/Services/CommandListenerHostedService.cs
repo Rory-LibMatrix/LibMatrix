@@ -119,7 +119,7 @@ public class CommandListenerHostedService(
         await _cts.CancelAsync();
     }
 
-    private async Task<string?> GetUsedPrefix(StateEventResponse evt) {
+    private async Task<string?> GetUsedPrefix(MatrixEventResponse evt) {
         var messageContent = evt.TypedContent as RoomMessageEventContent;
         var message = messageContent!.BodyWithoutReplyFallback;
         var prefix = config.Prefixes.OrderByDescending(x => x.Length).FirstOrDefault(message.StartsWith);
@@ -139,7 +139,7 @@ public class CommandListenerHostedService(
         return prefix;
     }
 
-    private async Task<CommandResult> InvokeCommand(StateEventResponse evt, string usedPrefix) {
+    private async Task<CommandResult> InvokeCommand(MatrixEventResponse evt, string usedPrefix) {
         var message = evt.TypedContent as RoomMessageEventContent;
         var room = hs.GetRoom(evt.RoomId!);
 

@@ -44,12 +44,12 @@ public class RoomBuilder {
     /// <summary>
     ///   State events to be sent *before* room access is configured. Keep this small!
     /// </summary>
-    public List<StateEvent> ImportantState { get; set; } = [];
+    public List<MatrixEvent> ImportantState { get; set; } = [];
 
     /// <summary>
     ///   State events to be sent *after* room access is configured, but before invites are sent.
     /// </summary>
-    public List<StateEvent> InitialState { get; set; } = [];
+    public List<MatrixEvent> InitialState { get; set; } = [];
 
     /// <summary>
     ///   Users to invite, with optional reason
@@ -86,7 +86,7 @@ public class RoomBuilder {
             { RoomPolicyServerEventContent.EventId, 100 },
             { RoomPinnedEventContent.EventId, 50 },
             // recommended extensions
-            { "im.vector.modular.widgets", 50},
+            { "im.vector.modular.widgets", 50 },
             // { "m.reaction", 0 }, // we probably don't want these to end up as room state
             // - prevent calls
             { "io.element.voice_broadcast_info", 50 },
@@ -197,7 +197,7 @@ public class RoomBuilder {
         await Task.WhenAll(inviteTasks);
     }
 
-    private async Task SetStatesAsync(GenericRoom room, List<StateEvent> state) {
+    private async Task SetStatesAsync(GenericRoom room, List<MatrixEvent> state) {
         if (state.Count == 0) return;
         await room.BulkSendEventsAsync(state);
         // We chunk this up to try to avoid hitting reverse proxy timeouts

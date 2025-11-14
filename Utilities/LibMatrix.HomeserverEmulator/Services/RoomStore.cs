@@ -51,7 +51,7 @@ public class RoomStore {
 
     public Room CreateRoom(CreateRoomRequest request, UserStore.User? user = null) {
         var room = new Room(roomId: $"!{Guid.NewGuid().ToString()}");
-        var newCreateEvent = new StateEvent() {
+        var newCreateEvent = new MatrixEvent() {
             Type = RoomCreateEventContent.EventId,
             RawContent = new()
         };
@@ -78,7 +78,7 @@ public class RoomStore {
         }
 
         if (!string.IsNullOrWhiteSpace(request.Name))
-            room.SetStateInternal(new StateEvent() {
+            room.SetStateInternal(new MatrixEvent() {
                 Type = RoomNameEventContent.EventId,
                 TypedContent = new RoomNameEventContent() {
                     Name = request.Name
@@ -86,7 +86,7 @@ public class RoomStore {
             });
 
         if (!string.IsNullOrWhiteSpace(request.RoomAliasName))
-            room.SetStateInternal(new StateEvent() {
+            room.SetStateInternal(new MatrixEvent() {
                 Type = RoomCanonicalAliasEventContent.EventId,
                 TypedContent = new RoomCanonicalAliasEventContent() {
                     Alias = $"#{request.RoomAliasName}:localhost"
@@ -112,10 +112,10 @@ public class RoomStore {
 
     public class Room : NotifyPropertyChanged {
         private CancellationTokenSource _debounceCts = new();
-        private ObservableCollection<StateEventResponse> _timeline;
-        private ObservableDictionary<string, List<StateEventResponse>> _accountData;
+        private ObservableCollection<MatrixEventResponse> _timeline;
+        private ObservableDictionary<string, List<MatrixEventResponse>> _accountData;
         private ObservableDictionary<string, ReadMarkersData> _readMarkers;
-        private FrozenSet<StateEventResponse> _stateCache;
+        private FrozenSet<MatrixEventResponse> _stateCache;
         private int _timelineHash;
 
         public Room(string roomId) {
@@ -129,9 +129,9 @@ public class RoomStore {
 
         public string RoomId { get; set; }
 
-        public FrozenSet<StateEventResponse> State => _timelineHash == _timeline.GetHashCode() ? _stateCache : RebuildState();
+        public FrozenSet<MatrixEventResponse> State => _timelineHash == _timeline.GetHashCode() ? _stateCache : RebuildState();
 
-        public ObservableCollection<StateEventResponse> Timeline {
+        public ObservableCollection<MatrixEventResponse> Timeline {
             get => _timeline;
             set {
                 if (Equals(value, _timeline)) return;
@@ -140,7 +140,7 @@ public class RoomStore {
                     // we dont want to do this as it's rebuilt when the state is accessed
 
                     // if (args.Action == NotifyCollectionChangedAction.Add) {
-                    //     foreach (StateEventResponse state in args.NewItems) {
+                    //     foreach (MatrixEventResponse state in args.NewItems) {
                     //         if (state.StateKey is not null)
                     //             // we want state to be deduplicated by type and key, and we want the latest state to be the one that is returned
                     //             RebuildState();
@@ -154,7 +154,7 @@ public class RoomStore {
             }
         }
 
-        public ObservableDictionary<string, List<StateEventResponse>> AccountData {
+        public ObservableDictionary<string, List<MatrixEventResponse>> AccountData {
             get => _accountData;
             set {
                 if (Equals(value, _accountData)) return;
@@ -164,7 +164,7 @@ public class RoomStore {
             }
         }
 
-        public ImmutableList<StateEventResponse> JoinedMembers =>
+        public ImmutableList<MatrixEventResponse> JoinedMembers =>
             State.Where(s => s is { Type: RoomMemberEventContent.EventId, TypedContent: RoomMemberEventContent { Membership: "join" } }).ToImmutableList();
 
         public ObservableDictionary<string, ReadMarkersData> ReadMarkers {
@@ -177,8 +177,8 @@ public class RoomStore {
             }
         }
 
-        internal StateEventResponse SetStateInternal(StateEvent request, string? senderId = null, UserStore.User? user = null) {
-            var state = request as StateEventResponse ?? new StateEventResponse() {
+        internal MatrixEventResponse SetStateInternal(MatrixEvent request, string? senderId = null, UserStore.User? user = null) {
+            var state = request as MatrixEventResponse ?? new MatrixEventResponse() {
                 Type = request.Type,
                 StateKey = request.StateKey ?? "",
                 EventId = "$" + Guid.NewGuid().ToString(),
@@ -195,7 +195,7 @@ public class RoomStore {
             return state;
         }
 
-        public StateEventResponse AddUser(string userId) {
+        public MatrixEventResponse AddUser(string userId) {
             var state = SetStateInternal(new() {
                 Type = RoomMemberEventContent.EventId,
                 StateKey = userId,
@@ -245,15 +245,15 @@ public class RoomStore {
 
         private SemaphoreSlim stateRebuildSemaphore = new(1, 1);
 
-        private FrozenSet<StateEventResponse> RebuildState() {
+        private FrozenSet<MatrixEventResponse> RebuildState() {
             stateRebuildSemaphore.Wait();
             while (true)
                 try {
                     Console.WriteLine($"Rebuilding state for room {RoomId}");
                     // ReSharper disable once RedundantEnumerableCastCall - This sometimes happens when the collection is modified during enumeration
-                    List<StateEventResponse>? timeline = null;
+                    List<MatrixEventResponse>? timeline = null;
                     lock (_timeline) {
-                        timeline = Timeline.OfType<StateEventResponse>().ToList();
+                        timeline = Timeline.OfType<MatrixEventResponse>().ToList();
                     }
 
                     foreach (var evt in timeline) {
@@ -284,7 +284,7 @@ public class RoomStore {
         }
     }
 
-    public List<StateEventResponse> GetRoomsByMember(string userId) {
+    public List<MatrixEventResponse> GetRoomsByMember(string userId) {
         // return _rooms
         // // .Where(r => r.State.Any(s => s.Type == RoomMemberEventContent.EventId && s.StateKey == userId))
         // .Select(r => (Room: r, MemberEvent: r.State.SingleOrDefault(s => s.Type == RoomMemberEventContent.EventId && s.StateKey == userId)))

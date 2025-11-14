@@ -13,10 +13,10 @@ using LibMatrix.Extensions;
 
 namespace LibMatrix;
 
-public class StateEvent {
-    public static FrozenSet<Type> KnownStateEventTypes { get; } = ClassCollector<EventContent>.ResolveFromAllAccessibleAssemblies().ToFrozenSet();
+public class MatrixEvent {
+    public static FrozenSet<Type> KnownEventTypes { get; } = ClassCollector<EventContent>.ResolveFromAllAccessibleAssemblies().ToFrozenSet();
 
-    public static FrozenDictionary<string, Type> KnownStateEventTypesByName { get; } = KnownStateEventTypes.Aggregate(
+    public static FrozenDictionary<string, Type> KnownEventTypesByName { get; } = KnownEventTypes.Aggregate(
         new Dictionary<string, Type>(),
         (dict, type) => {
             var attrs = type.GetCustomAttributes<MatrixEventAttribute>();
@@ -29,11 +29,11 @@ public class StateEvent {
             return dict;
         }).OrderBy(x => x.Key).ToFrozenDictionary();
 
-    public static Type GetStateEventType(string? type) =>
-        string.IsNullOrWhiteSpace(type) ? typeof(UnknownEventContent) : KnownStateEventTypesByName.GetValueOrDefault(type) ?? typeof(UnknownEventContent);
+    public static Type GetEventType(string? type) =>
+        string.IsNullOrWhiteSpace(type) ? typeof(UnknownEventContent) : KnownEventTypesByName.GetValueOrDefault(type) ?? typeof(UnknownEventContent);
 
     [JsonIgnore]
-    public Type MappedType => GetStateEventType(Type);
+    public Type MappedType => GetEventType(Type);
 
     [JsonIgnore]
     public bool IsLegacyType => MappedType.GetCustomAttributes<MatrixEventAttribute>().FirstOrDefault(x => x.EventName == Type)?.Legacy ?? false;
@@ -58,7 +58,7 @@ public class StateEvent {
     public EventContent? TypedContent {
         get {
             try {
-                var mappedType = GetStateEventType(Type);
+                var mappedType = GetEventType(Type);
                 if (mappedType == typeof(UnknownEventContent))
                     Console.WriteLine($"Warning: unknown event type '{Type}'");
                 var deserialisedContent = (EventContent)RawContent.Deserialize(mappedType, TypedContentSerializerOptions)!;
@@ -121,8 +121,8 @@ public class StateEvent {
     [JsonIgnore]
     public string InternalContentTypeName => TypedContent?.GetType().Name ?? "null";
 
-    public static bool TypeKeyPairMatches(StateEventResponse x, StateEventResponse y) => x.Type == y.Type && x.StateKey == y.StateKey;
-    public static bool Equals(StateEventResponse x, StateEventResponse y) => x.Type == y.Type && x.StateKey == y.StateKey && x.EventId == y.EventId;
+    public static bool TypeKeyPairMatches(MatrixEventResponse x, MatrixEventResponse y) => x.Type == y.Type && x.StateKey == y.StateKey;
+    public static bool Equals(MatrixEventResponse x, MatrixEventResponse y) => x.Type == y.Type && x.StateKey == y.StateKey && x.EventId == y.EventId;
 
     /// <summary>
     ///     Compares two state events for deep equality, including type, state key, and raw content.
@@ -131,10 +131,10 @@ public class StateEvent {
     /// <param name="x"></param>
     /// <param name="y"></param>
     /// <returns></returns>
-    public static bool DeepEquals(StateEventResponse x, StateEventResponse y) => x.Type == y.Type && x.StateKey == y.StateKey && JsonNode.DeepEquals(x.RawContent, y.RawContent);
+    public static bool DeepEquals(MatrixEventResponse x, MatrixEventResponse y) => x.Type == y.Type && x.StateKey == y.StateKey && JsonNode.DeepEquals(x.RawContent, y.RawContent);
 }
 
-public class StateEventResponse : StateEvent {
+public class MatrixEventResponse : MatrixEvent {
     [JsonPropertyName("origin_server_ts")]
     public long? OriginServerTs { get; set; }
 
@@ -178,27 +178,27 @@ public class StateEventResponse : StateEvent {
 }
 
 [JsonSourceGenerationOptions(WriteIndented = true)]
-[JsonSerializable(typeof(ChunkedStateEventResponse))]
-internal partial class ChunkedStateEventResponseSerializerContext : JsonSerializerContext;
+[JsonSerializable(typeof(ChunkedMatrixEventResponse))]
+internal partial class ChunkedMatrixEventResponseSerializerContext : JsonSerializerContext;
 
 [DebuggerDisplay("{Events.Count} events")]
 public class EventList {
     public EventList() { }
 
-    public EventList(List<StateEventResponse>? events) {
+    public EventList(List<MatrixEventResponse>? events) {
         Events = events;
     }
 
     [JsonPropertyName("events")]
-    public List<StateEventResponse>? Events { get; set; } = new();
+    public List<MatrixEventResponse>? Events { get; set; } = new();
 }
 
-public class ChunkedStateEventResponse {
+public class ChunkedMatrixEventResponse {
     [JsonPropertyName("chunk")]
-    public List<StateEventResponse>? Chunk { get; set; } = new();
+    public List<MatrixEventResponse>? Chunk { get; set; } = new();
 }
 
-public class PaginatedChunkedStateEventResponse : ChunkedStateEventResponse {
+public class PaginatedChunkedMatrixEventResponse : ChunkedMatrixEventResponse {
     [JsonPropertyName("start")]
     public string? Start { get; set; }
 
@@ -206,7 +206,7 @@ public class PaginatedChunkedStateEventResponse : ChunkedStateEventResponse {
     public string? End { get; set; }
 }
 
-public class BatchedChunkedStateEventResponse : ChunkedStateEventResponse {
+public class BatchedChunkedMatrixEventResponse : ChunkedMatrixEventResponse {
     [JsonPropertyName("next_batch")]
     public string? NextBatch { get; set; }
 
@@ -214,7 +214,7 @@ public class BatchedChunkedStateEventResponse : ChunkedStateEventResponse {
     public string? PrevBatch { get; set; }
 }
 
-public class RecursedBatchedChunkedStateEventResponse : BatchedChunkedStateEventResponse {
+public class RecursedBatchedChunkedMatrixEventResponse : BatchedChunkedMatrixEventResponse {
     [JsonPropertyName("recursion_depth")]
     public int? RecursionDepth { get; set; }
 }
@@ -235,7 +235,7 @@ public class StateEventContentPolymorphicTypeInfoResolver : DefaultJsonTypeInfoR
                 IgnoreUnrecognizedTypeDiscriminators = true,
                 UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType,
 
-                DerivedTypes = StateEvent.KnownStateEventTypesByName.Select(x => new JsonDerivedType(x.Value, x.Key)).ToList()
+                DerivedTypes = MatrixEvent.KnownEventTypesByName.Select(x => new JsonDerivedType(x.Value, x.Key)).ToList()
 
                 // DerivedTypes = new ClassCollector<EventContent>()
                 // .ResolveFromAllAccessibleAssemblies()

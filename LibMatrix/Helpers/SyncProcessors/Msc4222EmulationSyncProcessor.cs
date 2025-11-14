@@ -8,11 +8,11 @@ using Microsoft.Extensions.Logging;
 namespace LibMatrix.Helpers.SyncProcessors;
 
 public class Msc4222EmulationSyncProcessor(AuthenticatedHomeserverGeneric homeserver, ILogger? logger) {
-    private static bool StateEventsMatch(StateEventResponse a, StateEventResponse b) {
+    private static bool StateEventsMatch(MatrixEventResponse a, MatrixEventResponse b) {
         return a.Type == b.Type && a.StateKey == b.StateKey;
     }
 
-    private static bool StateEventIsNewer(StateEventResponse a, StateEventResponse b) {
+    private static bool StateEventIsNewer(MatrixEventResponse a, MatrixEventResponse b) {
         return StateEventsMatch(a, b) && a.OriginServerTs < b.OriginServerTs;
     }
 
@@ -76,7 +76,7 @@ public class Msc4222EmulationSyncProcessor(AuthenticatedHomeserverGeneric homese
             Events = []
         };
 
-        var oldState = new List<StateEventResponse>();
+        var oldState = new List<MatrixEventResponse>();
         if (data.State is { Events.Count: > 0 }) {
             oldState.ReplaceBy(data.State.Events, StateEventIsNewer);
         }
@@ -160,7 +160,7 @@ public class Msc4222EmulationSyncProcessor(AuthenticatedHomeserverGeneric homese
             logger?.LogWarning("Msc4222Emulation: Failed to get full state for room {roomId}, state may be incomplete!\n{exception}", roomId, e);
         }
 
-        var oldState = new List<StateEventResponse>();
+        var oldState = new List<MatrixEventResponse>();
         if (data.State is { Events.Count: > 0 }) {
             oldState.ReplaceBy(data.State.Events, StateEventIsNewer);
         }

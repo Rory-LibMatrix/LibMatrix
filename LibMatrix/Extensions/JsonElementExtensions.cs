@@ -8,7 +8,7 @@ namespace LibMatrix.Extensions;
 public static class JsonElementExtensions {
     public static bool FindExtraJsonElementFields(this JsonElement obj, Type objectType, string objectPropertyName) {
         if (objectPropertyName == "content" && objectType == typeof(JsonObject))
-            objectType = typeof(StateEventResponse);
+            objectType = typeof(MatrixEventResponse);
         // if (t == typeof(JsonNode))
         //     return false;
 
@@ -35,9 +35,9 @@ public static class JsonElementExtensions {
                     continue;
                 }
 
-                if (field.Name == "content" && (objectType == typeof(StateEventResponse) || objectType == typeof(StateEvent))) {
+                if (field.Name == "content" && (objectType == typeof(MatrixEventResponse) || objectType == typeof(MatrixEvent))) {
                     unknownPropertyFound |= field.FindExtraJsonPropertyFieldsByValueKind(
-                        StateEvent.GetStateEventType(obj.GetProperty("type").GetString()!), // We expect type to always be present
+                        MatrixEvent.GetEventType(obj.GetProperty("type").GetString()!), // We expect type to always be present
                         mappedProperty.PropertyType);
                     continue;
                 }

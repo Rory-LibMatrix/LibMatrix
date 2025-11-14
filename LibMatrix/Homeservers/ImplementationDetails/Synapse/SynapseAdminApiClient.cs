@@ -174,13 +174,13 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
             }
 
             var parallelisationLimit = new SemaphoreSlim(32, 32);
-            List<Task<(SynapseAdminRoomListResult.SynapseAdminRoomListResultRoom room, StateEventResponse?[] tasks)>> tasks = [];
+            List<Task<(SynapseAdminRoomListResult.SynapseAdminRoomListResultRoom room, MatrixEventResponse?[] tasks)>> tasks = [];
 
-            async Task<(SynapseAdminRoomListResult.SynapseAdminRoomListResultRoom room, StateEventResponse?[] tasks)> fillTask(
+            async Task<(SynapseAdminRoomListResult.SynapseAdminRoomListResultRoom room, MatrixEventResponse?[] tasks)> fillTask(
                 SynapseAdminRoomListResult.SynapseAdminRoomListResultRoom room) {
                 if (serverSupportsQueryEventsV2) return (room, []);
 
-                var fillTasks = await Task.WhenAll(((Task<StateEventResponse?>?[]) [
+                var fillTasks = await Task.WhenAll(((Task<MatrixEventResponse?>?[]) [
                         fetchTombstones && room.TombstoneEvent is null
                             ? parallelisationLimit.RunWithLockAsync(() => room.GetTombstoneEventAsync(authenticatedHomeserver))
                             : null!,
@@ -201,7 +201,7 @@ public class SynapseAdminApiClient(AuthenticatedHomeserverSynapse authenticatedH
 
             tasks.AddRange(
                 serverSupportsQueryEventsV2
-                    ? keep.Select(x => Task.FromResult((x, (StateEventResponse?[])[])))
+                    ? keep.Select(x => Task.FromResult((x, (MatrixEventResponse?[])[])))
                     : keep.Select(fillTask)
             );
 

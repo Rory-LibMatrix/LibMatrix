@@ -10,8 +10,8 @@ public class MessagesResponse {
     public string? End { get; set; }
 
     [JsonPropertyName("chunk")]
-    public List<StateEventResponse> Chunk { get; set; } = new();
+    public List<MatrixEventResponse> Chunk { get; set; } = new();
 
     [JsonPropertyName("state")]
-    public List<StateEventResponse> State { get; set; } = new();
+    public List<MatrixEventResponse> State { get; set; } = new();
 }

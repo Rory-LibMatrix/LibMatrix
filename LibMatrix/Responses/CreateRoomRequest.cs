@@ -29,7 +29,7 @@ public class CreateRoomRequest {
     // public string Preset { get; set; }
 
     [JsonPropertyName("initial_state")]
-    public List<StateEvent>? InitialState { get; set; }
+    public List<MatrixEvent>? InitialState { get; set; }
 
     /// <summary>
     /// One of: ["public", "private"]
@@ -54,15 +54,15 @@ public class CreateRoomRequest {
     ///     For use only when you can't use the CreationContent property
     /// </summary>
 
-    public StateEvent? this[string eventType, string eventKey = ""] {
+    public MatrixEvent? this[string eventType, string eventKey = ""] {
         get {
             var stateEvent = InitialState?.FirstOrDefault(x => x.Type == eventType && x.StateKey == eventKey);
             if (stateEvent == null)
-                InitialState?.Add(stateEvent = new StateEvent {
+                InitialState?.Add(stateEvent = new MatrixEvent {
                     Type = eventType,
                     StateKey = eventKey,
                     TypedContent = (EventContent)Activator.CreateInstance(
-                        StateEvent.KnownStateEventTypes.FirstOrDefault(x =>
+                        MatrixEvent.KnownEventTypes.FirstOrDefault(x =>
                             x.GetCustomAttributes<MatrixEventAttribute>()?
                                 .Any(y => y.EventName == eventType) ?? false) ?? typeof(UnknownEventContent)
                     )!
@@ -122,7 +122,7 @@ public class CreateRoomRequest {
                 }
             },
             RoomAliasName = roomAliasName,
-            InitialState = new List<StateEvent>()
+            InitialState = new List<MatrixEvent>()
         };
 
         return request;
@@ -162,7 +162,7 @@ public class CreateRoomRequest {
                 }
             },
             RoomAliasName = roomAliasName,
-            InitialState = new List<StateEvent>()
+            InitialState = new List<MatrixEvent>()
         };
 
         return request;

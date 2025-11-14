@@ -75,19 +75,18 @@ public class UserStore {
             UserId = $"@{localPart}:{_config.ServerName}",
             IsGuest = kind == "guest",
             AccountData = new() {
-                new StateEventResponse() {
+                new MatrixEventResponse() {
                     Type = "im.vector.analytics",
                     RawContent = new JsonObject() {
                         ["pseudonymousAnalyticsOptIn"] = false
                     },
                 },
-                new StateEventResponse() {
+                new MatrixEventResponse() {
                     Type = "im.vector.web.settings",
                     RawContent = new JsonObject() {
                         ["developerMode"] = true,
                         ["alwaysShowTimestamps"] = true,
                         ["SpotlightSearch.showNsfwPublicRooms"] = true,
-                        
                     }
                 },
                 new() {
@@ -135,7 +134,7 @@ public class UserStore {
         private ObservableDictionary<string, SessionInfo> _accessTokens;
         private ObservableDictionary<string, SyncFilter> _filters;
         private ObservableDictionary<string, object> _profile;
-        private ObservableCollection<StateEventResponse> _accountData;
+        private ObservableCollection<MatrixEventResponse> _accountData;
         private ObservableDictionary<string, RoomKeysResponse> _roomKeys;
         private ObservableDictionary<string, LoginResponse> _authorizedSessions;
 
@@ -174,7 +173,7 @@ public class UserStore {
             }
         }
 
-        public ObservableCollection<StateEventResponse> AccountData {
+        public ObservableCollection<MatrixEventResponse> AccountData {
             get => _accountData;
             set {
                 if (value == _accountData) return;

@@ -298,9 +298,9 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
         if (syncResponse.Rooms is { Join.Count: > 0 })
             foreach (var updatedRoom in syncResponse.Rooms.Join) {
                 if (updatedRoom.Value.Timeline is null) continue;
-                foreach (var stateEventResponse in updatedRoom.Value.Timeline.Events ?? []) {
-                    stateEventResponse.RoomId = updatedRoom.Key;
-                    var tasks = TimelineEventHandlers.Select(x => x(stateEventResponse)).ToList();
+                foreach (var MatrixEventResponse in updatedRoom.Value.Timeline.Events ?? []) {
+                    MatrixEventResponse.RoomId = updatedRoom.Key;
+                    var tasks = TimelineEventHandlers.Select(x => x(MatrixEventResponse)).ToList();
                     await Task.WhenAll(tasks);
                 }
             }
@@ -319,12 +319,12 @@ public class SyncHelper(AuthenticatedHomeserverGeneric homeserver, ILogger? logg
     /// <summary>
     /// Event fired when a timeline event is received
     /// </summary>
-    public List<Func<StateEventResponse, Task>> TimelineEventHandlers { get; } = new();
+    public List<Func<MatrixEventResponse, Task>> TimelineEventHandlers { get; } = new();
 
     /// <summary>
     /// Event fired when an account data event is received
     /// </summary>
-    public List<Func<StateEventResponse, Task>> AccountDataReceivedHandlers { get; } = new();
+    public List<Func<MatrixEventResponse, Task>> AccountDataReceivedHandlers { get; } = new();
 
     /// <summary>
     /// Event fired when an exception is thrown

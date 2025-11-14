@@ -42,7 +42,7 @@ public class LegacyController(ILogger<LegacyController> logger, TokenService tok
             room_id = room.RoomId,
             state = room.State.ToList(),
             visibility = "public",
-            messages = new PaginatedChunkedStateEventResponse() {
+            messages = new PaginatedChunkedMatrixEventResponse() {
                 Chunk = timelineChunk,
                 End = timelineChunk.Last().EventId,
                 Start = timelineChunk.Count >= limit ? timelineChunk.First().EventId : null

@@ -72,7 +72,7 @@ public class SpaceTests : TestBed<TestFixture> {
 
         var crq = new CreateRoomRequest() {
             Name = "Test space",
-            InitialState = expectedChildren.Select(c => new StateEvent() {
+            InitialState = expectedChildren.Select(c => new MatrixEvent() {
                 Type = "m.space.child",
                 StateKey = c.RoomId,
                 TypedContent = new SpaceChildEventContent() {

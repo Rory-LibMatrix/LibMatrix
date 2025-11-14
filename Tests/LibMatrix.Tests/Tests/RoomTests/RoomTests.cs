@@ -35,8 +35,8 @@ public class RoomTests : TestBed<TestFixture> {
 
     [Fact]
     public async Task GetMembersAsync() {
-        Assert.True(StateEvent.KnownStateEventTypes is { Count: > 0 }, "StateEvent.KnownStateEventTypes is empty!");
-        Assert.True(StateEvent.KnownStateEventTypesByName is { Count: > 0 }, "StateEvent.KnownStateEventTypesByName is empty!");
+        Assert.True(MatrixEvent.KnownEventTypes is { Count: > 0 }, "MatrixEvent.KnownEventTypes is empty!");
+        Assert.True(MatrixEvent.KnownEventTypesByName is { Count: > 0 }, "MatrixEvent.KnownEventTypesByName is empty!");
 
         var hs = await _hsAbstraction.GetConfiguredHomeserver();
         var room = await RoomAbstraction.GetTestRoom(hs);
@@ -240,7 +240,7 @@ public class RoomTests : TestBed<TestFixture> {
         });
 
         await room.LeaveAsync();
-        
+
         await File.WriteAllTextAsync("test.json", messages.ToJson());
     }
 
@@ -268,7 +268,7 @@ public class RoomTests : TestBed<TestFixture> {
 
         await room.LeaveAsync();
     }
-    
+
     [Fact]
     public async Task SendMessageEventAsync() {
         var hs = await _hsAbstraction.GetConfiguredHomeserver();
@@ -276,13 +276,14 @@ public class RoomTests : TestBed<TestFixture> {
         Assert.NotNull(room);
 
         var res = await room.SendMessageEventAsync(new RoomMessageEventContent(body: "This test was written by Emma [it/its], member of the Rory& system." +
-                                                                                     "\nIf you are reading this on matrix, it means the unit test for sending a message works!", messageType: "m.text"));
+                                                                                     "\nIf you are reading this on matrix, it means the unit test for sending a message works!",
+            messageType: "m.text"));
         Assert.NotNull(res);
         Assert.NotNull(res.EventId);
 
         await room.LeaveAsync();
     }
-    
+
     [Fact]
     public async Task InviteUsersAsync() {
         var hs = await _hsAbstraction.GetConfiguredHomeserver();
@@ -298,7 +299,7 @@ public class RoomTests : TestBed<TestFixture> {
             Assert.NotNull(u.UserId);
             Assert.NotEmpty(u.UserId);
         });
-        
+
         await room.InviteUsersAsync(users.Select(u => u.UserId));
         var members = await room.GetMembersListAsync();
         Assert.NotNull(members);
@@ -310,7 +311,7 @@ public class RoomTests : TestBed<TestFixture> {
             Assert.NotEmpty(m.StateKey);
         });
         Assert.All(users, u => Assert.Contains(u.UserId, members.Select(m => m.StateKey)));
-        
+
         await room.LeaveAsync();
     }
 }

@@ -14,29 +14,29 @@ public static class RoomAbstraction {
             // Visibility = CreateRoomVisibility.Public,
             RoomAliasName = Guid.NewGuid().ToString()
         };
-        crq.InitialState ??= new List<StateEvent>();
-        crq.InitialState.Add(new StateEvent() {
+        crq.InitialState ??= new List<MatrixEvent>();
+        crq.InitialState.Add(new MatrixEvent() {
             Type = RoomTopicEventContent.EventId,
             StateKey = "",
             TypedContent = new RoomTopicEventContent() {
                 Topic = "LibMatrix Test Room " + DateTime.Now.ToString("O")
             }
         });
-        crq.InitialState.Add(new StateEvent() {
+        crq.InitialState.Add(new MatrixEvent() {
             Type = RoomNameEventContent.EventId,
             StateKey = "",
             TypedContent = new RoomNameEventContent() {
                 Name = "LibMatrix Test Room " + DateTime.Now.ToString("O")
             }
         });
-        crq.InitialState.Add(new StateEvent() {
+        crq.InitialState.Add(new MatrixEvent() {
             Type = RoomAvatarEventContent.EventId,
             StateKey = "",
             TypedContent = new RoomAvatarEventContent() {
                 Url = "mxc://conduit.rory.gay/r9KiT0f9eQbv8pv4RxwBZFuzhfKjGWHx"
             }
         });
-        crq.InitialState.Add(new StateEvent() {
+        crq.InitialState.Add(new MatrixEvent() {
             Type = RoomAliasEventContent.EventId,
             StateKey = "",
             TypedContent = new RoomAliasEventContent() {
@@ -60,7 +60,7 @@ public static class RoomAbstraction {
             Name = $"LibMatrix Test Space ({roomCount} children)",
             // Visibility = CreateRoomVisibility.Public,
             RoomAliasName = Guid.NewGuid().ToString(),
-            InitialState = new List<StateEvent>()
+            InitialState = new List<MatrixEvent>()
         };
         crq.CreationContentBaseType.Type = "m.space";
 
@@ -72,7 +72,7 @@ public static class RoomAbstraction {
             })).ToAsyncResultEnumerable();
 
         await foreach (var room in createRoomTasks)
-            crq.InitialState.Add(new StateEvent {
+            crq.InitialState.Add(new MatrixEvent {
                 Type = "m.space.child",
                 StateKey = room.RoomId,
                 TypedContent = new SpaceChildEventContent() {
@@ -85,7 +85,7 @@ public static class RoomAbstraction {
         if (addSpaces)
             for (var i = 0; i < roomCount; i++) {
                 var space = await GetTestSpace(hs, roomCount - spaceSizeReduction, true, spaceSizeReduction);
-                crq.InitialState.Add(new StateEvent {
+                crq.InitialState.Add(new MatrixEvent {
                     Type = "m.space.child",
                     StateKey = space.RoomId,
                     TypedContent = new SpaceChildEventContent() {

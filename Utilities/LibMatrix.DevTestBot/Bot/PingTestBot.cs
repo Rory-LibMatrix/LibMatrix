@@ -63,7 +63,7 @@ public class PingTestBot : IHostedService {
 
         // foreach (var room in await hs.GetJoinedRooms()) {
         //     if(room.RoomId is "!OGEhHVWSdvArJzumhm:matrix.org") continue;
-        //     foreach (var stateEvent in await room.GetStateAsync<List<StateEvent>>("")) {
+        //     foreach (var stateEvent in await room.GetStateAsync<List<MatrixEvent>>("")) {
         //         var _ = stateEvent.GetType;
         //     }
         //     _logger.LogInformation($"Got room state for {room.RoomId}!");

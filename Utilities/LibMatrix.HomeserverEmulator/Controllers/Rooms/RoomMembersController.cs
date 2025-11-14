@@ -13,7 +13,7 @@ public class RoomMembersController(
     RoomStore roomStore,
     PaginationTokenResolverService paginationTokenResolver) : ControllerBase {
     [HttpGet("members")]
-    public async Task<List<StateEventResponse>> GetMembers(string roomId, string? at = null, string? membership = null, string? not_membership = null) {
+    public async Task<List<MatrixEventResponse>> GetMembers(string roomId, string? at = null, string? membership = null, string? not_membership = null) {
         var token = tokenService.GetAccessTokenOrNull(HttpContext);
         if (token == null)
             throw new MatrixException() {
@@ -44,7 +44,7 @@ public class RoomMembersController(
             members = members.Where(x => (x.TypedContent as RoomMemberEventContent)?.Membership != not_membership).ToList();
 
         if (at != null) {
-            StateEventResponse? evt = null;
+            MatrixEventResponse? evt = null;
             if (at.StartsWith('$'))
                 evt = await paginationTokenResolver.ResolveTokenToEvent(at, room);
 
