@@ -27,9 +27,9 @@
           nugetDeps ? null,
           projectReferences ? [ ],
           projectFile ? "${name}/${name}.csproj",
-        }:
+        }@args:
         pkgs.buildDotnetModule rec {
-          inherit projectReferences nugetDeps;
+          inherit projectReferences nugetDeps projectFile;
 
           pname = "${name}";
           version = "1.0.0-" + rVersion;
@@ -42,9 +42,6 @@
           dotnet-sdk = pkgs.dotnet-sdk_10;
           dotnet-runtime = pkgs.dotnet-aspnetcore_10;
           src = ./.;
-          projectFile = [
-            "${name}/${name}.csproj"
-          ];
           packNupkg = true;
           meta = with pkgs.lib; {
             description = "Rory&::LibMatrix";
@@ -78,7 +75,7 @@
             name = "LibMatrix.EventTypes";
             projectReferences = [
               ArcaneLibs
-              LibMatrix
+              #              LibMatrix
             ];
           };
           LibMatrix-Federation = makeNupkg {
@@ -89,6 +86,19 @@
               LibMatrix
             ];
           };
+          LibMatrix-Bot-Utils = makeNupkg {
+            name = "LibMatrix.Utilities.Bot";
+            nugetDeps = Utilities/LibMatrix.Utilities.Bot/deps.json;
+            projectFile = "Utilities/LibMatrix.Utilities.Bot/LibMatrix.Utilities.Bot.csproj";
+            projectReferences = [
+              ArcaneLibs
+              LibMatrix
+            ];
+          };
         };
+      checks = pkgs.lib.attrsets.unionOfDisjoint {
+        # Actual checks
+      } self.packages;
     };
+
 }
