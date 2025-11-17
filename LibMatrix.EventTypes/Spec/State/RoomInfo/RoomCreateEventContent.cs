@@ -1,5 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using ArcaneLibs.Extensions;
 
 namespace LibMatrix.EventTypes.Spec.State.RoomInfo;
 

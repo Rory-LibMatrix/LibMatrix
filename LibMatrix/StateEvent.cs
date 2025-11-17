@@ -132,6 +132,27 @@ public class MatrixEvent {
     /// <param name="y"></param>
     /// <returns></returns>
     public static bool DeepEquals(MatrixEventResponse x, MatrixEventResponse y) => x.Type == y.Type && x.StateKey == y.StateKey && JsonNode.DeepEquals(x.RawContent, y.RawContent);
+
+    public JsonObject GetRedactedContent(string roomVersion) {
+        JsonObject GetTopLevelKeys(string[] keys) {
+            var obj = new JsonObject();
+            foreach (var key in keys) {
+                if (RawContent.ContainsKey(key))
+                    obj[key] = RawContent[key]!;
+            }
+
+            return obj;
+        }
+
+        return Type switch {
+            "m.room.create" => RawContent,                                                          // as of v11... TODO: implement older versions
+            "m.room.member" => GetTopLevelKeys(["membership", "join_authorised_via_users_server"]), // TODO: missing third_party_invite.signed
+            "m.room.join_rules" => GetTopLevelKeys(["join_rule", "allow"]),
+            "m.room.power_levels" => GetTopLevelKeys(["ban", "events", "events_default", "kick", "redact", "state_default", "users", "users_default"]),
+            "m.room.history_visibility" => GetTopLevelKeys(["history_visibility"]),
+            _ => new JsonObject()
+        };
+    }
 }
 
 public class MatrixEventResponse : MatrixEvent {

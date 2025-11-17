@@ -1,6 +1,6 @@
 # Contributing
 
-Any contribution is welcome, even if it's just documentation or recommended git practices! We're not too strict on code style, but we do have a few guidelines:
+Any contribution is welcome, even if it's just documentation or recommended git practices! We're not too strict on code style, but we do have a few recommendations:
 - Use spaces, not tabs
 - Use 4 spaces for indentation
 - Use the C# naming convention for variables, methods, etc.

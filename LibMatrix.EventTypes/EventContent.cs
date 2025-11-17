@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Net.Http.Json;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -17,6 +18,7 @@ public abstract class EventContent {
         foreach (var attr in type.GetCustomAttributes<MatrixEventAttribute>(true)) {
             eventTypes.Add(attr.EventName);
         }
+
         return eventTypes;
     }
 }
@@ -55,7 +57,7 @@ public abstract class TimelineEventContent : EventContent {
         // used for reactions
         [JsonPropertyName("key")]
         public string? Key { get; set; }
-        
+
         [JsonExtensionData]
         public Dictionary<string, object>? AdditionalData { get; set; } = [];
 
