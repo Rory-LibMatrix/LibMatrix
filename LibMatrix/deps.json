@@ -1,12 +1,17 @@
 [
   {
+    "pname": "ArcaneLibs",
+    "version": "1.0.0-preview.20251205-114150",
+    "hash": "sha256-OFH86NaYdaHhNjvwMzamKO6xz1HuXZAO0pVon8FFnzA="
+  },
+  {
     "pname": "Microsoft.Extensions.DependencyInjection.Abstractions",
-    "version": "10.0.0-rc.2.25502.107",
-    "hash": "sha256-1nh8z2nglCizQkl0iWwJ/au4BAuuBu0xghKHGBeTM1I="
+    "version": "10.0.0",
+    "hash": "sha256-9iodXP39YqgxomnOPOxd/mzbG0JfOSXzFoNU3omT2Ps="
   },
   {
     "pname": "Microsoft.Extensions.Logging.Abstractions",
-    "version": "10.0.0-rc.2.25502.107",
-    "hash": "sha256-krml7WL+lF7oiYOvQ8NHQp7BVpHJrLIHhyxUgkHO+WE="
+    "version": "10.0.0",
+    "hash": "sha256-BnhgGZc01HwTSxogavq7Ueq4V7iMA3wPnbfRwQ4RhGk="
   }
 ]

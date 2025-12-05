@@ -8,11 +8,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1763321335,
-        "narHash": "sha256-cjNR58eGCHYtL+78anpUdxDg/Y/5oermkY4XWJQ5ybI=",
+        "lastModified": 1764934856,
+        "narHash": "sha256-ypuVuTHImU2JkzgkFmV4Z4AVNoz4yQAPkCbP5opo464=",
         "owner": "TheArcaneBrony",
         "repo": "ArcaneLibs",
-        "rev": "412a14c2ad2fed85066155d1060c35cbe23d6c91",
+        "rev": "491a3c65481c4e5a41b4435106e3dc8ba81efdc3",
         "type": "github"
       },
       "original": {
@@ -59,15 +59,15 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1762977756,
-        "narHash": "sha256-4PqRErxfe+2toFJFgcRKZ0UI9NSIOJa+7RXVtBhy4KE=",
-        "owner": "nixos",
+        "lastModified": 1764667669,
+        "narHash": "sha256-7WUCZfmqLAssbDqwg9cUDAXrSoXN79eEEq17qhTNM/Y=",
+        "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "c5ae371f1a6a7fd27823bc500d9390b38c05fa55",
+        "rev": "418468ac9527e799809c900eda37cbff999199b6",
         "type": "github"
       },
       "original": {
-        "owner": "nixos",
+        "owner": "NixOS",
         "ref": "nixos-unstable",
         "repo": "nixpkgs",
         "type": "github"

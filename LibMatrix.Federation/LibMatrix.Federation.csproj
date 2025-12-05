@@ -14,7 +14,7 @@
 
     <ItemGroup>
         <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2"/>
-        <PackageReference Include="Microsoft.Extensions.Primitives" Version="10.0.0-rc.2.25502.107"/>
+        <PackageReference Include="Microsoft.Extensions.Primitives" Version="10.0.0" />
     </ItemGroup>
 
 </Project>

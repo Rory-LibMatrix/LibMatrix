@@ -1,5 +1,5 @@
 {
-  inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   inputs.flake-utils.url = "github:numtide/flake-utils";
   inputs.arcanelibs.url = "github:TheArcaneBrony/ArcaneLibs";
   inputs.arcanelibs.inputs.nixpkgs.follows = "nixpkgs";
@@ -41,7 +41,7 @@
           #          dotnetFlags = [ "-v:diag" ];
           dotnet-sdk = pkgs.dotnet-sdk_10;
           dotnet-runtime = pkgs.dotnet-aspnetcore_10;
-          src = ./.;
+          src = pkgs.lib.cleanSource ./.;
           packNupkg = true;
           meta = with pkgs.lib; {
             description = "Rory&::LibMatrix";
@@ -99,6 +99,30 @@
       checks = pkgs.lib.attrsets.unionOfDisjoint {
         # Actual checks
       } self.packages;
+      nupkgs.x86_64-linux = pkgs.lib.mapAttrs (
+        name: pkg:
+        (
+          with pkgs;
+          pkgs.runCommand (pkg.pname + "-" + pkg.version + ".nupkg") { } ''
+            echo 'Creating zip archive for ${name}'
+            set -x
+            cd "${pkg.out}/share/nuget/packages/${lib.toLower pkg.pname}/${pkg.version}"
+            ls -la
+            # NuGet doesn't care about compression flags
+            ${lib.getExe pkgs.zip} -db -ds 32k -9 -r "$out" *
+            set +x
+          ''
+        )
+      ) self.packages.x86_64-linux;
+      nugetArtifactDir.x86_64-linux =
+        let
+          outPaths = pkgs.lib.mapAttrsToList (name: pkg: pkg.out) self.nupkgs.x86_64-linux;
+        in
+        pkgs.runCommand "nuget-artifacts" { } ''
+          mkdir -p $out
+          for path in ${pkgs.lib.concatStringsSep " " outPaths}; do
+            ln -vs ''\${path} $out/
+          done
+        '';
     };
-
 }
