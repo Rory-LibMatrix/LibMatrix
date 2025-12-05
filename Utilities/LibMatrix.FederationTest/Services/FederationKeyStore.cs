@@ -1,5 +1,7 @@
 using System.Text.Json;
+using ArcaneLibs.Extensions;
 using LibMatrix.Abstractions;
+using LibMatrix.Federation.Extensions;
 using LibMatrix.FederationTest.Utilities;
 using Org.BouncyCastle.Crypto.Parameters;
 
@@ -11,34 +13,41 @@ public class FederationKeyStore(FederationTestConfiguration config) {
     }
 
     private static (Ed25519PrivateKeyParameters privateKey, Ed25519PublicKeyParameters publicKey) currentKeyPair = default;
-    
+
     public class PrivateKeyCollection {
-        
         public required VersionedHomeserverPrivateKey CurrentSigningKey { get; set; }
     }
-    
+
     public PrivateKeyCollection GetCurrentSigningKey() {
-        if(!Directory.Exists(config.KeyStorePath)) Directory.CreateDirectory(config.KeyStorePath);
+        if (!Directory.Exists(config.KeyStorePath)) Directory.CreateDirectory(config.KeyStorePath);
         var privateKeyPath = Path.Combine(config.KeyStorePath, "private-keys.json");
 
         if (!File.Exists(privateKeyPath)) {
             var keyPair = InternalGetSigningKey();
-            var privateKey = new VersionedHomeserverPrivateKey {
-                PrivateKey = keyPair.privateKey.GetEncoded().ToUnpaddedBase64(),
+            var privateKey = new PrivateKeyCollection() {
+                CurrentSigningKey = new VersionedHomeserverPrivateKey {
+                    ServerName = config.ServerName,
+                    KeyId = new() {
+                        Algorithm = "ed25519",
+                        KeyId = "0"
+                    },
+                    PrivateKey = keyPair.privateKey.ToUnpaddedBase64(),
+                    PublicKey = keyPair.publicKey.ToUnpaddedBase64(),
+                }
             };
             File.WriteAllText(privateKeyPath, privateKey.ToJson());
         }
-        
-        return JsonSerializer.Deserialize<PrivateKeyCollection>()
+
+        return JsonSerializer.Deserialize<PrivateKeyCollection>(File.ReadAllText(privateKeyPath))!;
     }
 
     private (Ed25519PrivateKeyParameters privateKey, Ed25519PublicKeyParameters publicKey) InternalGetSigningKey() {
         if (currentKeyPair != default) {
             return currentKeyPair;
         }
-        
-        if(!Directory.Exists(config.KeyStorePath)) Directory.CreateDirectory(config.KeyStorePath);
-        
+
+        if (!Directory.Exists(config.KeyStorePath)) Directory.CreateDirectory(config.KeyStorePath);
+
         var privateKeyPath = Path.Combine(config.KeyStorePath, "signing.key");
         if (!File.Exists(privateKeyPath)) {
             var keyPair = Ed25519Utils.GenerateKeyPair();

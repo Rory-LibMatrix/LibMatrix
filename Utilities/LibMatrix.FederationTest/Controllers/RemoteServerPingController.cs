@@ -20,8 +20,8 @@ public class RemoteServerPingController(FederationTestConfiguration config, Fede
             try {
                 var ownKey = keyStore.GetCurrentSigningKey();
                 var hs = new AuthenticatedFederationClient(hsResolveResult.Server, new() {
-                    PrivateKey = ,
-                    OriginServerName = null
+                    PrivateKey = ownKey.CurrentSigningKey,
+                    OriginServerName = config.ServerName
                 });
                 var keys = await hs.GetServerKeysAsync();
                 responseMessage["version"] = await hs.GetServerVersionAsync();

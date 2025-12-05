@@ -2,6 +2,8 @@ using System.Net.Http.Headers;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using ArcaneLibs.Extensions;
+using LibMatrix.Abstractions;
+using LibMatrix.Responses.Federation;
 using Microsoft.Extensions.Primitives;
 
 namespace LibMatrix.Federation;
@@ -47,6 +49,14 @@ public class XMatrixAuthorizationScheme {
                 Signature = ""
             };
         }
+
+        public static XMatrixAuthorizationHeader FromSignedObject(SignedObject<XMatrixRequestSignature> signedObj, VersionedHomeserverPrivateKey currentKey) =>
+            new() {
+                Origin = signedObj.TypedContent.OriginServerName,
+                Destination = signedObj.TypedContent.DestinationServerName,
+                Signature = signedObj.Signatures[signedObj.TypedContent.OriginServerName][currentKey.KeyId],
+                Key = currentKey.KeyId
+            };
 
         public string ToHeaderValue() => $"{Scheme} origin=\"{Origin}\", destination=\"{Destination}\", key=\"{Key}\", sig=\"{Signature}\"";
     }

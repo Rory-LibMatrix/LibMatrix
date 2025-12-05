@@ -1,10 +1,8 @@
 using System.Text.Json.Nodes;
-using LibMatrix.Abstractions;
 using LibMatrix.Extensions;
 using LibMatrix.Federation;
 using LibMatrix.Federation.Extensions;
 using LibMatrix.FederationTest.Services;
-using LibMatrix.Homeservers;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LibMatrix.FederationTest.Controllers;
@@ -21,32 +19,33 @@ public class TestController(FederationTestConfiguration config, FederationKeySto
             BaseAddress = new Uri("https://matrix.rory.gay")
         };
 
-        var keyId = new VersionedKeyId() {
-            Algorithm = "ed25519",
-            KeyId = "0"
-        };
+        var currentKey = keyStore.GetCurrentSigningKey().CurrentSigningKey;
 
         var signatureData = new XMatrixAuthorizationScheme.XMatrixRequestSignature() {
-                Method = "GET",
-                Uri = "/_matrix/federation/v1/user/devices/@emma:rory.gay",
-                OriginServerName = config.ServerName,
-                DestinationServerName = "rory.gay"
-            }
-            .Sign(config.ServerName, keyId, keyStore.GetCurrentSigningKey().privateKey);
+            OriginServerName = config.ServerName,
+            Method = "GET",
+            DestinationServerName = "rory.gay",
+            Uri = "/_matrix/federation/v1/user/devices/@emma:rory.gay",
+        };
+        //     .Sign(currentKey);
+        //
+        // var signature = signatureData.Signatures[config.ServerName][currentKey.KeyId];
+        // var headerValue = new XMatrixAuthorizationScheme.XMatrixAuthorizationHeader() {
+        //     Origin = config.ServerName,
+        //     Key = currentKey.KeyId,
+        //     Destination = "rory.gay",
+        //     Signature = signature
+        // }.ToHeaderValue();
 
-        var signature = signatureData.Signatures[config.ServerName][keyId];
-        var headerValue = new XMatrixAuthorizationScheme.XMatrixAuthorizationHeader() {
-            Origin = config.ServerName,
-            Destination = "rory.gay",
-            Key = keyId,
-            Signature = signature
-        }.ToHeaderValue();
+        // var req = new HttpRequestMessage(HttpMethod.Get, "/_matrix/federation/v1/user/devices/@emma:rory.gay");
+        // req.Headers.Add("Authorization", headerValue);
 
-        var req = new HttpRequestMessage(HttpMethod.Get, "/_matrix/federation/v1/user/devices/@emma:rory.gay");
-        req.Headers.Add("Authorization", headerValue);
-
+        var req = signatureData.ToSignedHttpRequestMessage(currentKey);
         var response = await hc.SendAsync(req);
         var content = await response.Content.ReadFromJsonAsync<JsonObject>();
         return content!;
     }
+
+    // [HttpGet("/testMakeJoin")]
+    // public async Task<JsonObject> GetTestMakeJoin() { }
 }

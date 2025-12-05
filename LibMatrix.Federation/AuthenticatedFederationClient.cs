@@ -4,13 +4,13 @@ using LibMatrix.Homeservers;
 
 namespace LibMatrix.Federation;
 
-public class AuthenticatedFederationClient(string federationEndpoint, AuthenticatedFederationClient.AuthenticatedFederationConfiguration config, string? proxy = null) : FederationClient(federationEndpoint, proxy) {
-    
+public class AuthenticatedFederationClient(string federationEndpoint, AuthenticatedFederationClient.AuthenticatedFederationConfiguration config, string? proxy = null)
+    : FederationClient(federationEndpoint, proxy) {
     public class AuthenticatedFederationConfiguration {
-        public required VersionedHomeserverPrivateKey PrivateKey { get; set; } 
+        public required VersionedHomeserverPrivateKey PrivateKey { get; set; }
         public required string OriginServerName { get; set; }
     }
-    
+
     // public async Task<UserDeviceListResponse> GetUserDevicesAsync(string userId) {
     //     var response = await HttpClient.SendAsync(new XMatrixAuthorizationScheme.XMatrixRequestSignature() {
     //         OriginServerName = config.OriginServerName,
@@ -20,5 +20,4 @@ public class AuthenticatedFederationClient(string federationEndpoint, Authentica
     //     }.ToSignedHttpRequestMessage(config.PrivateKey));
     //     return response;
     // }
-    
 }

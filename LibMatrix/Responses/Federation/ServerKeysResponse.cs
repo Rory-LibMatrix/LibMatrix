@@ -38,7 +38,7 @@ public class ServerKeysResponse {
     [DebuggerDisplay("{Key}")]
     public class CurrentVerifyKey {
         [JsonPropertyName("key")]
-        public string Key { get; set; }
+        public required string Key { get; set; }
     }
 
     [DebuggerDisplay("{Key} (expired {Expired})")]

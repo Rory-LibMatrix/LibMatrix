@@ -23,18 +23,19 @@ public class FederationKeysController(FederationTestConfiguration config, Federa
         if (_cachedServerKeysResponse == null || _cachedServerKeysResponse.TypedContent.ValidUntil < DateTime.Now + TimeSpan.FromSeconds(30)) {
             var keys = keyStore.GetCurrentSigningKey();
             _cachedServerKeysResponse = new ServerKeysResponse() {
-                ValidUntil = DateTime.Now + TimeSpan.FromMinutes(1),
+                ValidUntil = DateTime.Now + TimeSpan.FromMinutes(5),
                 ServerName = config.ServerName,
                 OldVerifyKeys = [],
                 VerifyKeysById = new() {
                     {
-                        new() { Algorithm = "ed25519", KeyId = "0" }, new ServerKeysResponse.CurrentVerifyKey() {
-                            Key = keys.publicKey.ToUnpaddedBase64(),
+                        keys.CurrentSigningKey.KeyId, new ServerKeysResponse.CurrentVerifyKey() {
+                            Key = keys.CurrentSigningKey.PublicKey //.ToUnpaddedBase64(),
                         }
                     }
                 }
-            }.Sign(config.ServerName, new VersionedKeyId() { Algorithm = "ed25519", KeyId = "0" }, keys.privateKey);
+            }.Sign(keys.CurrentSigningKey);
         }
+
         _serverKeyCacheLock.Release();
 
         return _cachedServerKeysResponse;
