@@ -26,7 +26,7 @@
           name,
           nugetDeps ? null,
           projectReferences ? [ ],
-          projectFile ? "${name}/${name}.csproj",
+          projectFile ? "${pkgs.lib.replaceString "RoryLibMatrix" "LibMatrix" name}/${pkgs.lib.replaceString "RoryLibMatrix" "LibMatrix" name}.csproj",
         }@args:
         pkgs.buildDotnetModule rec {
           inherit projectReferences nugetDeps projectFile;
@@ -67,19 +67,19 @@
         in
         {
           LibMatrix = makeNupkg {
-            name = "LibMatrix";
+            name = "RoryLibMatrix";
             nugetDeps = LibMatrix/deps.json;
             projectReferences = [ ArcaneLibs ];
           };
           LibMatrix-EventTypes = makeNupkg {
-            name = "LibMatrix.EventTypes";
+            name = "RoryLibMatrix.EventTypes";
             projectReferences = [
               ArcaneLibs
               #              LibMatrix
             ];
           };
           LibMatrix-Federation = makeNupkg {
-            name = "LibMatrix.Federation";
+            name = "RoryLibMatrix.Federation";
             nugetDeps = LibMatrix.Federation/deps.json;
             projectReferences = [
               ArcaneLibs
@@ -87,7 +87,7 @@
             ];
           };
           LibMatrix-Bot-Utils = makeNupkg {
-            name = "LibMatrix.Utilities.Bot";
+            name = "RoryLibMatrix.Utilities.Bot";
             nugetDeps = Utilities/LibMatrix.Utilities.Bot/deps.json;
             projectFile = "Utilities/LibMatrix.Utilities.Bot/LibMatrix.Utilities.Bot.csproj";
             projectReferences = [

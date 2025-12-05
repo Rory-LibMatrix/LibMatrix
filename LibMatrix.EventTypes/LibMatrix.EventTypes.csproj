@@ -4,7 +4,14 @@
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <PackageId>RoryLibMatrix.EventTypes</PackageId>
+        <PackageLicenseExpression>AGPL-3.0-only</PackageLicenseExpression>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="../README.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\ArcaneLibs\ArcaneLibs\ArcaneLibs.csproj" Condition="'$(ContinuousIntegrationBuild)'!='true'"/>

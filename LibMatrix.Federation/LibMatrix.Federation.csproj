@@ -5,16 +5,23 @@
         <LangVersion>preview</LangVersion>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <PackageId>RoryLibMatrix.Federation</PackageId>
+        <PackageLicenseExpression>AGPL-3.0-only</PackageLicenseExpression>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 
     <ItemGroup>
+        <None Include="../README.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\LibMatrix\LibMatrix.csproj"/>
-        <PackageReference Include="LibMatrix" Version="*-*" Condition="'$(ContinuousIntegrationBuild)'=='true'"/>
+        <PackageReference Include="RoryLibMatrix" Version="*-*" Condition="'$(ContinuousIntegrationBuild)'=='true'"/>
     </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2"/>
-        <PackageReference Include="Microsoft.Extensions.Primitives" Version="10.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Primitives" Version="10.0.0"/>
     </ItemGroup>
 
 </Project>
