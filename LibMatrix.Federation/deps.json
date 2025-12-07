@@ -1,10 +1,5 @@
 [
   {
-    "pname": "ArcaneLibs",
-    "version": "1.0.0-preview.20251205-114150",
-    "hash": "sha256-OFH86NaYdaHhNjvwMzamKO6xz1HuXZAO0pVon8FFnzA="
-  },
-  {
     "pname": "BouncyCastle.Cryptography",
     "version": "2.6.2",
     "hash": "sha256-Yjk2+x/RcVeccGOQOQcRKCiYzyx1mlFnhS5auCII+Ms="

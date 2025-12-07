@@ -19,7 +19,7 @@
           date = builtins.substring 0 8 self.sourceInfo.lastModifiedDate;
           time = builtins.substring 8 6 self.sourceInfo.lastModifiedDate;
         in
-        "preview.${date}-${time}+${rev}";
+        "preview.${date}-${time}"; # +${rev}";
 
       makeNupkg =
         {
@@ -56,14 +56,14 @@
         let
           # HACKHACK: trim version string until nuget learns to deal with semver properly
           # See: https://github.com/NuGet/Home/issues/14628
-          ArcaneLibs = arcanelibs.packages."${pkgs.stdenv.hostPlatform.system}".ArcaneLibs.overrideAttrs (old: {
-            __intentionallyOverridingVersion = true;
-            version = builtins.substring 0 29 old.version; # "1.0.0-preview-20251106-123456";
-          });
-          LibMatrix = self.packages."${pkgs.stdenv.hostPlatform.system}".LibMatrix.overrideAttrs (old: {
-            __intentionallyOverridingVersion = true;
-            version = builtins.substring 0 29 old.version; # "1.0.0-preview-20251106-123456";
-          });
+          ArcaneLibs = arcanelibs.packages."${pkgs.stdenv.hostPlatform.system}".ArcaneLibs; #.overrideAttrs (old: {
+          #  __intentionallyOverridingVersion = true;
+          #  version = builtins.substring 0 29 old.version; # "1.0.0-preview-20251106-123456";
+          #});
+          LibMatrix = self.packages."${pkgs.stdenv.hostPlatform.system}".LibMatrix; #.overrideAttrs (old: {
+          #   __intentionallyOverridingVersion = true;
+          #   version = builtins.substring 0 29 old.version; # "1.0.0-preview-20251106-123456";
+          # });
         in
         {
           LibMatrix = makeNupkg {
