@@ -23,7 +23,6 @@ public class RemoteHomeserver {
             // Timeout = TimeSpan.FromSeconds(300) // TODO: Re-implement this
         };
 
-        if (proxy is not null) ClientHttpClient.DefaultRequestHeaders.Add("MXAE_UPSTREAM", serverName);
         if (!string.IsNullOrWhiteSpace(wellKnownUris.Server))
             FederationClient = new FederationClient(WellKnownUris.Server!, proxy);
         Auth = new(this);
