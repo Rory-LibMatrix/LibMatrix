@@ -669,5 +669,10 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
         public required List<string> Aliases { get; set; }
     }
 
+    public async Task<HttpResponseMessage> SetRoomDirectoryVisibilityAsync(string roomId, RoomDirectoryVisibilityResponse.VisibilityValue visibility)
+        => await ClientHttpClient.PostAsJsonAsync($"/_matrix/client/v3/directory/list/room/{HttpUtility.UrlEncode(roomId)}", new RoomDirectoryVisibilityResponse {
+            Visibility = visibility
+        });
+
 #endregion
 }

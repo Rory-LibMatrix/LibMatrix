@@ -83,6 +83,10 @@ public class RemoteHomeserver {
         } while (limit > 0 && limit-- > 0);
     }
 
+    public async Task<RoomDirectoryVisibilityResponse> GetRoomDirectoryVisibilityAsync(string roomId)
+        => await (await ClientHttpClient.GetAsync($"/_matrix/client/v3/directory/list/room/{HttpUtility.UrlEncode(roomId)}")).Content
+            .ReadFromJsonAsync<RoomDirectoryVisibilityResponse>() ?? throw new InvalidOperationException();
+
 #region Authentication
 
     public async Task<LoginResponse> LoginAsync(string username, string password, string? deviceName = null) {
@@ -118,6 +122,17 @@ public class RemoteHomeserver {
 #endregion
 
     public UserInteractiveAuthClient Auth;
+}
+
+public class RoomDirectoryVisibilityResponse {
+    [JsonPropertyName("visibility")]
+    public VisibilityValue Visibility { get; set; }
+
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public enum VisibilityValue {
+        [JsonStringEnumMemberName("public")] Public,
+        [JsonStringEnumMemberName("private")] Private
+    }
 }
 
 public class PublicRoomDirectoryResult {
