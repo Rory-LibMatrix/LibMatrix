@@ -4,7 +4,7 @@ Any contribution is welcome, even if it's just documentation or recommended git 
 - Use spaces, not tabs
 - Use 4 spaces for indentation
 - Use the C# naming convention for variables, methods, etc.
-- Wrap lines at 160 characters, though this value can be changed if it's too lean or strict
+- Wrap lines at 180 characters, though this value can be changed if it's too lean or strict
 - Use the `#region` and `#endregion` directives to group code if you're adding utility functions
 
 ```sh
