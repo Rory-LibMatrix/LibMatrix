@@ -60,23 +60,44 @@ public class RemoteHomeserver {
         return data ?? throw new InvalidOperationException($"Could not resolve alias {alias}");
     }
 
-    public Task<PublicRoomDirectoryResult> GetPublicRoomsAsync(int limit = 100, string? server = null, string? since = null) {
-        var url = $"/_matrix/client/v3/publicRooms?limit={limit}";
+    public async Task<PublicRoomDirectoryResult> GetPublicRoomsAsync(int limit = 100, string? server = null, string? since = null, string? thirdPartyInstanceId = null,
+        bool? includeAllNetworks = null, RoomDirectoryFilter? filter = null) {
+        if (thirdPartyInstanceId is null && includeAllNetworks is null && filter is null) {
+            var url = $"/_matrix/client/v3/publicRooms?limit={limit}";
+            if (!string.IsNullOrWhiteSpace(server)) {
+                url += $"&server={server}";
+            }
+
+            if (!string.IsNullOrWhiteSpace(since)) {
+                url += $"&since={since}";
+            }
+
+            return await ClientHttpClient.GetFromJsonAsync<PublicRoomDirectoryResult>(url);
+        }
+
+        // this technically requires authentication... TODO: move to AuthenticatedHomeserver?
+        var postUrl = "/_matrix/client/v3/publicRooms";
         if (!string.IsNullOrWhiteSpace(server)) {
-            url += $"&server={server}";
+            postUrl += $"?server={HttpUtility.UrlEncode(server)}";
         }
 
-        if (!string.IsNullOrWhiteSpace(since)) {
-            url += $"&since={since}";
-        }
+        var postData = new RoomDirectoryFilteredRequest {
+            Limit = limit,
+            Since = since,
+            ThirdPartyInstanceId = thirdPartyInstanceId,
+            IncludeAllNetworks = includeAllNetworks,
+            Filter = filter
+        };
 
-        return ClientHttpClient.GetFromJsonAsync<PublicRoomDirectoryResult>(url);
+        return await (await ClientHttpClient.PostAsJsonAsync(postUrl, postData)).EnsureSuccessStatusCode()
+            .Content.ReadFromJsonAsync<PublicRoomDirectoryResult>() ?? throw new InvalidOperationException();
     }
 
-    public async IAsyncEnumerable<PublicRoomDirectoryResult> EnumeratePublicRoomsAsync(int limit = int.MaxValue, string? server = null, string? since = null, int chunkSize = 100) {
+    public async IAsyncEnumerable<PublicRoomDirectoryResult> EnumeratePublicRoomsAsync(int limit = int.MaxValue, string? server = null, string? since = null,
+        string? thirdPartyInstanceId = null, bool? includeAllNetworks = null, RoomDirectoryFilter? filter = null, int chunkSize = 100) {
         PublicRoomDirectoryResult res;
         do {
-            res = await GetPublicRoomsAsync(chunkSize, server, since);
+            res = await GetPublicRoomsAsync(chunkSize, server, since, thirdPartyInstanceId, includeAllNetworks, filter);
             yield return res;
             if (res.NextBatch is null || res.NextBatch == since || res.Chunk.Count == 0) break;
             since = res.NextBatch;
@@ -122,6 +143,31 @@ public class RemoteHomeserver {
 #endregion
 
     public UserInteractiveAuthClient Auth;
+}
+
+public class RoomDirectoryFilteredRequest {
+    [JsonPropertyName("filter")]
+    public RoomDirectoryFilter? Filter { get; set; }
+
+    [JsonPropertyName("include_all_networks")]
+    public bool? IncludeAllNetworks { get; set; }
+
+    [JsonPropertyName("limit")]
+    public int Limit { get; set; }
+
+    [JsonPropertyName("since")]
+    public string? Since { get; set; }
+
+    [JsonPropertyName("third_party_instance_id")]
+    public string? ThirdPartyInstanceId { get; set; }
+}
+
+public class RoomDirectoryFilter {
+    [JsonPropertyName("generic_search_term")]
+    public string? GenericSearchTerm { get; set; }
+
+    [JsonPropertyName("room_types")]
+    public List<string?>? RoomTypes { get; set; }
 }
 
 public class RoomDirectoryVisibilityResponse {
