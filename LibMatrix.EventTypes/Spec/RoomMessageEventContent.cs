@@ -11,6 +11,9 @@ public class RoomMessageEventContent : TimelineEventContent {
         Body = body ?? "";
     }
 
+    // TODO: https://spec.matrix.org/v1.16/client-server-api/#mimage
+    // TODO: add `file` for e2ee files
+
     [JsonPropertyName("body")]
     public string Body { get; set; }
 
@@ -53,7 +56,7 @@ public class RoomMessageEventContent : TimelineEventContent {
     public class MentionsStruct {
         [JsonPropertyName("user_ids")]
         public List<string>? Users { get; set; }
-        
+
         [JsonPropertyName("room")]
         public bool? Room { get; set; }
     }
@@ -68,10 +71,33 @@ public class RoomMessageEventContent : TimelineEventContent {
         [JsonPropertyName("thumbnail_url")]
         public string? ThumbnailUrl { get; set; }
 
+        [JsonPropertyName("thumbnail_info")]
+        public ThumbnailInfoStruct? ThumbnailInfo { get; set; }
+
         [JsonPropertyName("w")]
         public int? Width { get; set; }
 
         [JsonPropertyName("h")]
         public int? Height { get; set; }
+
+        /// <summary>
+        ///     Duration of the audio/video in milliseconds, if applicable
+        /// </summary>
+        [JsonPropertyName("duration")]
+        public long? Duration { get; set; }
+
+        public class ThumbnailInfoStruct {
+            [JsonPropertyName("w")]
+            public int? Width { get; set; }
+
+            [JsonPropertyName("h")]
+            public int? Height { get; set; }
+
+            [JsonPropertyName("mimetype")]
+            public string? MimeType { get; set; }
+
+            [JsonPropertyName("size")]
+            public long? Size { get; set; }
+        }
     }
 }
