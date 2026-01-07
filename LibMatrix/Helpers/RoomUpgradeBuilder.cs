@@ -15,7 +15,7 @@ namespace LibMatrix.Helpers;
 public class RoomUpgradeBuilder : RoomBuilder {
     public RoomUpgradeOptions UpgradeOptions { get; set; } = new();
     public string OldRoomId { get; set; } = string.Empty;
-    public bool CanUpgrade { get; private set; }
+    public bool CanUpgrade { get; set; }
     public Dictionary<string, object> AdditionalTombstoneContent { get; set; } = new();
 
     private List<Type> basePolicyTypes = [];
@@ -27,7 +27,7 @@ public class RoomUpgradeBuilder : RoomBuilder {
         basePolicyTypes = ClassCollector<PolicyRuleEventContent>.ResolveFromAllAccessibleAssemblies().ToList();
         Console.WriteLine($"Found {basePolicyTypes.Count} policy types in {sw.ElapsedMilliseconds}ms");
         CanUpgrade = (
-                         (await OldRoom.GetPowerLevelsAsync())?.UserHasStatePermission(OldRoom.Homeserver.UserId, RoomTombstoneEventContent.EventId)
+                         (await OldRoom.GetPowerLevelsAsync())?.UserHasStatePermission(OldRoom.Homeserver.UserId, RoomTombstoneEventContent.EventId, true)
                          ?? (await OldRoom.GetRoomCreatorsAsync()).Contains(OldRoom.Homeserver.UserId)
                      )
                      || (OldRoom.IsV12PlusRoomId && (await OldRoom.GetRoomCreatorsAsync()).Contains(OldRoom.Homeserver.UserId));
@@ -186,6 +186,16 @@ public class RoomUpgradeBuilder : RoomBuilder {
             await oldRoom.SendStateEventAsync(RoomTombstoneEventContent.EventId, tombstoneContent);
         }
 
+        var oldPls = await oldRoom.GetPowerLevelsAsync();
+        if (oldPls?.UserHasStatePermission(oldRoom.Homeserver.UserId, RoomJoinRulesEventContent.EventId, true) ?? true) {
+            var oldJoinRules = await oldRoom.GetJoinRuleAsync();
+            var restrictContent = new RoomJoinRulesEventContent {
+                JoinRule = RoomJoinRulesEventContent.JoinRules.Restricted,
+                Allow = (oldJoinRules?.Allow ?? []).Append(new() { RoomId = room.RoomId, Type = "m.room_membership" }).ToList()
+            };
+            await oldRoom.SendStateEventAsync(RoomJoinRulesEventContent.EventId, restrictContent);
+        }
+
         return room;
     }
 
@@ -198,6 +208,7 @@ public class RoomUpgradeBuilder : RoomBuilder {
         public bool UpgradeUnstableValues { get; set; }
         public bool ForceUpgrade { get; set; }
         public bool NoopUpgrade { get; set; }
+        public bool RestrictOldRoom { get; set; }
         public Msc4321PolicyListUpgradeOptions Msc4321PolicyListUpgradeOptions { get; set; } = new();
 
         [JsonIgnore]

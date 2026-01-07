@@ -393,7 +393,7 @@ public class GenericRoom {
             new UserIdAndReason { UserId = userId, Reason = reason });
 
     public async Task InviteUserAsync(string userId, string? reason = null, bool skipExisting = true) {
-        if (skipExisting && await GetStateOrNullAsync<RoomMemberEventContent>("m.room.member", userId) is not { Membership: "leave" or "ban" or "join" })
+        if (skipExisting && await GetStateOrNullAsync<RoomMemberEventContent>("m.room.member", userId) is { Membership: "ban" or "join" })
             return;
         await Homeserver.ClientHttpClient.PostAsJsonAsync($"/_matrix/client/v3/rooms/{RoomId}/invite", new UserIdAndReason(userId, reason));
     }

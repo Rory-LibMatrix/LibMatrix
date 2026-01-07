@@ -2,7 +2,9 @@ using System.Diagnostics;
 using System.Runtime.Intrinsics.X86;
 using System.Text.RegularExpressions;
 using ArcaneLibs.Extensions;
+using LibMatrix.EventTypes.Spec;
 using LibMatrix.EventTypes.Spec.State.RoomInfo;
+using LibMatrix.EventTypes.Spec.State.Space;
 using LibMatrix.Homeservers;
 using LibMatrix.Responses;
 using LibMatrix.RoomTypes;
@@ -85,6 +87,11 @@ public class RoomBuilder {
             { RoomTombstoneEventContent.EventId, 150 },
             { RoomPolicyServerEventContent.EventId, 100 },
             { RoomPinnedEventContent.EventId, 50 },
+            { RoomTopicEventContent.EventId, 50 },
+            { SpaceChildEventContent.EventId, 100 },
+            { SpaceParentEventContent.EventId, 100 },
+            { RoomMessageReactionEventContent.EventId, 0 },
+            { RoomRedactionEventContent.EventId, 0 },
             // recommended extensions
             { "im.vector.modular.widgets", 50 },
             // { "m.reaction", 0 }, // we probably don't want these to end up as room state
@@ -99,6 +106,7 @@ public class RoomBuilder {
     public List<string> AdditionalCreators { get; set; } = new();
 
     public virtual async Task<GenericRoom> Create(AuthenticatedHomeserverGeneric homeserver) {
+        Console.WriteLine($"Creating room on {homeserver.ServerName}...");
         var crq = new CreateRoomRequest {
             PowerLevelContentOverride = new() {
                 EventsDefault = 1000000,
@@ -154,8 +162,6 @@ public class RoomBuilder {
 
         var room = await homeserver.CreateRoom(crq);
 
-        Console.WriteLine("Press any key to continue...");
-        Console.ReadKey(true);
         await SetBasicRoomInfoAsync(room);
         await SetStatesAsync(room, ImportantState);
         await SetAccessAsync(room);
@@ -167,6 +173,7 @@ public class RoomBuilder {
 
     private async Task SendInvites(GenericRoom room) {
         if (Invites.Count == 0) return;
+        Console.WriteLine($"Sending {Invites.Count} invites for room {room.RoomId}");
 
         if (SynapseAdminAutoAcceptLocalInvites && room.Homeserver is AuthenticatedHomeserverSynapse synapse) {
             var localJoinTasks = Invites.Where(u => UserId.Parse(u.Key).ServerName == synapse.ServerName).Select(async entry => {
@@ -192,13 +199,14 @@ public class RoomBuilder {
             catch (MatrixException e) {
                 Console.Error.WriteLine("Failed to invite {0} to {1}: {2}", kvp.Key, room.RoomId, e.Message);
             }
-        });
+        }).ToList();
 
         await Task.WhenAll(inviteTasks);
     }
 
     private async Task SetStatesAsync(GenericRoom room, List<MatrixEvent> state) {
         if (state.Count == 0) return;
+        Console.WriteLine($"Setting {state.Count} state events for {room.RoomId}...");
         await room.BulkSendEventsAsync(state);
         // We chunk this up to try to avoid hitting reverse proxy timeouts
         // foreach (var group in state.Chunk(chunkSize)) {
@@ -233,6 +241,7 @@ public class RoomBuilder {
     }
 
     private async Task SetBasicRoomInfoAsync(GenericRoom room) {
+        Console.WriteLine($"Setting basic room info for {room.RoomId}...");
         if (!string.IsNullOrWhiteSpace(Name.Name))
             await room.SendStateEventAsync(RoomNameEventContent.EventId, Name);
 
@@ -255,6 +264,7 @@ public class RoomBuilder {
     }
 
     private async Task SetAccessAsync(GenericRoom room) {
+        Console.WriteLine($"Setting access settings for {room.RoomId}...");
         if (!V12PlusRoomVersions.Contains(Version))
             PowerLevels.Users![room.Homeserver.WhoAmI.UserId] = OwnPowerLevel;
         else {
