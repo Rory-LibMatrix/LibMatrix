@@ -1,10 +1,10 @@
 using System.Text.Json.Serialization;
 using ArcaneLibs.Collections;
-using LibMatrix.Extensions;
 using Microsoft.Extensions.Logging;
 using WellKnownType = LibMatrix.Services.WellKnownResolver.WellKnownResolvers.ClientWellKnown;
-using ResultType =
-    LibMatrix.Services.WellKnownResolver.WellKnownResolverService.WellKnownResolutionResult<LibMatrix.Services.WellKnownResolver.WellKnownResolvers.ClientWellKnown?>;
+using ResultType = LibMatrix.Services.WellKnownResolver.WellKnownResolverService.WellKnownResolutionResult<
+    LibMatrix.Services.WellKnownResolver.WellKnownResolvers.ClientWellKnown?
+>;
 
 namespace LibMatrix.Services.WellKnownResolver.WellKnownResolvers;
 
@@ -14,7 +14,7 @@ public class ClientWellKnownResolver(ILogger<ClientWellKnownResolver> logger, We
         StoreNulls = false
     };
 
-    public Task<WellKnownResolverService.WellKnownResolutionResult<ClientWellKnown>> TryResolveWellKnown(string homeserver, WellKnownResolverConfiguration? config = null) {
+    public Task<ResultType> TryResolveWellKnown(string homeserver, WellKnownResolverConfiguration? config = null) {
         config ??= configuration;
         return ClientWellKnownCache.TryGetOrAdd(homeserver, async () => {
             logger.LogTrace($"Resolving client well-known: {homeserver}");
@@ -22,7 +22,6 @@ public class ClientWellKnownResolver(ILogger<ClientWellKnownResolver> logger, We
             WellKnownResolverService.WellKnownResolutionResult<ClientWellKnown> result =
                 await TryGetWellKnownFromUrl($"https://{homeserver}/.well-known/matrix/client", WellKnownResolverService.WellKnownSource.Https);
             if (result.Content != null) return result;
-
 
             return result;
         });

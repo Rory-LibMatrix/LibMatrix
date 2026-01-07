@@ -2,8 +2,9 @@ using System.Text.Json.Serialization;
 using ArcaneLibs.Collections;
 using Microsoft.Extensions.Logging;
 using WellKnownType = LibMatrix.Services.WellKnownResolver.WellKnownResolvers.ServerWellKnown;
-using ResultType =
-    LibMatrix.Services.WellKnownResolver.WellKnownResolverService.WellKnownResolutionResult<LibMatrix.Services.WellKnownResolver.WellKnownResolvers.ServerWellKnown?>;
+using ResultType = LibMatrix.Services.WellKnownResolver.WellKnownResolverService.WellKnownResolutionResult<
+    LibMatrix.Services.WellKnownResolver.WellKnownResolvers.ServerWellKnown?
+>;
 
 namespace LibMatrix.Services.WellKnownResolver.WellKnownResolvers;
 
@@ -13,7 +14,7 @@ public class ServerWellKnownResolver(ILogger<ServerWellKnownResolver> logger, We
         StoreNulls = false
     };
 
-    public Task<WellKnownResolverService.WellKnownResolutionResult<ServerWellKnown>> TryResolveWellKnown(string homeserver, WellKnownResolverConfiguration? config = null) {
+    public Task<ResultType> TryResolveWellKnown(string homeserver, WellKnownResolverConfiguration? config = null) {
         config ??= configuration;
         return ClientWellKnownCache.TryGetOrAdd(homeserver, async () => {
             logger.LogTrace($"Resolving client well-known: {homeserver}");

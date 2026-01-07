@@ -321,6 +321,9 @@ public class GenericRoom {
     public Task<RoomCreateEventContent?> GetCreateEventAsync() =>
         GetStateAsync<RoomCreateEventContent>("m.room.create");
 
+    public Task<RoomPolicyServerEventContent?> GetPolicyServerAsync() =>
+        GetStateAsync<RoomPolicyServerEventContent>(RoomPolicyServerEventContent.EventId);
+
     public async Task<string?> GetRoomType() {
         var res = await GetStateAsync<RoomCreateEventContent>("m.room.create");
         return res.Type;

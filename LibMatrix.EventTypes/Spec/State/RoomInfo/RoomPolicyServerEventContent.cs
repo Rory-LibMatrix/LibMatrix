@@ -8,4 +8,7 @@ public class RoomPolicyServerEventContent : EventContent {
 
     [JsonPropertyName("via")]
     public string? Via { get; set; }
+
+    [JsonPropertyName("public_key")]
+    public string? PublicKey { get; set; }
 }

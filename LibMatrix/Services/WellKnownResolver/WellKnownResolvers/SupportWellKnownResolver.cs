@@ -1,5 +1,3 @@
-using System.Diagnostics;
-using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using WellKnownType = LibMatrix.Services.WellKnownResolver.WellKnownResolvers.SupportWellKnown;
@@ -16,7 +14,7 @@ public class SupportWellKnownResolver(ILogger<SupportWellKnownResolver> logger, 
             logger.LogTrace($"Resolving support well-known: {homeserver}");
 
             ResultType result = await TryGetWellKnownFromUrl($"https://{homeserver}/.well-known/matrix/support", WellKnownResolverService.WellKnownSource.Https);
-            if (result.Content != null) 
+            if (result.Content != null)
                 return result;
 
             return null;

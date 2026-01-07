@@ -14,15 +14,17 @@ public class WellKnownResolverService {
     private readonly ClientWellKnownResolver _clientWellKnownResolver;
     private readonly SupportWellKnownResolver _supportWellKnownResolver;
     private readonly ServerWellKnownResolver _serverWellKnownResolver;
+    private readonly PolicyServerWellKnownResolver _policyServerWellKnownResolver;
     private readonly WellKnownResolverConfiguration _configuration;
 
     public WellKnownResolverService(ILogger<WellKnownResolverService> logger, ClientWellKnownResolver clientWellKnownResolver, SupportWellKnownResolver supportWellKnownResolver,
-        WellKnownResolverConfiguration configuration, ServerWellKnownResolver serverWellKnownResolver) {
+        WellKnownResolverConfiguration configuration, ServerWellKnownResolver serverWellKnownResolver, PolicyServerWellKnownResolver policyServerWellKnownResolver) {
         _logger = logger;
         _clientWellKnownResolver = clientWellKnownResolver;
         _supportWellKnownResolver = supportWellKnownResolver;
         _configuration = configuration;
         _serverWellKnownResolver = serverWellKnownResolver;
+        _policyServerWellKnownResolver = policyServerWellKnownResolver;
         if (logger is NullLogger<WellKnownResolverService>) {
             var stackFrame = new StackTrace(true).GetFrame(1);
             Console.WriteLine(
@@ -31,16 +33,26 @@ public class WellKnownResolverService {
     }
 
     public async Task<WellKnownRecords> TryResolveWellKnownRecords(string homeserver, bool includeClient = true, bool includeServer = true, bool includeSupport = true,
-        WellKnownResolverConfiguration? config = null) {
+        bool includePolicyServer = true, WellKnownResolverConfiguration? config = null) {
         WellKnownRecords records = new();
         _logger.LogDebug($"Resolving well-knowns for {homeserver}");
-        var clientTask = _clientWellKnownResolver.TryResolveWellKnown(homeserver, config ?? _configuration);
-        var serverTask = _serverWellKnownResolver.TryResolveWellKnown(homeserver, config ?? _configuration);
-        var supportTask = _supportWellKnownResolver.TryResolveWellKnown(homeserver, config ?? _configuration);
+        var clientTask = includeClient
+            ? _clientWellKnownResolver.TryResolveWellKnown(homeserver, config ?? _configuration)
+            : Task.FromResult<WellKnownResolutionResult<ClientWellKnown?>>(null!);
+        var serverTask = includeServer
+            ? _serverWellKnownResolver.TryResolveWellKnown(homeserver, config ?? _configuration)
+            : Task.FromResult<WellKnownResolutionResult<ServerWellKnown?>>(null!);
+        var supportTask = includeSupport
+            ? _supportWellKnownResolver.TryResolveWellKnown(homeserver, config ?? _configuration)
+            : Task.FromResult<WellKnownResolutionResult<SupportWellKnown?>>(null!);
+        var policyServerTask = includePolicyServer
+            ? _policyServerWellKnownResolver.TryResolveWellKnown(homeserver, config ?? _configuration)
+            : Task.FromResult<WellKnownResolutionResult<PolicyServerWellKnown?>>(null!);
 
         if (includeClient && await clientTask is { } clientResult) records.ClientWellKnown = clientResult;
         if (includeServer && await serverTask is { } serverResult) records.ServerWellKnown = serverResult;
         if (includeSupport && await supportTask is { } supportResult) records.SupportWellKnown = supportResult;
+        if (includePolicyServer && await policyServerTask is { } policyServerResult) records.PolicyServerWellKnown = policyServerResult;
 
         return records;
     }
@@ -49,6 +61,7 @@ public class WellKnownResolverService {
         public WellKnownResolutionResult<ClientWellKnown?>? ClientWellKnown { get; set; }
         public WellKnownResolutionResult<ServerWellKnown?>? ServerWellKnown { get; set; }
         public WellKnownResolutionResult<SupportWellKnown?>? SupportWellKnown { get; set; }
+        public WellKnownResolutionResult<PolicyServerWellKnown?>? PolicyServerWellKnown { get; set; }
     }
 
     public class WellKnownResolutionResult<T> {
