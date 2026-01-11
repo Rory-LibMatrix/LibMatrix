@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -19,7 +20,7 @@ public class SignedObject<T> {
     }
 
     [JsonExtensionData]
-    public required JsonObject Content { get; set; }
+    public JsonObject Content { get; set; } = null!;
 
     [JsonIgnore]
     public T TypedContent {

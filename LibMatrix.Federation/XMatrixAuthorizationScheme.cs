@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using ArcaneLibs.Extensions;
 using LibMatrix.Abstractions;
+using LibMatrix.Extensions;
 using LibMatrix.Responses.Federation;
 using Microsoft.Extensions.Primitives;
 
@@ -37,17 +38,27 @@ public class XMatrixAuthorizationScheme {
                     ErrorCode = MatrixException.ErrorCodes.M_UNAUTHORIZED
                 };
 
-            var headerValues = new StringValues(header.Parameter);
-            foreach (var value in headerValues) {
-                Console.WriteLine(headerValues.ToJson());
+            var headerValues = new Dictionary<string, string>();
+            var parts = header.Parameter.Split(',');
+            foreach (var part in parts) {
+                var kv = part.Split('=', 2);
+                if (kv.Length != 2)
+                    continue;
+                var key = kv[0].Trim();
+                var value = kv[1].Trim().Trim('"');
+                headerValues[key] = value;
             }
 
-            return new() {
-                Destination = "",
-                Key = "",
-                Origin = "",
-                Signature = ""
+            Console.WriteLine("X-Matrix parts: " + headerValues.ToJson(unsafeContent: true));
+
+            var xma = new XMatrixAuthorizationHeader() {
+                Destination = headerValues["destination"],
+                Key = headerValues["key"],
+                Origin = headerValues["origin"],
+                Signature = headerValues["sig"]
             };
+            Console.WriteLine("Parsed X-Matrix Auth Header: " + xma.ToJson());
+            return xma;
         }
 
         public static XMatrixAuthorizationHeader FromSignedObject(SignedObject<XMatrixRequestSignature> signedObj, VersionedHomeserverPrivateKey currentKey) =>
@@ -74,7 +85,7 @@ public class XMatrixAuthorizationScheme {
         [JsonPropertyName("destination")]
         public required string DestinationServerName { get; set; }
 
-        [JsonPropertyName("content"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        [JsonPropertyName("content"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public JsonObject? Content { get; set; }
     }
 }

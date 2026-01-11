@@ -1,0 +1,13 @@
+POST https://libmatrix-fed-test.rory.gay/ping
+Accept: application/json
+Content-Type: application/json
+
+[
+  "matrix.org",
+  "rory.gay",
+  "element.io",
+  "4d2.org",
+  "mozilla.org",
+  "fedora.im",
+  "opensuse.org"
+]
