@@ -13,6 +13,7 @@ public static class ServiceInstaller {
         services.AddSingleton<ClientWellKnownResolver>();
         services.AddSingleton<ServerWellKnownResolver>();
         services.AddSingleton<SupportWellKnownResolver>();
+        services.AddSingleton<PolicyServerWellKnownResolver>();
         if (!services.Any(x => x.ServiceType == typeof(WellKnownResolverConfiguration)))
             services.AddSingleton<WellKnownResolverConfiguration>();
         services.AddSingleton<WellKnownResolverService>();
