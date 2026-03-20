@@ -1,5 +1,6 @@
 #define SINGLE_HTTPCLIENT // Use a single HttpClient instance for all MatrixHttpClient instances
 // #define SYNC_HTTPCLIENT   // Only allow one request as a time, for debugging
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
@@ -70,7 +71,7 @@ public class MatrixHttpClient {
     public int MaxRetryIntervalMs { get; set; } = DefaultMaxRetryIntervalMs;
     public int MaxRetries { get; set; } = DefaultMaxRetries;
 
-    private Dictionary<HttpRequestMessage, int> _retries = [];
+    private readonly ConcurrentDictionary<HttpRequestMessage, int> _retries = [];
 
     // default headers, not bound to client
     public HttpRequestHeaders DefaultRequestHeaders { get; set; } =
@@ -224,7 +225,12 @@ public class MatrixHttpClient {
         }
 
         if (responseMessage.IsSuccessStatusCode) {
-            _retries.Remove(request);
+            while (!_retries.TryRemove(request, out _)) {
+                Console.WriteLine("[MatrixHttpClient] Race - failed to remove retries entry, retrying...");
+                // ReSharper disable once MethodSupportsCancellation - this shouldn't be cancellable as it would be a memory leak
+                await Task.Delay(5); // hopefully helps resolve contention?
+            }
+
             return responseMessage;
         }
 
