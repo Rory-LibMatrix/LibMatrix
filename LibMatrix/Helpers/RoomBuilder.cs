@@ -207,7 +207,7 @@ public class RoomBuilder {
     private async Task SetStatesAsync(GenericRoom room, List<MatrixEvent> state) {
         if (state.Count == 0) return;
         Console.WriteLine($"Setting {state.Count} state events for {room.RoomId}...");
-        await room.BulkSendEventsAsync(state);
+        // await room.BulkSendEventsAsync(state);
         // We chunk this up to try to avoid hitting reverse proxy timeouts
         // foreach (var group in state.Chunk(chunkSize)) {
         //     var sw = Stopwatch.StartNew();
@@ -217,27 +217,31 @@ public class RoomBuilder {
         //         Console.WriteLine($"Warning: Sending {group.Length} state events took {sw.ElapsedMilliseconds}ms, which is quite long. Reducing chunk size to {chunkSize}.");
         //     }
         // }
-        // int chunkSize = 50;
-        // for (int i = 0; i < state.Count; i += chunkSize) {
-        //     var chunk = state.Skip(i).Take(chunkSize).ToList();
-        //     if (chunk.Count == 0) continue;
-        //
-        //     var sw = Stopwatch.StartNew();
-        //     await room.BulkSendEventsAsync(chunk, forceSyncInterval: chunk.Count + 1);
-        //     Console.WriteLine($"Sent {chunk.Count} state events in {sw.ElapsedMilliseconds}ms. {state.Count - (i + chunk.Count)} remaining.");
-        //     // if (sw.ElapsedMilliseconds > 45000) {
-        //     //     chunkSize = Math.Max(chunkSize / 3, 1);
-        //     //     Console.WriteLine($"Warning: Sending {chunk.Count} state events took {sw.ElapsedMilliseconds}ms, which is dangerously long. Reducing chunk size to {chunkSize}.");
-        //     // }
-        //     // else if (sw.ElapsedMilliseconds > 30000) {
-        //     //     chunkSize = Math.Max(chunkSize / 2, 1);
-        //     //     Console.WriteLine($"Warning: Sending {chunk.Count} state events took {sw.ElapsedMilliseconds}ms, which is quite long. Reducing chunk size to {chunkSize}.");
-        //     // }
-        //     // else if (sw.ElapsedMilliseconds < 10000) {
-        //     //     chunkSize = Math.Min((int)(chunkSize * 1.2), 1000);
-        //     //     Console.WriteLine($"Info: Sending {chunk.Count} state events took {sw.ElapsedMilliseconds}ms, increasing chunk size to {chunkSize}.");
-        //     // }
-        // }
+        int chunkSize = 767;
+        for (int i = 0; i < state.Count; i += chunkSize) {
+            var chunk = state.Skip(i).Take(chunkSize).ToList();
+            if (chunk.Count == 0) continue;
+
+            var sw = Stopwatch.StartNew();
+            await room.BulkSendEventsAsync(chunk, forceSyncInterval: chunk.Count + 1);
+            Console.WriteLine($"Sent {chunk.Count} state events in {sw.ElapsedMilliseconds}ms. {state.Count - (i + chunk.Count)} remaining.");
+            if (sw.ElapsedMilliseconds > 50000) {
+                chunkSize = Math.Max((int)(chunkSize / 1.2), 1);
+                Console.WriteLine($"Warning: Sending {chunk.Count} state events took {sw.ElapsedMilliseconds}ms, which is dangerously long. Reducing chunk size to {chunkSize}.");
+            }
+            // else if (sw.ElapsedMilliseconds > 30000) {
+            //     chunkSize = Math.Max(chunkSize / 2, 1);
+            //     Console.WriteLine($"Warning: Sending {chunk.Count} state events took {sw.ElapsedMilliseconds}ms, which is quite long. Reducing chunk size to {chunkSize}.");
+            // }
+            else if (sw.ElapsedMilliseconds < 5000) {
+                chunkSize = Math.Min((int)(chunkSize * 1.5), 1000);
+                Console.WriteLine($"Info: Sending {chunk.Count} state events took {sw.ElapsedMilliseconds}ms, increasing chunk size to {chunkSize}.");
+            }
+            else if (sw.ElapsedMilliseconds < 10000) {
+                chunkSize = Math.Min((int)(chunkSize * 1.2), 1000);
+                Console.WriteLine($"Info: Sending {chunk.Count} state events took {sw.ElapsedMilliseconds}ms, increasing chunk size to {chunkSize}.");
+            }
+        }
     }
 
     private async Task SetBasicRoomInfoAsync(GenericRoom room) {
