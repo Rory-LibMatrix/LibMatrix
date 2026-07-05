@@ -186,6 +186,34 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
         }
     }
 
+    public virtual async Task<T> GetRoomAccountDataAsync<T>(string roomId, string key) =>
+        // var res = await _httpClient.GetAsync($"/_matrix/client/v3/user/{UserId}/account_data/{key}");
+        // if (!res.IsSuccessStatusCode) {
+        //     Console.WriteLine($"Failed to get account data: {await res.Content.ReadAsStringAsync()}");
+        //     throw new InvalidDataException($"Failed to get account data: {await res.Content.ReadAsStringAsync()}");
+        // }
+        //
+        // return await res.Content.ReadFromJsonAsync<T>();
+        await ClientHttpClient.GetFromJsonAsync<T>($"/_matrix/client/v3/user/{WhoAmI.UserId}/rooms/{HttpUtility.UrlEncode(roomId)}/account_data/{key}");
+
+    public virtual async Task<T?> GetRoomAccountDataOrNullAsync<T>(string roomId, string key) {
+        try {
+            return await GetRoomAccountDataAsync<T>(roomId, key);
+        }
+        catch (MatrixException e) {
+            if (e is { ErrorCode: MatrixException.ErrorCodes.M_NOT_FOUND }) return default;
+            throw;
+        }
+    }
+
+    public virtual async Task SetRoomAccountDataAsync(string roomId, string key, object data) {
+        var res = await ClientHttpClient.PutAsJsonAsync($"/_matrix/client/v3/user/{WhoAmI.UserId}/rooms/{HttpUtility.UrlEncode(roomId)}/account_data/{key}", data);
+        if (!res.IsSuccessStatusCode) {
+            Console.WriteLine($"Failed to set account data: {await res.Content.ReadAsStringAsync()}");
+            throw new InvalidDataException($"Failed to set account data: {await res.Content.ReadAsStringAsync()}");
+        }
+    }
+
 #endregion
 
 #region MSC 4133
@@ -378,11 +406,14 @@ public class AuthenticatedHomeserverGeneric : RemoteHomeserver {
     ///   <b>Warning</b>: This uses /sync!
     /// </summary>
     /// <param name="includeGlobal">Include non-room account data</param>
+    /// <param name="rooms">Scope sync request to given room ID(s)</param>
     /// <returns>Dictionary of room IDs and their account data.</returns>
     /// <exception cref="Exception"></exception>
-    public async Task<Dictionary<string, EventList?>> EnumerateAccountDataPerRoom(bool includeGlobal = false) {
+    public async Task<Dictionary<string, EventList?>> EnumerateAccountDataPerRoom(bool includeGlobal = false, List<string>? rooms = null) {
         var syncHelper = new SyncHelper(this);
-        syncHelper.FilterId = await NamedCaches.FilterCache.GetOrSetValueAsync(CommonSyncFilters.GetAccountDataWithRooms);
+        syncHelper.FilterId = rooms == null
+            ? await NamedCaches.FilterCache.GetOrSetValueAsync(CommonSyncFilters.GetAccountDataWithRooms)
+            : (await UploadFilterAsync(CommonSyncFilters.GetAccountDataForRoomsFilter(rooms))).FilterId;
         var resp = await syncHelper.SyncAsync();
         if (resp is null) throw new Exception("Sync failed");
         var perRoomAccountData = new Dictionary<string, EventList?>();
