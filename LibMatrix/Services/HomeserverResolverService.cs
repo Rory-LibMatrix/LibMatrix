@@ -37,16 +37,22 @@ public class HomeserverResolverService {
             var res = new WellKnownUris();
 
             if (client != null)
-                res.Client = (await client)?.TrimEnd('/') ?? throw new Exception($"Could not resolve client URL for {homeserver}.");
+                res.Client = (await client)?.TrimEnd('/') ?? throw new LibMatrixException() {
+                    ErrorCode = LibMatrixException.ErrorCodes.RLM_NO_CLIENT_URL,
+                    Error = $"Could not resolve client URL for {homeserver}."
+                };
 
             if (server != null)
-                res.Server = (await server)?.TrimEnd('/') ?? throw new Exception($"Could not resolve server URL for {homeserver}.");
+                res.Server = (await server)?.TrimEnd('/') ?? throw new LibMatrixException() {
+                    ErrorCode = LibMatrixException.ErrorCodes.RLM_NO_SERVER_URL,
+                    Error = $"Could not resolve server URL for {homeserver}."
+                };
 
             _logger.LogInformation("Resolved well-knowns for {hs}: {json}", homeserver, res.ToJson(indent: false));
             return res;
         });
     }
-    
+
     private async Task<T?> GetFromJsonAsync<T>(string url) {
         try {
             return await _httpClient.GetFromJsonAsync<T>(url);
@@ -56,7 +62,7 @@ public class HomeserverResolverService {
             return default;
         }
     }
-    
+
     private async Task<string?> _tryResolveClientEndpoint(string homeserver) {
         ArgumentNullException.ThrowIfNull(homeserver);
         _logger.LogTrace("Resolving client well-known: {homeserver}", homeserver);
@@ -71,7 +77,7 @@ public class HomeserverResolverService {
         }
         else if (homeserver.StartsWith("http://")) {
             clientWellKnown = await GetFromJsonAsync<ClientWellKnown>($"{homeserver}/.well-known/matrix/client");
-            
+
             if (clientWellKnown is null && await MatrixHttpClient.CheckSuccessStatus($"{homeserver}/_matrix/client/versions"))
                 return homeserver;
         }

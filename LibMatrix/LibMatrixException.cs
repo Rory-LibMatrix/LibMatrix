@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using ArcaneLibs.Extensions;
+
 // ReSharper disable MemberCanBePrivate.Global
 
 namespace LibMatrix;
@@ -12,13 +13,15 @@ public class LibMatrixException : Exception {
     [JsonPropertyName("error")]
     public required string Error { get; set; }
 
-
     public object GetAsObject() => new { errcode = ErrorCode, error = Error };
     public string GetAsJson() => GetAsObject().ToJson(ignoreNull: true);
 
     public override string Message =>
         $"{ErrorCode}: {ErrorCode switch {
+            "M_NOT_FOUND" => "The specified entity could not be found",
             "M_UNSUPPORTED" => "The requested feature is not supported",
+            "RLM_NO_CLIENT_URL" => "Could not resolve client URL",
+            "RLM_NO_SERVER_URL" => "Could not resolve server URL",
             _ => $"Unknown error: {GetAsObject().ToJson(ignoreNull: true)}"
         }}\nError: {Error}";
 
@@ -26,5 +29,7 @@ public class LibMatrixException : Exception {
     public static class ErrorCodes {
         public const string M_NOT_FOUND = "M_NOT_FOUND";
         public const string M_UNSUPPORTED = "M_UNSUPPORTED";
+        public const string RLM_NO_CLIENT_URL = "RLM_NO_CLIENT_URL";
+        public const string RLM_NO_SERVER_URL = "RLM_NO_SERVER_URL";
     }
 }
