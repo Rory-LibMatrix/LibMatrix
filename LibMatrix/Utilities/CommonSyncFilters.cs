@@ -91,4 +91,14 @@ public static class CommonSyncFilters {
         [GetSpaceRelations] = GetSpaceRelationsFilter,
         [GetOwnMemberEvents] = GetOwnMemberEventsFilter
     }.ToFrozenDictionary();
+
+    public static SyncFilter GetAccountDataForRoomsFilter(List<string> rooms) => new() {
+        Presence = new SyncFilter.EventFilter(notTypes: ["*"]),
+        Room = new SyncFilter.RoomFilter() {
+            State = new SyncFilter.RoomFilter.StateFilter(notTypes: ["*"]),
+            Ephemeral = new SyncFilter.RoomFilter.StateFilter(notTypes: ["*"]),
+            Timeline = new SyncFilter.RoomFilter.StateFilter(notTypes: ["*"]),
+            AccountData = new SyncFilter.RoomFilter.StateFilter(rooms: rooms)
+        }
+    };
 }
