@@ -15,7 +15,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\ArcaneLibs\ArcaneLibs\ArcaneLibs.csproj" Condition="'$(ContinuousIntegrationBuild)'!='true'"/>
-        <PackageReference Include="ArcaneLibs" Version="1.0.0-preview.2025*" Condition="'$(ContinuousIntegrationBuild)'=='true'"/>
+        <PackageReference Include="ArcaneLibs" Version="1.0.1-preview.2026*" Condition="'$(ContinuousIntegrationBuild)'=='true'"/>
     </ItemGroup>
 
 </Project>
