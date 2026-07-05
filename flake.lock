@@ -8,11 +8,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1769418843,
-        "narHash": "sha256-A6HNPtDQ2BDV4vsiSRTq3DKBau1EzFx2wYaDAfsa3CI=",
+        "lastModified": 1781647411,
+        "narHash": "sha256-sbn+Sd0dJLEDSgaIzYD0kJD7zAgCSFtR6looEe2CkWg=",
         "owner": "TheArcaneBrony",
         "repo": "ArcaneLibs",
-        "rev": "b660f7823bf97c48342126055fe7a1e9b9d41f3d",
+        "rev": "66fa066a90fb1a836f08cd1f62591ed537c0da59",
         "type": "github"
       },
       "original": {
@@ -59,11 +59,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1773821835,
-        "narHash": "sha256-TJ3lSQtW0E2JrznGVm8hOQGVpXjJyXY2guAxku2O9A4=",
+        "lastModified": 1783224372,
+        "narHash": "sha256-8i/87eeoqiGE4yOTjwSA3Eh/ziJRQEmd/unYU+K27sk=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "b40629efe5d6ec48dd1efba650c797ddbd39ace0",
+        "rev": "d407951447dcd00442e97087bf374aad70c04cea",
         "type": "github"
       },
       "original": {
