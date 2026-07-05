@@ -96,7 +96,7 @@ public class MessageBuilder(string msgType = "m.text", string format = "org.matr
     }
 
     public MessageBuilder WithMention(string id, string? displayName = null, string[]? vias = null, bool useIdInPlainText = false, bool useLinkInPlainText = false) {
-        if (!useLinkInPlainText) Content.Body += $"@{(useIdInPlainText ? id : displayName ?? id)}";
+        if (!useLinkInPlainText) Content.Body += $"{(useIdInPlainText ? id : displayName ?? id)}";
         else {
             Content.Body += $"https://matrix.to/#/{id}";
             if (vias is { Length: > 0 }) Content.Body += $"?via={string.Join("&via=", vias)}";
